@@ -544,16 +544,15 @@ export function EventForm({ userId, event }: EventFormProps) {
                   disabled={isUploading}
                 />
               </div>
-  <div className="mt-4 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-    <p className="font-semibold text-foreground">Cómo preparar la imagen</p>
-    <ul className="mt-2 list-disc space-y-1 pl-5">
-      <li>Horizontal, proporción 16:9.</li>
-      <li>Mínimo 1200 × 675 px.</li>
-      <li>JPG, PNG o WebP, hasta 500 KB.</li>
-      <li>La Home la mostrará recortada dentro de una tarjeta horizontal.</li>
-    </ul>
-  </div>
-              </p>
+              <div className="mt-4 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">Cómo preparar la imagen</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  <li>Horizontal, proporción 16:9.</li>
+                  <li>Mínimo 1200 × 675 px.</li>
+                  <li>JPG, PNG o WebP, hasta 500 KB.</li>
+                  <li>La Home la mostrará recortada dentro de una tarjeta horizontal.</li>
+                </ul>
+              </div>
             </div>
           )}
           {isUploading && (
