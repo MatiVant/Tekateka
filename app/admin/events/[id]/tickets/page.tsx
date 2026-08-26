@@ -1,0 +1,78 @@
+import { redirect, notFound } from 'next/navigation';
+import { requireAuth } from '@/lib/auth';
+import { Navbar } from '@/components/navbar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { AllTicketsTable } from '@/components/admin/all-tickets-table';
+
+export default async function EventTicketsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const { authorized, user, profile } = await requireAuth(['organizer']);
+
+  if (!authorized || !user) {
+    redirect('/auth/login');
+  }
+
+  const supabase = await createClient();
+
+  // Verificar que el evento pertenece al organizador
+  const { data: event } = await supabase
+    .from('events')
+    .select('*')
+    .eq('id', id)
+    .eq('organizer_id', user.id)
+    .single();
+
+  if (!event) {
+    notFound();
+  }
+
+  // Obtener tickets del evento
+  const { data: tickets } = await supabase
+    .from('tickets')
+    .select(`
+      *,
+      events (
+        id,
+        title,
+        event_date,
+        venue,
+        price
+      )
+    `)
+    .eq('event_id', id)
+    .order('purchased_at', { ascending: false });
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/admin">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver al Panel
+          </Link>
+        </Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tickets: {event.title}</CardTitle>
+            <CardDescription>
+              Gestiona las entradas vendidas y confirma los pagos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AllTicketsTable tickets={tickets || []} />
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}
