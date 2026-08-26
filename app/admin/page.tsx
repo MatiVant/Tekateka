@@ -3,10 +3,12 @@ import { requireAuth } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Calendar, Ticket, DollarSign, Users, Plus, Clock, XCircle } from "lucide-react"
 import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
 export default async function AdminPage() {
@@ -17,6 +19,8 @@ export default async function AdminPage() {
   }
 
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
+  const { data: mercadoPagoConnection } = await adminSupabase.from("mercadopago_connections").select("id").eq("producer_id", user.id).maybeSingle()
 
   // El trigger de la BD actualiza automáticamente el estado
 
@@ -97,6 +101,8 @@ export default async function AdminPage() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-12">
+          {profile?.role !== "superadmin" && <MercadoPagoConnect connected={Boolean(mercadoPagoConnection)} />}
+
           <div className="flex items-start justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold mb-2">Mis Eventos</h1>
