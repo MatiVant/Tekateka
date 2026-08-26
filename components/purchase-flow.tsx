@@ -533,8 +533,10 @@ export function PurchaseFlow({
 
         {checkoutUrl ? (
           <p className="text-center text-xs text-muted-foreground">El pago se generó con el importe de esta compra.</p>
+        ) : mercadoPagoLink ? (
+          <p className="text-center text-xs text-muted-foreground">El productor no tiene Checkout Pro conectado. Podés usar el link manual.</p>
         ) : (
-          <Alert variant="destructive"><AlertDescription>No se pudo generar el checkout de Mercado Pago.</AlertDescription></Alert>
+          <Alert variant="destructive"><AlertDescription>El productor todavía no configuró Mercado Pago.</AlertDescription></Alert>
         )}
       </div>
     )

@@ -24,7 +24,7 @@ export default async function SuperAdminPage() {
   const [{ count: eventCount }, { count: ticketCount }, { data: sales }] = await Promise.all([
     supabase.from("events").select("id", { count: "exact", head: true }),
     supabase.from("tickets").select("id", { count: "exact", head: true }),
-    supabase.from("tickets").select("final_price").in("status", ["confirmed", "used"]),
+    supabase.from("tickets").select("final_price").eq("payment_status", "approved"),
   ])
   const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
   const { data: movements } = await supabase

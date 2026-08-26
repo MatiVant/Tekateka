@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   const { data: payment } = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((r) => r.ok ? r.json() : null)
   if (!payment) return NextResponse.json({ received: true })
   const status = payment.status === "approved" ? "approved" : payment.status === "rejected" || payment.status === "cancelled" ? "rejected" : "pending"
-  await supabase.from("tickets").update({ payment_status: status, paid_at: status === "approved" ? new Date().toISOString() : null }).eq("id", ticket.id)
+  const ticketIds = String(payment.external_reference || ticket.id).split(",").filter(Boolean)
+  await supabase.from("tickets").update({ payment_status: status, paid_at: status === "approved" ? new Date().toISOString() : null }).in("id", ticketIds)
   return NextResponse.json({ received: true })
 }

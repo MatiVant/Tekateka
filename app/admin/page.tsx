@@ -89,12 +89,12 @@ export default async function AdminPage() {
 
   const totalEvents = events?.length || 0
   const totalTickets = tickets?.length || 0
-  const confirmedTickets = tickets?.filter((t) => t.status === "confirmed").length || 0
-  const pendingTickets = tickets?.filter((t) => t.status === "pending").length || 0
+  const confirmedTickets = tickets?.filter((t) => t.payment_status === "approved" || t.status === "confirmed").length || 0
+  const pendingTickets = tickets?.filter((t) => t.payment_status !== "approved" && t.status === "pending").length || 0
   const totalRevenue =
     tickets
-      ?.filter((t) => t.status === "confirmed")
-      .reduce((sum, ticket: any) => sum + Number(ticket.events.price), 0) || 0
+      ?.filter((t) => t.payment_status === "approved" || t.status === "confirmed")
+      .reduce((sum, ticket: any) => sum + Number(ticket.final_price ?? ticket.events.price ?? 0), 0) || 0
 
   return (
     <div className="min-h-screen bg-background">

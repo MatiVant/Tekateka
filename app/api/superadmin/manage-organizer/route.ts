@@ -37,8 +37,9 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error;
 
-      // TODO: Enviar email de aprobación
-      console.log('[v0] Organizador aprobado:', organizerId);
+      if (process.env.RESEND_API_KEY) {
+        await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'Ticketer <onboarding@resend.dev>', to: organizerId, subject: 'Tu cuenta de organizador fue aprobada', html: '<p>Tu cuenta de organizador ya está aprobada. Ya podés publicar eventos.</p>' }) });
+      }
 
       return NextResponse.json({ success: true });
     } 
@@ -55,8 +56,9 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error;
 
-      // TODO: Enviar email de rechazo
-      console.log('[v0] Organizador rechazado:', organizerId);
+      if (process.env.RESEND_API_KEY) {
+        await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'Ticketer <onboarding@resend.dev>', to: organizerId, subject: 'Actualización de tu solicitud de organizador', html: `<p>Tu solicitud no fue aprobada.</p><p>Motivo: ${rejectionReason || 'No especificado'}</p>` }) });
+      }
 
       return NextResponse.json({ success: true });
     }
