@@ -65,6 +65,7 @@ export function PurchaseFlow({
   const [error, setError] = useState<string | null>(null)
   const [finalPrice, setFinalPrice] = useState(eventPrice)
   const [discountApplied, setDiscountApplied] = useState(false)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
   const router = useRouter()
 
@@ -232,6 +233,10 @@ export function PurchaseFlow({
       if (isFree || (isPwyw && priceToUse === 0)) {
         setStep("success")
       } else {
+        const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds }) })
+        const checkoutData = await checkoutResponse.json()
+        if (!checkoutResponse.ok) throw new Error(checkoutData.error || "No se pudo iniciar el pago")
+        setCheckoutUrl(checkoutData.initPoint)
         setStep("payment")
       }
     } catch (error: unknown) {
@@ -516,21 +521,21 @@ export function PurchaseFlow({
           </div>
         </div>
 
-        {mercadoPagoLink ? (
+        {checkoutUrl ? (
           <Button asChild className="w-full">
-            <a href={mercadoPagoLink} target="_blank" rel="noopener noreferrer">
-              Pagar con Mercado Pago
-            </a>
+            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Pagar con Mercado Pago</a>
           </Button>
-        ) : (
-          <Alert variant="destructive">
-            <AlertDescription>El productor todavía no configuró un enlace de pago.</AlertDescription>
-          </Alert>
-        )}
+        ) : mercadoPagoLink ? (
+          <Button asChild className="w-full">
+            <a href={mercadoPagoLink} target="_blank" rel="noopener noreferrer">Usar link manual de pago</a>
+          </Button>
+        ) : null}
 
-        <Button onClick={() => setStep("receipt")} variant="outline" className="w-full">
-          Ya realicé el pago
-        </Button>
+        {checkoutUrl ? (
+          <p className="text-center text-xs text-muted-foreground">El pago se generó con el importe de esta compra.</p>
+        ) : (
+          <Alert variant="destructive"><AlertDescription>No se pudo generar el checkout de Mercado Pago.</AlertDescription></Alert>
+        )}
       </div>
     )
   }
