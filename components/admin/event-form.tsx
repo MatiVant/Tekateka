@@ -158,6 +158,7 @@ export function EventForm({ userId, event }: EventFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
     setIsLoading(true)
 
     try {
@@ -209,6 +210,8 @@ export function EventForm({ userId, event }: EventFormProps) {
 
       router.push("/admin")
       router.refresh()
+      // No reactivamos el botón: dejamos el estado de carga hasta que la navegación complete
+      // para evitar que el evento se cree dos veces.
     } catch (error: unknown) {
       console.error("[v0] Error al guardar evento:", error)
       toast({
@@ -216,7 +219,6 @@ export function EventForm({ userId, event }: EventFormProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Error al guardar el evento",
       })
-    } finally {
       setIsLoading(false)
     }
   }
@@ -241,7 +243,16 @@ export function EventForm({ userId, event }: EventFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="relative space-y-6">
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 rounded-lg bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">
+            {event ? "Actualizando evento..." : "Creando evento..."}
+          </p>
+          <p className="text-xs text-muted-foreground">No cierres esta ventana.</p>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="title">Título del Evento *</Label>
         <Input

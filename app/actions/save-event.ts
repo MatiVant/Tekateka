@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 interface EventData {
   title: string
@@ -57,6 +57,8 @@ export async function saveEvent(
 
       if (updateError) throw updateError
 
+      revalidatePath('/admin')
+      revalidatePath(`/events/${eventId}`)
       return { success: true, eventId }
     } else {
       // Crear nuevo evento
@@ -79,6 +81,8 @@ export async function saveEvent(
         if (tiersError) throw tiersError
       }
 
+      revalidatePath('/admin')
+      revalidatePath('/')
       return { success: true, eventId: newEvent.id }
     }
   } catch (error) {
