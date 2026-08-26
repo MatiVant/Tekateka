@@ -77,12 +77,13 @@ export function EventForm({ userId, event }: EventFormProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
+    // La Home recorta las imágenes en formato horizontal 16:9.
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor selecciona un archivo de imagen",
+        description: "Usá una imagen JPG, PNG o WebP en formato horizontal (16:9)",
       })
       return
     }
@@ -94,6 +95,23 @@ export function EventForm({ userId, event }: EventFormProps) {
         title: "Error",
         description: "La imagen no debe superar los 5MB",
       })
+      return
+    }
+
+    if (file.size > 500 * 1024) {
+      toast({ variant: "destructive", title: "Imagen demasiado pesada", description: "Reducila a menos de 500 KB para que se vea rápido en la Home." })
+      return
+    }
+
+    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
+      image.onerror = () => reject(new Error("No se pudo leer la imagen"))
+      image.src = URL.createObjectURL(file)
+    })
+    const ratio = dimensions.width / dimensions.height
+    if (dimensions.width < 1200 || Math.abs(ratio - 16 / 9) > 0.08) {
+      toast({ variant: "destructive", title: "Formato recomendado: 16:9", description: "Subí una imagen horizontal de al menos 1200 × 675 px para evitar recortes." })
       return
     }
 
@@ -524,12 +542,15 @@ export function EventForm({ userId, event }: EventFormProps) {
                   disabled={isUploading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-4 space-y-1">
-                <div>Recomendaciones:</div>
-                <div>• Tamaño: 1200 x 720px (proporción 16:9)</div>
-                <div>• Formato: JPG o WebP (mejor compresión)</div>
-                <div>• Archivo: Máximo 500KB</div>
-                <div className="mt-2">PNG, JPG, GIF hasta 5MB</div>
+  <div className="mt-4 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+    <p className="font-semibold text-foreground">Cómo preparar la imagen</p>
+    <ul className="mt-2 list-disc space-y-1 pl-5">
+      <li>Horizontal, proporción 16:9.</li>
+      <li>Mínimo 1200 × 675 px.</li>
+      <li>JPG, PNG o WebP, hasta 500 KB.</li>
+      <li>La Home la mostrará recortada dentro de una tarjeta horizontal.</li>
+    </ul>
+  </div>
               </p>
             </div>
           )}

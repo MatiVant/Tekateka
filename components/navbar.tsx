@@ -61,7 +61,12 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
                 <Button variant="ghost" asChild><Link href="/my-tickets">Mis Entradas</Link></Button>
                 <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
               </>
-            ) : <><Button variant="ghost" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button><Button asChild><Link href="/auth/sign-up">Registrarse</Link></Button></>}
+            ) : (
+              <>
+                <Button variant="ghost" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button>
+                <Button asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
+              </>
+            )}
           </div>
         </div>
       </div>
