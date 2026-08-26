@@ -111,11 +111,13 @@ export function EventCard({ event, featured = false }: EventCardProps) {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
+                timeZone: "America/Argentina/Buenos_Aires",
               })}{" "}
               ·{" "}
               {eventDate.toLocaleTimeString("es-ES", {
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "America/Argentina/Buenos_Aires",
               })}
             </span>
           </div>
