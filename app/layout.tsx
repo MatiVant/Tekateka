@@ -6,9 +6,9 @@ import { Navbar } from "@/components/navbar"
 import { getCurrentUser } from "@/lib/auth"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
-const _spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
+const _geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
+const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
+const _spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk" })
 
 export const metadata: Metadata = {
   title: "TekaTeka - Venta de Entradas",

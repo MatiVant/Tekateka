@@ -72,9 +72,12 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         {!isAvailable && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
             <Badge variant="destructive" className="text-base px-4 py-2 font-semibold">
-              {event.status === "sold_out" ? "Agotado" : "No Disponible"}
+              {event.status === "sold_out" || event.available_tickets === 0 ? "Agotado" : "No Disponible"}
             </Badge>
           </div>
+        )}
+        {isAvailable && event.available_tickets <= Math.max(5, Math.ceil(event.total_tickets * 0.1)) && (
+          <Badge className="absolute bottom-4 left-4 bg-primary text-primary-foreground">Últimos lugares</Badge>
         )}
 
         {isAvailable && (
