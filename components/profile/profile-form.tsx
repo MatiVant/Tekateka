@@ -14,7 +14,6 @@ interface ProfileFormProps {
   role: string
   initialFullName: string
   initialPhone: string
-  initialPaymentInfo: string
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,11 +23,10 @@ const ROLE_LABELS: Record<string, string> = {
   user: "Asistente",
 }
 
-export function ProfileForm({ email, role, initialFullName, initialPhone, initialPaymentInfo }: ProfileFormProps) {
+export function ProfileForm({ email, role, initialFullName, initialPhone }: ProfileFormProps) {
   const { toast } = useToast()
   const [fullName, setFullName] = useState(initialFullName)
   const [phone, setPhone] = useState(initialPhone)
-  const [paymentInfo, setPaymentInfo] = useState(initialPaymentInfo)
   const [isSaving, setIsSaving] = useState(false)
 
   const isOrganizer = role === "organizer" || role === "superadmin"
@@ -36,7 +34,7 @@ export function ProfileForm({ email, role, initialFullName, initialPhone, initia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
-    const result = await updateProfile({ full_name: fullName, phone, payment_info: paymentInfo })
+    const result = await updateProfile({ full_name: fullName, phone })
     setIsSaving(false)
 
     if (result.error) {
@@ -94,21 +92,6 @@ export function ProfileForm({ email, role, initialFullName, initialPhone, initia
             : "Lo usamos para contactarte ante cualquier novedad."}
         </p>
       </div>
-
-      {isOrganizer && (
-        <div className="space-y-2">
-          <Label htmlFor="paymentInfo">Datos de cobro</Label>
-          <Input
-            id="paymentInfo"
-            type="text"
-            placeholder="CBU / Alias / CVU"
-            value={paymentInfo}
-            onChange={(e) => setPaymentInfo(e.target.value)}
-            className="h-11"
-          />
-          <p className="text-xs text-muted-foreground">Se usa para liquidarte las ventas de tus eventos.</p>
-        </div>
-      )}
 
       <Button type="submit" disabled={isSaving}>
         {isSaving ? "Guardando..." : "Guardar cambios"}

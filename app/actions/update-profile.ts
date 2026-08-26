@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache"
 export async function updateProfile(formData: {
   full_name: string
   phone: string
-  payment_info: string
 }) {
   const supabase = await createClient()
   const {
@@ -35,7 +34,6 @@ export async function updateProfile(formData: {
     .update({
       full_name: fullName,
       phone: phone || null,
-      payment_info: formData.payment_info.trim() || null,
     })
     .eq("id", user.id)
 

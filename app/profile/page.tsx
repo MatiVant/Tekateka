@@ -34,7 +34,6 @@ export default async function ProfilePage() {
               role={profile?.role || "user"}
               initialFullName={profile?.full_name || ""}
               initialPhone={profile?.phone || ""}
-              initialPaymentInfo={profile?.payment_info || ""}
             />
           </CardContent>
         </Card>
