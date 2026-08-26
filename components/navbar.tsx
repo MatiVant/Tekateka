@@ -58,9 +58,9 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
             {user ? (
               <>
                 {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
-                {profile?.role === "superadmin" && <><Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button><Button variant="ghost" asChild><Link href="/superadmin/events">Todos los Eventos</Link></Button></>}
+                {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
                 {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
-                <Button variant="ghost" asChild><Link href="/my-tickets">Mis Entradas</Link></Button>
+                <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
                 <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
               </>
             ) : (

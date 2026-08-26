@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { requireAuth } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
-import { Users, CheckCircle, XCircle, Clock } from "lucide-react"
+import { Users, CheckCircle, XCircle, Clock, LayoutList } from "lucide-react"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
 
 export default async function SuperAdminPage() {
@@ -37,9 +39,17 @@ export default async function SuperAdminPage() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-2">Administración</h1>
-          <p className="text-muted-foreground">Gestiona organizadores, suscripciones y plataforma</p>
+        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Administración</h1>
+            <p className="text-muted-foreground">Gestiona organizadores, suscripciones y plataforma</p>
+          </div>
+          <Button asChild className="w-fit">
+            <Link href="/superadmin/events">
+              <LayoutList className="mr-2 h-4 w-4" />
+              Todos los eventos
+            </Link>
+          </Button>
         </div>
 
         {/* Stats Grid */}
