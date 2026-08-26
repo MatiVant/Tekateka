@@ -46,6 +46,7 @@ export function DeleteEventButton({ eventId, eventTitle }: DeleteEventButtonProp
           description: result.error || "No se pudo eliminar el evento",
           variant: "destructive",
         })
+        setIsDeleting(false)
       }
     } catch (error) {
       toast({
@@ -53,7 +54,6 @@ export function DeleteEventButton({ eventId, eventTitle }: DeleteEventButtonProp
         description: "Error inesperado al eliminar el evento",
         variant: "destructive",
       })
-    } finally {
       setIsDeleting(false)
     }
   }

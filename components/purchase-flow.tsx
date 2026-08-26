@@ -66,6 +66,7 @@ export function PurchaseFlow({
   const [finalPrice, setFinalPrice] = useState(eventPrice)
   const [discountApplied, setDiscountApplied] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
   const router = useRouter()
 
@@ -74,6 +75,16 @@ export function PurchaseFlow({
   useEffect(() => {
     fetchTiers()
     fetchEventMaxTickets()
+    const payment = new URLSearchParams(window.location.search).get("payment")
+    if (payment === "success") {
+      setPaymentNotice("Pago recibido. Estamos confirmando tu compra; revisá tu email para recibir las entradas.")
+      setStep("success")
+    } else if (payment === "pending") {
+      setPaymentNotice("El pago quedó pendiente. Te avisaremos por email cuando Mercado Pago lo confirme.")
+      setStep("success")
+    } else if (payment === "failure") {
+      setPaymentNotice("El pago no se completó. Podés volver e intentarlo nuevamente.")
+    }
   }, [eventId])
 
   const fetchTiers = async () => {
@@ -493,6 +504,7 @@ export function PurchaseFlow({
   if (step === "payment") {
     return (
       <div className="space-y-6">
+        {paymentNotice && <Alert variant={paymentNotice.includes("no se completó") ? "destructive" : "default"}><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <Alert>
           <AlertDescription className="text-sm leading-relaxed">
             {paymentInstructions ||
@@ -521,6 +533,7 @@ export function PurchaseFlow({
           </div>
         </div>
 
+        {paymentNotice?.includes("no se completó") && <Button type="button" variant="outline" className="w-full" onClick={() => { setPaymentNotice(null); setStep("form") }}>Volver y revisar datos</Button>}
         {checkoutUrl ? (
           <Button asChild className="w-full">
             <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Pagar con Mercado Pago</a>
@@ -607,6 +620,7 @@ export function PurchaseFlow({
         <h3 className="text-xl font-semibold">
           {isFree ? "¡Entradas Confirmadas!" : "Compra Pendiente de Confirmación"}
         </h3>
+        {paymentNotice && <Alert><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <p className="text-muted-foreground text-sm leading-relaxed">
           {isFree
             ? `Has reservado ${quantity} ${quantity === 1 ? "entrada" : "entradas"} para ${eventTitle}. Recibirás un email con ${quantity === 1 ? "tu código QR" : "tus códigos QR"}.`

@@ -1,6 +1,9 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/admin"
+import { Resend } from "resend"
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 interface CreateTicketData {
   event_id: string
@@ -87,14 +90,13 @@ export async function createTicket(data: CreateTicketData) {
         .eq("id", data.event_id)
         .single()
 
-      // Solo enviar email si NO estamos en modo de prueba o si el destinatario es el admin
-      const isTestMode = data.buyer_email === "mtrovant@gmail.com"
-
-      if (!isTestMode) {
-        console.log("[v0] Enviando email de confirmación de compra...")
-        // Aquí iría la lógica de envío de email cuando esté configurado
-      } else {
-        console.log("[v0] Email en modo prueba - Link de pago:", event?.mercado_pago_link)
+      if (resend && event) {
+        await resend.emails.send({
+          from: "Entradas <onboarding@resend.dev>",
+          to: data.buyer_email,
+          subject: `Compra recibida: ${event.title}`,
+          html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Si todavía no pagaste, podés hacerlo desde la pantalla de compra.</p><p>Conservá este email: te enviaremos tus entradas cuando el pago sea confirmado.</p>`,
+        })
       }
     } catch (emailError) {
       console.error("[v0] Error al enviar email:", emailError)

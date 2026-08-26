@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, Upload, X, ImageIcon, Plus, Trash2 } from "lucide-react"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 import { saveEvent } from "@/app/actions/save-event"
 
@@ -253,6 +253,9 @@ export function EventForm({ userId, event }: EventFormProps) {
           <p className="text-xs text-muted-foreground">No cierres esta ventana.</p>
         </div>
       )}
+      <Card>
+        <CardHeader><CardTitle>Información básica</CardTitle><CardDescription>Nombre y descripción del evento.</CardDescription></CardHeader>
+        <CardContent className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="title">Título del Evento *</Label>
         <Input
@@ -275,7 +278,12 @@ export function EventForm({ userId, event }: EventFormProps) {
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader><CardTitle>Fecha y ubicación</CardTitle><CardDescription>Cuándo y dónde será el evento.</CardDescription></CardHeader>
+        <CardContent className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="eventDate">Fecha del evento *</Label>
@@ -302,7 +310,12 @@ export function EventForm({ userId, event }: EventFormProps) {
           <p className="text-xs text-muted-foreground">Pegá el enlace para que los asistentes puedan abrir la ubicación.</p>
         </div>
       </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader><CardTitle>Precios y entradas</CardTitle><CardDescription>Definí el precio, cupos y tipos de entrada.</CardDescription></CardHeader>
+        <CardContent className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label>Tipo de Evento *</Label>
@@ -514,7 +527,12 @@ export function EventForm({ userId, event }: EventFormProps) {
           )}
         </div>
       )}
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader><CardTitle>Imagen del evento</CardTitle><CardDescription>Usá una imagen horizontal para la portada.</CardDescription></CardHeader>
+        <CardContent>
       <div className="space-y-2">
         <Label>Imagen del Evento</Label>
         <div className="mt-2">
@@ -574,6 +592,8 @@ export function EventForm({ userId, event }: EventFormProps) {
           )}
         </div>
       </div>
+        </CardContent>
+      </Card>
 
       <div className="flex gap-3">
         <Button type="submit" disabled={isLoading || isUploading}>
