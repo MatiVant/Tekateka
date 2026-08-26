@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
@@ -26,53 +25,16 @@ export function PurchaseForm({ eventId, userId }: PurchaseFormProps) {
     setError(null);
 
     try {
-      const supabase = createClient();
-      
-      // Verificar que el usuario está autenticado
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth/login');
-        return;
-      }
-
-      // Generar QR code único
-      const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-
-      // Crear el ticket
-      const { error: ticketError } = await supabase
-        .from('tickets')
-        .insert({
-          event_id: eventId,
-          buyer_id: user.id,
-          buyer_name: name,
-          buyer_email: email,
-          qr_code: qrCode,
-          status: 'pending',
-        });
-
-      if (ticketError) throw ticketError;
-
-      // Actualizar tickets disponibles
-      const { error: updateError } = await supabase.rpc('decrement_available_tickets', {
+      const { createTicket } = await import("@/app/actions/create-ticket")
+      const qrCode = `TICKET-${crypto.randomUUID()}`
+      await createTicket({
         event_id: eventId,
-      });
-
-      if (updateError) {
-        // Si falla la actualización, intentamos con una consulta directa
-        const { data: event } = await supabase
-          .from('events')
-          .select('available_tickets')
-          .eq('id', eventId)
-          .single();
-
-        if (event) {
-          await supabase
-            .from('events')
-            .update({ available_tickets: event.available_tickets - 1 })
-            .eq('id', eventId);
-        }
-      }
-
+        tier_id: null,
+        buyer_name: name.trim(),
+        buyer_email: email.trim().toLowerCase(),
+        qr_code: qrCode,
+        final_price: 0,
+      })
       router.push('/my-tickets?success=true');
     } catch (error: unknown) {
       console.error('[v0] Error al comprar ticket:', error);

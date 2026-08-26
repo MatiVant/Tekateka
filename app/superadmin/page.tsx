@@ -21,6 +21,12 @@ export default async function SuperAdminPage() {
   const approvedCount = organizers?.filter((o) => o.organizer_status === "approved").length || 0
   const rejectedCount = organizers?.filter((o) => o.organizer_status === "rejected").length || 0
   const activeSubscriptions = organizers?.filter((o) => o.subscription_status === "active").length || 0
+  const [{ count: eventCount }, { count: ticketCount }, { data: sales }] = await Promise.all([
+    supabase.from("events").select("id", { count: "exact", head: true }),
+    supabase.from("tickets").select("id", { count: "exact", head: true }),
+    supabase.from("tickets").select("final_price").in("status", ["confirmed", "used"]),
+  ])
+  const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,6 +73,21 @@ export default async function SuperAdminPage() {
             </div>
             <div className="text-3xl font-bold text-foreground">{activeSubscriptions}</div>
             <p className="text-xs text-muted-foreground mt-2">Con suscripción activa</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          <div className="p-6 bg-card border border-border rounded-lg">
+            <p className="text-sm text-muted-foreground">Eventos publicados</p>
+            <p className="mt-2 text-3xl font-bold">{eventCount || 0}</p>
+          </div>
+          <div className="p-6 bg-card border border-border rounded-lg">
+            <p className="text-sm text-muted-foreground">Entradas emitidas</p>
+            <p className="mt-2 text-3xl font-bold">{ticketCount || 0}</p>
+          </div>
+          <div className="p-6 bg-card border border-border rounded-lg">
+            <p className="text-sm text-muted-foreground">Ventas confirmadas</p>
+            <p className="mt-2 text-3xl font-bold">${totalSales.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
           </div>
         </div>
 

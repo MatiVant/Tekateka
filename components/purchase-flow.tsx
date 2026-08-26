@@ -49,6 +49,7 @@ export function PurchaseFlow({
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [promotionCode, setPromotionCode] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState<number | null>(null)
@@ -213,6 +214,7 @@ export function PurchaseFlow({
           qr_code: qrCode,
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
+          marketing_consent: marketingConsent,
         }
 
         console.log(`[v0] Creando ticket ${i + 1}/${quantity}...`, ticketData)
@@ -342,6 +344,19 @@ export function PurchaseFlow({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+        </div>
+
+        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+          <input
+            id="marketing-consent"
+            type="checkbox"
+            checked={marketingConsent}
+            onChange={(event) => setMarketingConsent(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-primary"
+          />
+          <Label htmlFor="marketing-consent" className="text-sm font-normal leading-relaxed">
+            Quiero guardar mis datos para comprar más rápido en futuros eventos y recibir novedades.
+          </Label>
         </div>
 
         <div className="space-y-2">

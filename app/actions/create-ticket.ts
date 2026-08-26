@@ -10,6 +10,7 @@ interface CreateTicketData {
   qr_code: string
   promotion_code?: string
   final_price: number
+  marketing_consent?: boolean
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -18,27 +19,26 @@ export async function createTicket(data: CreateTicketData) {
   try {
     console.log("[v0] Server Action - Creando ticket:", data)
 
-    // Crear el ticket
-    const { data: ticket, error: ticketError } = await supabase
-      .from("tickets")
-      .insert({
-        event_id: data.event_id,
-        tier_id: data.tier_id,
-        buyer_name: data.buyer_name,
-        buyer_email: data.buyer_email,
-        qr_code: data.qr_code,
-        final_price: data.final_price,
-        status: "pending",
-      })
-      .select()
-      .single()
+    const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
+      p_event_id: data.event_id,
+      p_tier_id: data.tier_id,
+      p_buyer_name: data.buyer_name,
+      p_buyer_email: data.buyer_email,
+      p_qr_code: data.qr_code,
+      p_final_price: data.final_price,
+      p_buyer_id: null,
+      p_marketing_consent: data.marketing_consent ?? false,
+    })
 
     if (ticketError) {
-      console.error("[v0] Error al crear ticket:", ticketError)
-      throw new Error(`Error al crear ticket: ${ticketError.message}`)
+      console.error("[v0] Error al crear ticket atómico:", ticketError)
+      throw new Error(ticketError.message)
     }
 
-    console.log("[v0] Ticket creado exitosamente:", ticket.id)
+    const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
+    if (!createdTicket) throw new Error("No se pudo crear el ticket")
+
+    console.log("[v0] Ticket creado exitosamente:", createdTicket.id)
 
     // Si hay código de promoción, guardarlo en la tabla de relación
     if (data.promotion_code) {
@@ -51,7 +51,7 @@ export async function createTicket(data: CreateTicketData) {
 
       if (promoData) {
         await supabase.from("ticket_promotions").insert({
-          ticket_id: ticket.id,
+          ticket_id: createdTicket.id,
           promotion_code_id: promoData.id,
         })
 
@@ -82,7 +82,7 @@ export async function createTicket(data: CreateTicketData) {
       // No lanzar error, el ticket ya fue creado
     }
 
-    return ticket
+    return createdTicket
   } catch (error) {
     console.error("[v0] Error en createTicket:", error)
     throw error
