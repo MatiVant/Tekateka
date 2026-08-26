@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 
@@ -12,8 +13,27 @@ interface NavbarProps {
   profile?: { role: string; full_name: string | null } | null
 }
 
-export function Navbar({ user, profile }: NavbarProps) {
+export function Navbar({ user: initialUser, profile: initialProfile }: NavbarProps) {
   const router = useRouter()
+  const [user, setUser] = useState(initialUser)
+  const [profile, setProfile] = useState(initialProfile)
+
+  useEffect(() => {
+    const supabase = createClient()
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ? { email: session.user.email } : null)
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+        router.refresh()
+      }
+    })
+
+    return () => authListener.subscription.unsubscribe()
+  }, [router])
+
+  useEffect(() => {
+    setUser(initialUser)
+    setProfile(initialProfile)
+  }, [initialUser, initialProfile])
 
   const handleLogout = async () => {
     const supabase = createClient()
