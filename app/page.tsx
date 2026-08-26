@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { EventCard } from "@/components/event-card"
 import { Sparkles, Calendar, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default async function HomePage() {
   const supabase = await createClient()
