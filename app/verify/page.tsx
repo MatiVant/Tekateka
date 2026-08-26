@@ -12,9 +12,11 @@ export default async function VerifyPage() {
     redirect('/auth/login');
   }
 
+  const navbarUser = user.email ? { email: user.email } : null
+
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar user={user} profile={profile} />
+      <Navbar user={navbarUser} profile={profile} />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-2xl mx-auto">

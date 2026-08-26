@@ -135,6 +135,7 @@ export default async function EventDetailPage({
                     eventTitle={event.title}
                     eventPrice={Number(event.price)}
                     paymentInstructions={event.payment_instructions}
+                    mercadoPagoLink={event.mercado_pago_link}
                     isFree={isFree}
                     isPwyw={isPwyw}
                   />

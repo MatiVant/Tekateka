@@ -15,7 +15,7 @@ export async function validatePromotion(
   promotionCode: string,
   basePrice: number
 ): Promise<ValidationResult> {
-  const supabase = createServerClient(await cookies());
+  const supabase = await createServerClient();
   
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -86,7 +86,7 @@ export async function recordPromotionUsage(
   discountAmount: number,
   finalPrice: number
 ) {
-  const supabase = createServerClient(await cookies());
+  const supabase = await createServerClient();
 
   try {
     // Guardar uso de promoción
@@ -103,11 +103,7 @@ export async function recordPromotionUsage(
     if (insertError) throw insertError;
 
     // Incrementar contador de usos en el código de promoción
-    const { error: updateError } = await supabase
-      .from('promotion_codes')
-      .update({ current_uses: supabase.rpc('increment_promotion_usage', { id: promotionCodeId }) })
-      .eq('id', promotionCodeId);
-
+    const { error: updateError } = await supabase.rpc('increment_promotion_usage', { id: promotionCodeId });
     if (updateError) throw updateError;
   } catch (error) {
     console.error('[v0] Error recording promotion usage:', error);

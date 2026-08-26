@@ -8,8 +8,9 @@ import { formatCurrency } from "@/lib/format"
 import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
 
 export default async function SuperAdminEventsPage() {
-  const profile = await requireAuth(["superadmin"])
-  const { user } = await getCurrentUser()
+  await requireAuth(["superadmin"])
+  const userData = await getCurrentUser()
+  const user = userData?.user
 
   const supabase = await createServerClient()
 

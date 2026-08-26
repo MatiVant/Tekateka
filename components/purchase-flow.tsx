@@ -28,6 +28,7 @@ interface PurchaseFlowProps {
   eventTitle: string
   eventPrice: number
   paymentInstructions?: string
+  mercadoPagoLink?: string | null
   isFree?: boolean
   isPwyw?: boolean
 }
@@ -39,6 +40,7 @@ export function PurchaseFlow({
   eventTitle,
   eventPrice,
   paymentInstructions,
+  mercadoPagoLink,
   isFree = false,
   isPwyw = false,
 }: PurchaseFlowProps) {
@@ -514,7 +516,19 @@ export function PurchaseFlow({
           </div>
         </div>
 
-        <Button onClick={() => setStep("receipt")} className="w-full">
+        {mercadoPagoLink ? (
+          <Button asChild className="w-full">
+            <a href={mercadoPagoLink} target="_blank" rel="noopener noreferrer">
+              Pagar con Mercado Pago
+            </a>
+          </Button>
+        ) : (
+          <Alert variant="destructive">
+            <AlertDescription>El productor todavía no configuró un enlace de pago.</AlertDescription>
+          </Alert>
+        )}
+
+        <Button onClick={() => setStep("receipt")} variant="outline" className="w-full">
           Ya realicé el pago
         </Button>
       </div>

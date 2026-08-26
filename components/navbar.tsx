@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 
 interface NavbarProps {
-  user?: { email: string } | null
+  user?: { email?: string } | null
   profile?: { role: string; full_name: string | null } | null
 }
 

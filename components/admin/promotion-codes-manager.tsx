@@ -11,6 +11,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
 
+type PromotionType = "percentage" | "fixed" | "2x1" | "protocol"
+
 interface PromotionCode {
   id: string
   code: string
@@ -35,7 +37,7 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     code: "",
-    promotion_type: "percentage" as const,
+    promotion_type: "percentage" as PromotionType,
     discount_value: "",
     description: "",
     category: "",
@@ -174,7 +176,7 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
                 id="promo-type"
                 className="w-full px-3 py-2 border border-input rounded-md bg-background"
                 value={formData.promotion_type}
-                onChange={(e) => setFormData({ ...formData, promotion_type: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, promotion_type: e.target.value as PromotionType })}
               >
                 <option value="percentage">Porcentaje (%)</option>
                 <option value="fixed">Descuento Fijo ($)</option>

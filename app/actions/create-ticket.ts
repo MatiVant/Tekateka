@@ -17,8 +17,6 @@ export async function createTicket(data: CreateTicketData) {
   const supabase = createClient()
 
   try {
-    console.log("[v0] Server Action - Creando ticket:", data)
-
     const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
       p_event_id: data.event_id,
       p_tier_id: data.tier_id,
@@ -38,7 +36,6 @@ export async function createTicket(data: CreateTicketData) {
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
 
-    console.log("[v0] Ticket creado exitosamente:", createdTicket.id)
 
     // Si hay código de promoción, guardarlo en la tabla de relación
     if (data.promotion_code) {
