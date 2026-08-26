@@ -25,15 +25,17 @@ export default async function HomePage() {
               <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 text-balance leading-[1.1] text-foreground">
                 Descubre eventos
               </h1>
+              <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-primary">Eventos cerca tuyo</p>
               <p className="text-xl md:text-2xl text-muted-foreground text-pretty max-w-2xl leading-relaxed">
                 Compra entradas de forma segura e instantánea para los mejores eventos
               </p>
+              <Button asChild size="lg" className="mt-8"><Link href="#eventos">Explorar eventos</Link></Button>
             </div>
           </div>
         </div>
       </section>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <main id="eventos" className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {featuredEvents.length > 0 && (
           <section className="mb-20">
             <div className="flex items-center justify-between mb-8">

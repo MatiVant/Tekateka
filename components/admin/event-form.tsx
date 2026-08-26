@@ -43,6 +43,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [eventTime, setEventTime] = useState(eventDateTime ? eventDateTime.toISOString().slice(11, 16) : "")
 
   const [venue, setVenue] = useState(event?.venue || "")
+  const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
   const [price, setPrice] = useState(event?.price.toString() || "")
   const [totalTickets, setTotalTickets] = useState(event?.total_tickets.toString() || "")
   const [imageUrl, setImageUrl] = useState(event?.image_url || "")
@@ -160,6 +161,7 @@ export function EventForm({ userId, event }: EventFormProps) {
         description: description || null,
         event_date: combinedDateTime,
         venue,
+        location_url: locationUrl || null,
         price: basePrice,
         is_pay_what_you_want: eventType === "pwyw",
         total_tickets: Number.parseInt(totalTickets),
@@ -245,7 +247,7 @@ export function EventForm({ userId, event }: EventFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="eventDate">Fecha *</Label>
           <Input id="eventDate" type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
@@ -258,14 +260,15 @@ export function EventForm({ userId, event }: EventFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="venue">Lugar *</Label>
-          <Input
-            id="venue"
-            type="text"
-            placeholder="Teatro Nacional"
-            required
-            value={venue}
-            onChange={(e) => setVenue(e.target.value)}
-          />
+          <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="locationUrl">Ubicación en Google Maps (opcional)</Label>
+          <Input id="locationUrl" type="url" placeholder="https://maps.google.com/..." value={locationUrl} onChange={(e) => setLocationUrl(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Pegá el enlace para que los asistentes puedan abrir la ubicación.</p>
         </div>
       </div>
 

@@ -20,6 +20,7 @@ interface EventCardProps {
     available_tickets: number
     total_tickets: number
     image_url: string | null
+    location_url?: string | null
     status: string
   }
   featured?: boolean
@@ -93,11 +94,17 @@ export function EventCard({ event, featured = false }: EventCardProps) {
       </div>
 
       <CardContent className={`${featured ? "p-6" : "p-5"}`}>
-        <h3
-          className={`font-bold text-balance line-clamp-2 mb-3 group-hover:text-primary transition-colors ${featured ? "text-2xl" : "text-xl"}`}
-        >
-          {event.title}
-        </h3>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="rounded-md bg-primary/10 px-2.5 py-1.5 text-center text-primary">
+            <span className="block text-xs font-semibold uppercase">{eventDate.toLocaleDateString("es-AR", { month: "short", timeZone: "America/Argentina/Buenos_Aires" })}</span>
+            <span className="block text-xl font-bold leading-none">{eventDate.toLocaleDateString("es-AR", { day: "numeric", timeZone: "America/Argentina/Buenos_Aires" })}</span>
+          </div>
+          <h3
+            className={`flex-1 font-bold text-balance line-clamp-2 group-hover:text-primary transition-colors ${featured ? "text-2xl" : "text-xl"}`}
+          >
+            {event.title}
+          </h3>
+        </div>
 
         {event.description && (
           <p className="text-sm text-muted-foreground text-pretty line-clamp-2 mb-4">{event.description}</p>
@@ -124,7 +131,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
 
           <div className="flex items-center gap-2.5 text-sm">
             <MapPin className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-foreground/80 text-pretty line-clamp-1">{event.venue}</span>
+            {event.location_url ? <a href={event.location_url} target="_blank" rel="noopener noreferrer" className="text-foreground/80 text-pretty line-clamp-1 underline-offset-4 hover:underline">{event.venue}</a> : <span className="text-foreground/80 text-pretty line-clamp-1">{event.venue}</span>}
           </div>
 
           <div className="flex items-center gap-2.5 text-sm">
