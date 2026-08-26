@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono, Outfit } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Navbar } from "@/components/navbar"
+import { ThemeProvider } from "@/components/theme-provider"
 import { getCurrentUser } from "@/lib/auth"
 import "./globals.css"
 
@@ -28,11 +29,13 @@ export default async function RootLayout({
   const userData = await getCurrentUser()
 
   return (
-    <html lang="es" className="dark">
+    <html lang="es" suppressHydrationWarning>
       <body className={`${_geist.variable} ${_geistMono.variable} ${_outfit.variable} font-sans antialiased bg-background text-foreground`}>
-        <Navbar user={userData?.user} profile={userData?.profile} />
-        {children}
-        <Analytics />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <Navbar user={userData?.user} profile={userData?.profile} />
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

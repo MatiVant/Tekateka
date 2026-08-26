@@ -267,13 +267,15 @@ export function EventForm({ userId, event }: EventFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="eventDate">Fecha *</Label>
-          <Input id="eventDate" type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          <Label htmlFor="eventDate">Fecha del evento *</Label>
+          <Input id="eventDate" type="date" required min={new Date().toISOString().slice(0, 10)} value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="h-11 cursor-pointer" />
+          <p className="text-xs text-muted-foreground">Elegí la fecha desde el calendario.</p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="eventTime">Hora *</Label>
-          <Input id="eventTime" type="time" required value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
+          <Label htmlFor="eventTime">Hora de inicio *</Label>
+          <Input id="eventTime" type="time" required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="h-11 cursor-pointer" />
+          <p className="text-xs text-muted-foreground">Elegí la hora desde el reloj.</p>
         </div>
 
         <div className="space-y-2">

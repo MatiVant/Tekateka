@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface NavbarProps {
   user?: { email?: string } | null
@@ -53,6 +54,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
+            {user && <ThemeToggle />}
             {user ? (
               <>
                 {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
