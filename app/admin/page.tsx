@@ -9,6 +9,7 @@ import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
+import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
 export default async function AdminPage() {
@@ -203,6 +204,12 @@ export default async function AdminPage() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {profile?.role !== "superadmin" && (
+          <div className="mt-12">
+            <ContactSuperadmin />
+          </div>
+        )}
       </main>
     </div>
   )

@@ -78,16 +78,21 @@ export function ProfileForm({ email, role, initialFullName, initialPhone, initia
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Teléfono de contacto</Label>
+        <Label htmlFor="phone">Teléfono de contacto {isOrganizer ? "*" : ""}</Label>
         <Input
           id="phone"
           type="tel"
+          required={isOrganizer}
           placeholder="+54 9 11 1234 5678"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           className="h-11"
         />
-        <p className="text-xs text-muted-foreground">Lo usamos para contactarte ante cualquier novedad.</p>
+        <p className="text-xs text-muted-foreground">
+          {isOrganizer
+            ? "Obligatorio: lo usamos para contactarte ante cualquier novedad de tus eventos."
+            : "Lo usamos para contactarte ante cualquier novedad."}
+        </p>
       </div>
 
       {isOrganizer && (

@@ -22,11 +22,19 @@ export async function updateProfile(formData: {
     return { error: "El nombre no puede estar vacío" }
   }
 
+  const { data: currentProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+  const isOrganizer = currentProfile?.role === "organizer" || currentProfile?.role === "superadmin"
+
+  const phone = formData.phone.trim()
+  if (isOrganizer && !phone) {
+    return { error: "El teléfono de contacto es obligatorio para organizadores" }
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({
       full_name: fullName,
-      phone: formData.phone.trim() || null,
+      phone: phone || null,
       payment_info: formData.payment_info.trim() || null,
     })
     .eq("id", user.id)

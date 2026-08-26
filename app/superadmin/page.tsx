@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Users, CheckCircle, XCircle, Clock, LayoutList } from "lucide-react"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
+import { MessagesInbox } from "@/components/superadmin/messages-inbox"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -34,6 +35,33 @@ export default async function SuperAdminPage() {
     .select("id, movement_type, amount, created_at, event_id, organizer_id, events(title)")
     .order("created_at", { ascending: false })
     .limit(8)
+
+  const { data: rawMessages } = await supabase
+    .from("organizer_messages")
+    .select("id, subject, body, priority, status, created_at, organizer_id")
+    .order("created_at", { ascending: false })
+    .limit(100)
+
+  const organizerIds = [...new Set((rawMessages || []).map((m) => m.organizer_id as string))]
+  const { data: senderProfiles } = organizerIds.length
+    ? await supabase.from("profiles").select("id, full_name, email, phone").in("id", organizerIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null; phone: string | null }[] }
+  const profileMap = new Map((senderProfiles || []).map((p) => [p.id, p]))
+
+  const messages = (rawMessages || []).map((m) => {
+    const p = profileMap.get(m.organizer_id as string)
+    return {
+      id: m.id as string,
+      subject: m.subject as string,
+      body: m.body as string,
+      priority: m.priority as "low" | "normal" | "high",
+      status: m.status as "unread" | "read" | "resolved",
+      created_at: m.created_at as string,
+      organizer_name: p?.full_name ?? null,
+      organizer_email: p?.email ?? null,
+      organizer_phone: p?.phone ?? null,
+    }
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,6 +150,10 @@ export default async function SuperAdminPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="mb-12">
+          <MessagesInbox messages={messages} />
         </section>
 
         {/* Organizers Section */}
