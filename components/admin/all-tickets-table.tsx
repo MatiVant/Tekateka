@@ -44,6 +44,7 @@ interface Ticket {
   buyer_email: string
   qr_code: string
   status: string
+  payment_status?: "pending" | "submitted" | "approved" | "rejected"
   purchased_at: string
   payment_receipt_url?: string
   payment_notes?: string
@@ -179,6 +180,11 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
     setIsReceiptDialogOpen(true)
   }
 
+  const getPaymentBadge = (status?: Ticket["payment_status"]) => {
+    const labels = { pending: "Pago pendiente", submitted: "Comprobante enviado", approved: "Pago aprobado", rejected: "Pago rechazado" }
+    return <Badge variant={status === "approved" ? "default" : status === "rejected" ? "destructive" : "secondary"}>{labels[status || "pending"]}</Badge>
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -232,6 +238,7 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
                 <th className="text-left p-4 font-medium text-xs">Promoción</th>
                 <th className="text-left p-4 font-medium text-xs">Precio</th>
                 <th className="text-left p-4 font-medium text-xs">Estado</th>
+                <th className="text-left p-4 font-medium text-xs">Pago</th>
                 <th className="text-left p-4 font-medium text-xs">Comprobante</th>
                 <th className="text-left p-4 font-medium text-xs">Acciones</th>
               </tr>
@@ -268,6 +275,7 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
                   </td>
                   <td className="p-4 font-semibold">{formatCurrency(ticket.final_price || ticket.events.price)}</td>
                   <td className="p-4">{getStatusBadge(ticket.status)}</td>
+                  <td className="p-4">{getPaymentBadge(ticket.payment_status)}</td>
                   <td className="p-4">
                     {ticket.payment_receipt_url ? (
                       <Button

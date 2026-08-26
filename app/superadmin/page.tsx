@@ -27,6 +27,11 @@ export default async function SuperAdminPage() {
     supabase.from("tickets").select("final_price").in("status", ["confirmed", "used"]),
   ])
   const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
+  const { data: movements } = await supabase
+    .from("platform_movements")
+    .select("id, movement_type, amount, created_at, event_id, organizer_id, events(title)")
+    .order("created_at", { ascending: false })
+    .limit(8)
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,6 +95,24 @@ export default async function SuperAdminPage() {
             <p className="mt-2 text-3xl font-bold">${totalSales.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
           </div>
         </div>
+
+        <section className="mb-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Últimos movimientos</h2>
+            <p className="text-sm text-muted-foreground">Actividad global de tickets y pagos</p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50"><tr><th className="p-4 text-left">Evento</th><th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr></thead>
+              <tbody>
+                {(movements || []).map((movement) => {
+                  const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
+                  return <tr key={movement.id} className="border-t border-border"><td className="p-4">{event?.title || "Evento eliminado"}</td><td className="p-4">{movement.movement_type}</td><td className="p-4">{Number(movement.amount || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</td><td className="p-4 text-muted-foreground">{new Date(movement.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td></tr>
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* Organizers Section */}
         <div>

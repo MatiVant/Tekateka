@@ -19,7 +19,8 @@ export async function updateTicketReceipt(
       .from('tickets')
       .update({
         payment_receipt_url: receiptUrl,
-        payment_notes: notes || null
+        payment_notes: notes || null,
+        payment_status: "submitted"
       })
       .eq('id', ticketId)
       .select()
