@@ -4,30 +4,28 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Nueva paleta púrpura vibrante para TekaTeka */
-  --background: oklch(0.98 0.005 280);
-  --foreground: oklch(0.15 0.01 280);
+  /* Paleta noche clara: superficies luminosas y azul petróleo */
+  --background: oklch(0.965 0.018 235);
+  --foreground: oklch(0.22 0.035 235);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.01 280);
+  --card-foreground: oklch(0.22 0.035 235);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.01 280);
-  /* Primario: púrpura vibrante TekaTeka */
-  --primary: oklch(0.55 0.24 280);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.01 280);
-  --secondary-foreground: oklch(0.15 0.01 280);
-  --muted: oklch(0.94 0.005 280);
-  --muted-foreground: oklch(0.5 0.01 280);
-  /* Acento: púrpura claro para highlights */
-  --accent: oklch(0.7 0.2 290);
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.9 0.005 280);
-  --input: oklch(0.96 0.005 280);
-  --ring: oklch(0.55 0.24 280);
-  --chart-1: oklch(0.55 0.24 280);
-  --chart-2: oklch(0.7 0.2 290);
+  --popover-foreground: oklch(0.22 0.035 235);
+  --primary: oklch(0.43 0.11 235);
+  --primary-foreground: oklch(0.99 0.005 235);
+  --secondary: oklch(0.93 0.025 235);
+  --secondary-foreground: oklch(0.25 0.04 235);
+  --muted: oklch(0.92 0.018 235);
+  --muted-foreground: oklch(0.48 0.035 235);
+  --accent: oklch(0.72 0.14 35);
+  --accent-foreground: oklch(0.22 0.035 35);
+  --destructive: oklch(0.58 0.19 27);
+  --destructive-foreground: oklch(0.99 0.005 27);
+  --border: oklch(0.88 0.025 235);
+  --input: oklch(0.98 0.008 235);
+  --ring: oklch(0.43 0.11 235);
+  --chart-1: oklch(0.43 0.11 235);
+  --chart-2: oklch(0.72 0.14 35);
   --chart-3: oklch(0.6 0.18 270);
   --chart-4: oklch(0.65 0.22 300);
   --chart-5: oklch(0.5 0.26 265);
@@ -43,15 +41,15 @@
 }
 
 .dark {
-  /* Tema oscuro minimalista con púrpura vibrante - Dark mode limpio */
-  --background: oklch(0.08 0.01 280);
+  /* Modo oscuro opcional, con el mismo azul petróleo */
+  --background: oklch(0.13 0.025 235);
   --foreground: oklch(0.95 0.01 280);
   --card: oklch(0.12 0.015 280);
   --card-foreground: oklch(0.95 0.01 280);
   --popover: oklch(0.12 0.015 280);
   --popover-foreground: oklch(0.95 0.01 280);
-  --primary: oklch(0.68 0.28 280);
-  --primary-foreground: oklch(0.08 0.01 280);
+  --primary: oklch(0.68 0.13 235);
+  --primary-foreground: oklch(0.12 0.02 235);
   --secondary: oklch(0.15 0.015 280);
   --secondary-foreground: oklch(0.95 0.01 280);
   --muted: oklch(0.2 0.01 280);

@@ -182,7 +182,8 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
 
   const getPaymentBadge = (status?: Ticket["payment_status"]) => {
     const labels = { pending: "Pago pendiente", submitted: "Comprobante enviado", approved: "Pago aprobado", rejected: "Pago rechazado" }
-    return <Badge variant={status === "approved" ? "default" : status === "rejected" ? "destructive" : "secondary"}>{labels[status || "pending"]}</Badge>
+    const className = status === "approved" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : status === "rejected" ? "bg-rose-100 text-rose-800 border-rose-200" : status === "submitted" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-muted text-muted-foreground"
+    return <Badge variant="outline" className={className}>{labels[status || "pending"]}</Badge>
   }
 
   const getStatusBadge = (status: string) => {

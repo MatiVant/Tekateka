@@ -51,47 +51,17 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
             <span className="text-xl font-bold text-primary">TekaTeka</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
             {user ? (
               <>
-                {(profile?.role === "organizer" || profile?.role === "superadmin") && (
-                  <Button variant="ghost" asChild>
-                    <Link href="/admin">Panel Admin</Link>
-                  </Button>
-                )}
-                {profile?.role === "superadmin" && (
-                  <>
-                    <Button variant="ghost" asChild>
-                      <Link href="/superadmin">Superadmin</Link>
-                    </Button>
-                    <Button variant="ghost" asChild>
-                      <Link href="/superadmin/events">Todos los Eventos</Link>
-                    </Button>
-                  </>
-                )}
-                {profile?.role === "ticketero" && (
-                  <Button variant="ghost" asChild>
-                    <Link href="/verify">Verificar Tickets</Link>
-                  </Button>
-                )}
-                <Button variant="ghost" asChild>
-                  <Link href="/my-tickets">Mis Entradas</Link>
-                </Button>
-                <Button variant="outline" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Salir
-                </Button>
+                {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
+                {profile?.role === "superadmin" && <><Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button><Button variant="ghost" asChild><Link href="/superadmin/events">Todos los Eventos</Link></Button></>}
+                {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
+                <Button variant="ghost" asChild><Link href="/my-tickets">Mis Entradas</Link></Button>
+                <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
               </>
-            ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href="/auth/login">Iniciar Sesión</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/auth/sign-up">Registrarse</Link>
-                </Button>
-              </>
-            )}
+            ) : <><Button variant="ghost" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button><Button asChild><Link href="/auth/sign-up">Registrarse</Link></Button></>}
           </div>
         </div>
       </div>
