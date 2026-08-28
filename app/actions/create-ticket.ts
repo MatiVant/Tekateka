@@ -93,7 +93,7 @@ export async function createTicket(data: CreateTicketData) {
 
       if (resend && event) {
         await resend.emails.send({
-          from: "Entradas <onboarding@resend.dev>",
+          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
           to: data.buyer_email,
           subject: `Compra recibida: ${event.title}`,
           html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Si todavía no pagaste, podés hacerlo desde la pantalla de compra.</p><p>Conservá este email: te enviaremos tus entradas cuando el pago sea confirmado.</p>`,

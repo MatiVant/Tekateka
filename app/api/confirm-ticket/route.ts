@@ -37,17 +37,6 @@ export async function POST(request: Request) {
 
     if (updateError) throw updateError
 
-    const canSendEmail = !process.env.RESEND_API_KEY?.startsWith("re_") || ticket.buyer_email === "mtrovant@gmail.com"
-
-    if (!canSendEmail) {
-      console.log("[v0] Email omitido - Resend en modo prueba solo permite enviar a mtrovant@gmail.com")
-      return NextResponse.json({
-        success: true,
-        message: "Ticket confirmado (email no enviado - modo prueba de Resend)",
-        warning: "Para enviar emails a otros destinatarios, verifica un dominio en resend.com/domains",
-      })
-    }
-
     if (!resend) {
       return NextResponse.json({ success: true, warning: "Email no configurado" })
     }
@@ -65,7 +54,7 @@ export async function POST(request: Request) {
       })
 
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: "TekaTeka <onboarding@resend.dev>",
+        from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
         to: ticket.buyer_email,
         subject: `✅ Tu entrada para ${ticket.events.title} ha sido confirmada`,
         html: `

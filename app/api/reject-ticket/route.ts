@@ -48,24 +48,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Error al rechazar el ticket" }, { status: 500 })
     }
 
-    const canSendEmail = !process.env.RESEND_API_KEY?.startsWith("re_") || ticket.buyer_email === "mtrovant@gmail.com"
-
-    if (!canSendEmail) {
-      console.log("[v0] Email de rechazo omitido - Resend en modo prueba solo permite enviar a mtrovant@gmail.com")
-      return NextResponse.json({
-        success: true,
-        message: "Ticket rechazado (email no enviado - modo prueba de Resend)",
-        warning: "Para enviar emails a otros destinatarios, verifica un dominio en resend.com/domains",
-      })
-    }
-
     if (!resend) {
       return NextResponse.json({ success: true, warning: "Email no configurado" })
     }
 
     try {
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: "TekaTeka <onboarding@resend.dev>",
+        from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
         to: ticket.buyer_email,
         subject: `❌ Tu pago para ${ticket.events.title} no pudo ser verificado`,
         html: `

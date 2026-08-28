@@ -73,10 +73,8 @@ export async function sendOrganizerMessage(formData: {
     const recipients = (superadmins ?? []).map((s) => s.email).filter((e): e is string => Boolean(e))
 
     if (resend && recipients.length > 0) {
-      const canSend = !process.env.RESEND_API_KEY?.startsWith("re_") || recipients.includes("mtrovant@gmail.com")
-      if (canSend) {
-        await resend.emails.send({
-          from: "TekaTeka <onboarding@resend.dev>",
+      await resend.emails.send({
+          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
           to: recipients,
           replyTo: user.email ?? undefined,
           subject: `[${PRIORITY_LABELS[priority]}] Mensaje de organizador: ${subject}`,
@@ -96,9 +94,6 @@ export async function sendOrganizerMessage(formData: {
             </div>
           `,
         })
-      } else {
-        console.log("[v0] Alerta omitida - Resend en modo prueba")
-      }
     }
   } catch (err) {
     console.log("[v0] sendOrganizerMessage - email error:", err instanceof Error ? err.message : String(err))
