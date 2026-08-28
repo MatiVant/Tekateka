@@ -102,7 +102,7 @@ export default async function AdminPage() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-12">
-          {profile?.role !== "superadmin" && <MercadoPagoConnect connected={Boolean(mercadoPagoConnection)} />}
+          <MercadoPagoConnect connected={Boolean(mercadoPagoConnection)} isSuperadmin={profile?.role === "superadmin"} />
 
           <div className="flex items-start justify-between mb-6">
             <div>

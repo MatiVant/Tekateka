@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { EventForm } from '@/components/admin/event-form';
 
 export default async function NewEventPage() {
-  const { authorized, user, profile } = await requireAuth(['organizer']);
+  const { authorized, user, profile } = await requireAuth(['organizer', 'superadmin']);
 
   if (!authorized || !user) {
     redirect('/auth/login');
