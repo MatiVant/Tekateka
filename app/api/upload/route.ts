@@ -9,6 +9,13 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Only JPG, PNG, and WebP images are allowed" }, { status: 400 })
+    }
+    if (file.size > 500 * 1024) {
+      return NextResponse.json({ error: "Image must be smaller than 500 KB" }, { status: 400 })
+    }
 
     // Upload to Vercel Blob
     const blob = await put(file.name, file, {

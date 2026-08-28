@@ -133,7 +133,11 @@ export function EventForm({ userId, event }: EventFormProps) {
         throw new Error("Error al subir la imagen")
       }
 
-      const { url } = await response.json()
+      const result = await response.json()
+      if (!result.url || typeof result.url !== "string" || !result.url.startsWith("https://")) {
+        throw new Error("La subida no devolvió una URL válida")
+      }
+      const { url } = result
 
       setImageUrl(url)
       setImagePreview(url)
@@ -159,6 +163,14 @@ export function EventForm({ userId, event }: EventFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isLoading) return
+    if (!imageUrl.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Falta la imagen del evento",
+        description: "Subí una imagen antes de guardar el evento.",
+      })
+      return
+    }
     setIsLoading(true)
 
     try {

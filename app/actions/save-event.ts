@@ -48,6 +48,10 @@ export async function saveEvent(
       throw new Error('No tienes permiso para crear eventos en nombre de otro usuario')
     }
 
+    if (!eventData.image_url || !eventData.image_url.startsWith('https://')) {
+      throw new Error('La imagen del evento es obligatoria y debe haberse subido correctamente')
+    }
+
     if (eventId) {
       // Actualizar evento existente
       const { error: updateError } = await supabase
