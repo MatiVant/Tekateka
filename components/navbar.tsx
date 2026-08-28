@@ -18,6 +18,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   const router = useRouter()
   const [user, setUser] = useState(initialUser)
   const [profile, setProfile] = useState(initialProfile)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -37,10 +38,25 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   }, [initialUser, initialProfile])
 
   const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
     const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
+    setUser(null)
+    setProfile(null)
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      console.error("[v0] Error al cerrar sesión:", error)
+      // Si la sesión local no pudo invalidarse, no dejamos la interfaz en un estado ambiguo.
+      setUser(initialUser)
+      setProfile(initialProfile)
+      setIsLoggingOut(false)
+      return
+    }
+
+    // Navegación completa: fuerza a Next.js a consultar la sesión/cookies nuevas
+    // y evita que quede visible el dashboard del árbol RSC anterior.
+    window.location.assign("/")
   }
 
   return (
@@ -61,7 +77,9 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
                 {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
                 {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
                 <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
-                <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
+                <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut} aria-busy={isLoggingOut}>
+                  <LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}
+                </Button>
               </>
             ) : (
               <>
