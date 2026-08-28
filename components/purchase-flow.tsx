@@ -215,6 +215,7 @@ export function PurchaseFlow({
         priceToUse = finalPrice
       }
 
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
       const ticketIds: string[] = []
 
       for (let i = 0; i < quantity; i++) {
@@ -229,6 +230,7 @@ export function PurchaseFlow({
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
           marketing_consent: marketingConsent,
+          buyer_id: currentUser?.id ?? null,
         }
 
         console.log(`[v0] Creando ticket ${i + 1}/${quantity}...`, ticketData)

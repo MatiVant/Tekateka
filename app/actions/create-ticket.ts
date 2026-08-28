@@ -14,6 +14,7 @@ interface CreateTicketData {
   promotion_code?: string
   final_price: number
   marketing_consent?: boolean
+  buyer_id?: string | null
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -49,7 +50,7 @@ export async function createTicket(data: CreateTicketData) {
       p_buyer_email: data.buyer_email,
       p_qr_code: data.qr_code,
       p_final_price: data.final_price,
-      p_buyer_id: null,
+      p_buyer_id: data.buyer_id ?? null,
       p_marketing_consent: data.marketing_consent ?? false,
     })
 

@@ -14,20 +14,33 @@ export default async function MyTicketsPage() {
     redirect("/auth/login")
   }
 
-  const { data: tickets } = await supabase
+  const ticketSelect = `
+    *,
+    events (
+      title,
+      event_date,
+      venue,
+      price,
+      image_url
+    )
+  `
+
+  const { data: ticketsByUser } = await supabase
     .from("tickets")
-    .select(`
-      *,
-      events (
-        title,
-        event_date,
-        venue,
-        price,
-        image_url
-      )
-    `)
+    .select(ticketSelect)
     .eq("buyer_id", userData.user.id)
     .order("purchased_at", { ascending: false })
+
+  // Compatibilidad con compras anteriores creadas antes de guardar buyer_id.
+  const { data: ticketsByEmail } = await supabase
+    .from("tickets")
+    .select(ticketSelect)
+    .eq("buyer_email", userData.user.email ?? "")
+    .order("purchased_at", { ascending: false })
+
+  const tickets = Array.from(
+    new Map([...(ticketsByUser || []), ...(ticketsByEmail || [])].map((ticket) => [ticket.id, ticket])).values(),
+  ).sort((a, b) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime())
 
   const getStatusBadge = (status: string) => {
     switch (status) {
