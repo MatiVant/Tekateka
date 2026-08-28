@@ -22,14 +22,38 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
 
   useEffect(() => {
     const supabase = createClient()
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    let mounted = true
+
+    const syncSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!mounted) return
       setUser(session?.user ? { email: session.user.email } : null)
+      if (!session?.user) {
+        setProfile(null)
+        return
+      }
+      const { data: nextProfile } = await supabase.from("profiles").select("role, full_name").eq("id", session.user.id).maybeSingle()
+      if (mounted) setProfile(nextProfile)
+    }
+
+    void syncSession()
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+      setUser(session?.user ? { email: session.user.email } : null)
+      if (!session?.user) {
+        setProfile(null)
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        void syncSession()
+      }
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
         router.refresh()
       }
     })
 
-    return () => authListener.subscription.unsubscribe()
+    return () => {
+      mounted = false
+      authListener.subscription.unsubscribe()
+    }
   }, [router])
 
   useEffect(() => {

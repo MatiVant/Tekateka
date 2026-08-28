@@ -104,6 +104,51 @@ export async function sendOrganizerMessage(formData: {
   return { success: true }
 }
 
+export async function replyToOrganizerMessage(formData: { messageId: string; body: string }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "No autenticado" }
+  const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single()
+  if (profile?.role !== "superadmin") return { error: "No autorizado" }
+
+  const body = formData.body.trim()
+  if (!body) return { error: "La respuesta no puede estar vacía" }
+  if (body.length > 4000) return { error: "La respuesta es demasiado larga" }
+
+  const admin = createAdminClient()
+  const { data: original } = await admin.from("organizer_messages").select("organizer_id, subject").eq("id", formData.messageId).single()
+  if (!original) return { error: "Mensaje no encontrado" }
+
+  const { data: organizer } = await admin.from("profiles").select("email, full_name").eq("id", original.organizer_id).single()
+  if (!organizer?.email) return { error: "El organizador no tiene email" }
+
+  const { error } = await admin.from("organizer_messages").insert({
+    organizer_id: original.organizer_id,
+    subject: `Re: ${original.subject}`,
+    body,
+    priority: "normal",
+    status: "unread",
+  })
+  if (error) return { error: "No se pudo guardar la respuesta" }
+
+  try {
+    if (resend) {
+      await resend.emails.send({
+        from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+        to: organizer.email,
+        replyTo: "notificaciones@tktk.buholabs.com.ar",
+        subject: `Respuesta: ${original.subject}`,
+        html: `<p>Hola ${organizer.full_name || ""},</p><p>${body.replace(/</g, "&lt;")}</p><p>Podés continuar la conversación respondiendo este email.</p>`,
+      })
+    }
+  } catch (err) {
+    console.log("[v0] replyToOrganizerMessage - email error:", err instanceof Error ? err.message : String(err))
+  }
+
+  revalidatePath("/superadmin")
+  return { success: true }
+}
+
 export async function updateMessageStatus(messageId: string, status: "unread" | "read" | "resolved") {
   const supabase = await createClient()
   const {

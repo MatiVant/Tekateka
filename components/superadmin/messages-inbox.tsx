@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { updateMessageStatus } from "@/app/actions/organizer-messages"
-import { Mail, Phone, Check, MailOpen, Inbox } from "lucide-react"
+import { replyToOrganizerMessage, updateMessageStatus } from "@/app/actions/organizer-messages"
+import { Mail, Phone, Check, MailOpen, Inbox, Send } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 type Status = "unread" | "read" | "resolved"
 type Priority = "low" | "normal" | "high"
@@ -48,9 +50,24 @@ export function MessagesInbox({ messages }: { messages: OrganizerMessage[] }) {
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
   const [filter, setFilter] = useState<Status | "all">("all")
+  const [replyFor, setReplyFor] = useState<string | null>(null)
+  const [replyBody, setReplyBody] = useState("")
 
   const visible = filter === "all" ? messages : messages.filter((m) => m.status === filter)
   const unreadCount = messages.filter((m) => m.status === "unread").length
+
+  const sendReply = (messageId: string) => {
+    startTransition(async () => {
+      const result = await replyToOrganizerMessage({ messageId, body: replyBody })
+      if (result.error) {
+        toast({ variant: "destructive", title: "Error", description: result.error })
+        return
+      }
+      setReplyBody("")
+      setReplyFor(null)
+      toast({ title: "Respuesta enviada", description: "Se guardó en el historial y se envió por email." })
+    })
+  }
 
   const changeStatus = (id: string, status: Status) => {
     startTransition(async () => {
@@ -136,6 +153,9 @@ export function MessagesInbox({ messages }: { messages: OrganizerMessage[] }) {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={isPending} onClick={() => setReplyFor(replyFor === m.id ? null : m.id)}>
+                    <Send className="mr-2 h-4 w-4" />Responder
+                  </Button>
                   {m.status !== "read" && (
                     <Button size="sm" variant="outline" disabled={isPending} onClick={() => changeStatus(m.id, "read")}>
                       <MailOpen className="mr-2 h-4 w-4" />
@@ -159,6 +179,26 @@ export function MessagesInbox({ messages }: { messages: OrganizerMessage[] }) {
                     </Button>
                   )}
                 </div>
+
+                {replyFor === m.id && (
+                  <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                    <Label htmlFor={`reply-${m.id}`}>Respuesta</Label>
+                    <Textarea
+                      id={`reply-${m.id}`}
+                      value={replyBody}
+                      onChange={(event) => setReplyBody(event.target.value)}
+                      placeholder="Escribí una respuesta para el organizador..."
+                      rows={4}
+                      disabled={isPending}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" disabled={isPending} onClick={() => { setReplyFor(null); setReplyBody("") }}>Cancelar</Button>
+                      <Button type="button" disabled={isPending || !replyBody.trim()} onClick={() => sendReply(m.id)}>
+                        <Send className="mr-2 h-4 w-4" />{isPending ? "Enviando..." : "Enviar respuesta"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
