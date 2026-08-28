@@ -56,14 +56,15 @@ export async function POST(request: Request) {
     : payment.status === "rejected" || payment.status === "cancelled"
       ? "rejected"
       : "pending"
-  await supabase
-    .from("tickets")
-    .update({
-      payment_id: String(paymentId),
-      payment_status: status,
-      paid_at: status === "approved" ? new Date().toISOString() : null,
-    })
-    .in("id", ticketIds)
-    .eq("payment_provider", "mercadopago")
+  const { error: processError } = await supabase.rpc("process_mercadopago_payment", {
+    p_ticket_ids: ticketIds,
+    p_payment_id: String(paymentId),
+    p_payment_status: status,
+  })
+  if (processError) {
+    console.error("[v0] Error procesando pago de Mercado Pago:", processError)
+    return NextResponse.json({ error: "No se pudo procesar el pago" }, { status: 500 })
+  }
+
   return NextResponse.json({ received: true })
 }
