@@ -19,6 +19,14 @@ export async function POST(request: Request) {
   const preference = await fetch("https://api.mercadopago.com/checkout/preferences", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ title: event.title, quantity: 1, unit_price: total, currency_id: "ARS" }], payer: { name: firstTicket.buyer_name, email: firstTicket.buyer_email }, external_reference: ids.join(","), notification_url: `${new URL(request.url).origin}/api/mercadopago/webhook`, back_urls: { success: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=success`, pending: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=pending`, failure: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=failure` }, auto_return: "approved" }) })
   if (!preference.ok) return NextResponse.json({ error: "No se pudo crear el checkout de Mercado Pago" }, { status: 502 })
   const data = await preference.json()
-  await supabase.from("tickets").update({ payment_provider: "mercadopago", payment_id: data.id, payment_status: "pending" }).in("id", ids)
+  await supabase
+    .from("tickets")
+    .update({
+      payment_provider: "mercadopago",
+      mercado_pago_reference: String(data.id),
+      payment_id: null,
+      payment_status: "pending",
+    })
+    .in("id", ids)
   return NextResponse.json({ initPoint: data.init_point, preferenceId: data.id })
 }

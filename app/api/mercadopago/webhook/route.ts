@@ -17,16 +17,53 @@ export async function POST(request: Request) {
   if (Date.now() - Number(ts) * 1000 > 5 * 60 * 1000) return NextResponse.json({ error: "Webhook expirado" }, { status: 401 })
 
   const supabase = await createClient()
-  const { data: ticket } = await supabase.from("tickets").select("id, event_id, events!inner(organizer_id)").eq("payment_id", String(paymentId)).maybeSingle()
-  if (!ticket) return NextResponse.json({ received: true })
-  const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
-  const accessToken = await getProducerAccessToken(event.organizer_id)
+  const mpUserId = payload?.user_id ?? payload?.user_id?.toString()
+  if (!mpUserId) return NextResponse.json({ received: true })
+
+  const { data: connection } = await supabase
+    .from("mercadopago_connections")
+    .select("producer_id")
+    .eq("mp_user_id", String(mpUserId))
+    .maybeSingle()
+  if (!connection?.producer_id) return NextResponse.json({ received: true })
+
+  const accessToken = await getProducerAccessToken(connection.producer_id)
   if (!accessToken) return NextResponse.json({ received: true })
 
-  const { data: payment } = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((r) => r.ok ? r.json() : null)
-  if (!payment) return NextResponse.json({ received: true })
-  const status = payment.status === "approved" ? "approved" : payment.status === "rejected" || payment.status === "cancelled" ? "rejected" : "pending"
-  const ticketIds = String(payment.external_reference || ticket.id).split(",").filter(Boolean)
-  await supabase.from("tickets").update({ payment_status: status, paid_at: status === "approved" ? new Date().toISOString() : null }).in("id", ticketIds)
+  const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(String(paymentId))}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!paymentResponse.ok) return NextResponse.json({ received: true })
+  const payment = await paymentResponse.json()
+  const ticketIds = String(payment.external_reference || "").split(",").filter(Boolean)
+  if (!ticketIds.length) return NextResponse.json({ received: true })
+
+  const { data: matchingTickets } = await supabase
+    .from("tickets")
+    .select("id, event_id, events!inner(organizer_id)")
+    .in("id", ticketIds)
+  if (!matchingTickets?.length || matchingTickets.length !== ticketIds.length) return NextResponse.json({ received: true })
+  const eventIds = new Set(matchingTickets.map((ticket) => ticket.event_id))
+  if (eventIds.size !== 1) return NextResponse.json({ received: true })
+  const organizerIds = new Set(matchingTickets.map((ticket) => {
+    const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
+    return event?.organizer_id
+  }))
+  if (organizerIds.size !== 1 || !organizerIds.has(connection.producer_id)) return NextResponse.json({ received: true })
+
+  const status = payment.status === "approved"
+    ? "approved"
+    : payment.status === "rejected" || payment.status === "cancelled"
+      ? "rejected"
+      : "pending"
+  await supabase
+    .from("tickets")
+    .update({
+      payment_id: String(paymentId),
+      payment_status: status,
+      paid_at: status === "approved" ? new Date().toISOString() : null,
+    })
+    .in("id", ticketIds)
+    .eq("payment_provider", "mercadopago")
   return NextResponse.json({ received: true })
 }
