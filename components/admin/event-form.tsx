@@ -98,8 +98,8 @@ export function EventForm({ userId, event }: EventFormProps) {
       return
     }
 
-    if (file.size > 500 * 1024) {
-      toast({ variant: "destructive", title: "Imagen demasiado pesada", description: "Reducila a menos de 500 KB para que se vea rápido en la Home." })
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "Imagen demasiado pesada", description: "Reducila a menos de 5 MB para poder subirla." })
       return
     }
 
@@ -124,16 +124,18 @@ export function EventForm({ userId, event }: EventFormProps) {
       const response = await fetch("/api/upload", {
         method: "POST",
         body: uploadFormData,
+        credentials: "same-origin",
       }).catch((err) => {
         handleNetworkError(err)
         throw err
       })
 
+      const result = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error("Error al subir la imagen")
+        throw new Error(result.error || `Error al subir la imagen (${response.status})`)
       }
 
-      const result = await response.json()
+      
       if (!result.url || typeof result.url !== "string" || !result.url.startsWith("https://")) {
         throw new Error("La subida no devolvió una URL válida")
       }

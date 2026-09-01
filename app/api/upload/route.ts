@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ error: "Only JPG, PNG, and WebP images are allowed" }, { status: 400 })
     }
-    if (file.size > 500 * 1024) {
-      return NextResponse.json({ error: "Image must be smaller than 500 KB" }, { status: 400 })
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image must be smaller than 5 MB" }, { status: 400 })
     }
 
     // Upload to Vercel Blob
