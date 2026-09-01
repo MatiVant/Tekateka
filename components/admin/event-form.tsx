@@ -39,8 +39,26 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [description, setDescription] = useState(event?.description || "")
 
   const eventDateTime = event?.event_date ? new Date(event.event_date) : null
-  const [eventDate, setEventDate] = useState(eventDateTime ? eventDateTime.toISOString().slice(0, 10) : "")
-  const [eventTime, setEventTime] = useState(eventDateTime ? eventDateTime.toISOString().slice(11, 16) : "")
+  const argentinaDateTime = eventDateTime
+    ? new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(eventDateTime).reduce<Record<string, string>>((parts, part) => {
+        parts[part.type] = part.value
+        return parts
+      }, {})
+    : null
+  const [eventDate, setEventDate] = useState(
+    argentinaDateTime ? `${argentinaDateTime.year}-${argentinaDateTime.month}-${argentinaDateTime.day}` : "",
+  )
+  const [eventTime, setEventTime] = useState(
+    argentinaDateTime ? `${argentinaDateTime.hour}:${argentinaDateTime.minute}` : "",
+  )
 
   const [venue, setVenue] = useState(event?.venue || "")
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
@@ -188,7 +206,8 @@ export function EventForm({ userId, event }: EventFormProps) {
     setIsLoading(true)
 
     try {
-      const combinedDateTime = new Date(`${eventDate}T${eventTime}:00`).toISOString()
+      // El formulario representa hora civil argentina; se convierte explícitamente a UTC.
+      const combinedDateTime = new Date(`${eventDate}T${eventTime}:00-03:00`).toISOString()
 
       let basePrice = 0
       if (eventType === "free") {

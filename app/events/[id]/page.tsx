@@ -67,11 +67,12 @@ export default async function EventDetailPage({
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <span className="text-lg">
-                  {eventDate.toLocaleDateString("es-ES", {
+                  {eventDate.toLocaleDateString("es-AR", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
                     day: "numeric",
+                    timeZone: "America/Argentina/Buenos_Aires",
                   })}
                 </span>
               </div>
@@ -79,9 +80,10 @@ export default async function EventDetailPage({
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-muted-foreground" />
                 <span className="text-lg">
-                  {eventDate.toLocaleTimeString("es-ES", {
+                  {eventDate.toLocaleTimeString("es-AR", {
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "America/Argentina/Buenos_Aires",
                   })}
                 </span>
               </div>
