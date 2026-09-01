@@ -77,6 +77,10 @@ export function EventForm({ userId, event }: EventFormProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Mostrar la vista previa inmediatamente, antes de esperar la subida al servidor.
+    const localPreviewUrl = URL.createObjectURL(file)
+    setImagePreview(localPreviewUrl)
+
     // La Home recorta las imágenes en formato horizontal 16:9.
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
     if (!allowedTypes.includes(file.type)) {
@@ -105,9 +109,16 @@ export function EventForm({ userId, event }: EventFormProps) {
 
     const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
       const image = new Image()
-      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
-      image.onerror = () => reject(new Error("No se pudo leer la imagen"))
-      image.src = URL.createObjectURL(file)
+      const dimensionsUrl = URL.createObjectURL(file)
+      image.onload = () => {
+        URL.revokeObjectURL(dimensionsUrl)
+        resolve({ width: image.naturalWidth, height: image.naturalHeight })
+      }
+      image.onerror = () => {
+        URL.revokeObjectURL(dimensionsUrl)
+        reject(new Error("No se pudo leer la imagen"))
+      }
+      image.src = dimensionsUrl
     })
     const ratio = dimensions.width / dimensions.height
     if (dimensions.width < 1200 || Math.abs(ratio - 16 / 9) > 0.08) {
@@ -145,6 +156,7 @@ export function EventForm({ userId, event }: EventFormProps) {
       setImagePreview(url)
     } catch (error) {
       console.error("Error uploading image:", error)
+      // La preview local sigue visible para que el admin pueda identificar el archivo seleccionado.
       if (!(error instanceof TypeError)) {
         toast({
           variant: "destructive",
