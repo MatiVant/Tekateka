@@ -88,6 +88,14 @@ export default async function AdminPage() {
     .select("*, events!inner(*)")
     .eq("events.organizer_id", user.id)
 
+  const { data: externalPayments } = await adminSupabase
+    .from("external_payment_notifications")
+    .select("payment_id, amount, currency, payer_email, payment_date, raw_status, created_at")
+    .eq("producer_id", user.id)
+    .eq("status", "pending_review")
+    .order("created_at", { ascending: false })
+    .limit(20)
+
   const totalEvents = events?.length || 0
   const totalTickets = tickets?.length || 0
   const confirmedTickets = tickets?.filter((t) => t.payment_status === "approved" || t.status === "confirmed").length || 0
@@ -182,6 +190,24 @@ export default async function AdminPage() {
             </Button>
           </div>
         </div>
+
+        {externalPayments && externalPayments.length > 0 && (
+          <section className="mb-12 rounded-lg border border-amber-500/40 bg-amber-500/5 p-6" aria-labelledby="external-payments-title">
+            <h2 id="external-payments-title" className="text-xl font-bold">Pagos por link externo para revisar</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Mercado Pago informó estos pagos, pero no están vinculados automáticamente a una entrada.</p>
+            <div className="mt-4 space-y-3">
+              {externalPayments.map((payment) => (
+                <div key={payment.payment_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-4 text-sm">
+                  <div>
+                    <p className="font-medium">Pago #{payment.payment_id}</p>
+                    <p className="text-muted-foreground">Pagador: {payment.payer_email || "No informado"} · Estado: {payment.raw_status || "No informado"}</p>
+                  </div>
+                  <p className="font-semibold">{payment.amount ?? "—"} {payment.currency || ""}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Events Section */}
         <div>

@@ -36,7 +36,43 @@ export async function POST(request: Request) {
   if (!paymentResponse.ok) return NextResponse.json({ received: true })
   const payment = await paymentResponse.json()
   const ticketIds = String(payment.external_reference || "").split(",").filter(Boolean)
-  if (!ticketIds.length) return NextResponse.json({ received: true })
+
+  // Los links externos no tienen external_reference de nuestra app.
+  // Se registran para revisión manual y nunca confirman tickets automáticamente.
+  if (!ticketIds.length) {
+    const { error: notificationError } = await supabase.from("external_payment_notifications").upsert({
+      payment_id: String(paymentId),
+      producer_id: connection.producer_id,
+      status: "pending_review",
+      amount: payment.transaction_amount ?? null,
+      currency: payment.currency_id ?? null,
+      payer_email: payment.payer?.email ?? null,
+      payment_date: payment.date_approved ?? payment.date_created ?? null,
+      raw_status: payment.status ?? null,
+    }, { onConflict: "payment_id" })
+
+    if (notificationError) {
+      console.error("[v0] No se pudo registrar pago externo:", notificationError)
+      return NextResponse.json({ error: "No se pudo registrar el pago" }, { status: 500 })
+    }
+
+    const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", connection.producer_id).maybeSingle()
+    if (organizer?.email && process.env.RESEND_API_KEY) {
+      try {
+        const { Resend } = await import("resend")
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        await resend.emails.send({
+          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+          to: organizer.email,
+          subject: "Pago recibido por link externo — requiere revisión",
+          html: `<p>Hola ${organizer.full_name || ""},</p><p>Mercado Pago informó un pago recibido por un link externo.</p><ul><li><strong>Importe:</strong> ${payment.transaction_amount ?? "No informado"} ${payment.currency_id ?? ""}</li><li><strong>Payment ID:</strong> ${String(paymentId)}</li><li><strong>Estado:</strong> ${payment.status ?? "No informado"}</li><li><strong>Email del pagador:</strong> ${payment.payer?.email ?? "No informado"}</li></ul><p>Revisá el pago en Mercado Pago y confirmá manualmente la entrada si corresponde.</p>`,
+        })
+      } catch (emailError) {
+        console.error("[v0] No se pudo enviar aviso de pago externo:", emailError)
+      }
+    }
+    return NextResponse.json({ received: true, requires_review: true })
+  }
 
   const { data: matchingTickets } = await supabase
     .from("tickets")
