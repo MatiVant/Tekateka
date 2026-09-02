@@ -18,7 +18,7 @@ export function getPaymentStatusLabel(status?: string | null) {
 export function getMovementTypeLabel(type?: string | null) {
   switch (type) {
     case "ticket_created":
-      return "Entrada creada"
+      return "Por ingresar"
     case "ticket_sale":
       return "Venta de entrada"
     case "payment_approved":
