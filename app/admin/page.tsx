@@ -97,12 +97,16 @@ export default async function AdminPage() {
     .order("created_at", { ascending: false })
     .limit(20)
 
-  const { data: movements } = await adminSupabase
-    .from("platform_movements")
-    .select("id, movement_type, amount, created_at, event_id, ticket_id, metadata, events!inner(title, organizer_id), tickets(buyer_name, buyer_email)")
-    .eq("events.organizer_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50)
+  const { data: allOrganizerEvents } = await adminSupabase.from("events").select("id").eq("organizer_id", user.id)
+  const organizerEventIds = (allOrganizerEvents || []).map((event) => event.id)
+  const { data: movements } = organizerEventIds.length
+    ? await adminSupabase
+        .from("platform_movements")
+        .select("id, movement_type, amount, created_at, event_id, ticket_id, metadata, events(title, organizer_id), tickets(buyer_name, buyer_email)")
+        .in("event_id", organizerEventIds)
+        .order("created_at", { ascending: false })
+        .limit(200)
+    : { data: [] }
 
   const totalEvents = events?.length || 0
   const totalTickets = tickets?.length || 0
@@ -208,7 +212,7 @@ export default async function AdminPage() {
                 <div key={payment.payment_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-4 text-sm">
                   <div>
                     <p className="font-medium">Pago #{payment.payment_id}</p>
-                    <p className="text-muted-foreground">Pagador: {payment.payer_email || "No informado"} · Estado: {payment.raw_status || "No informado"}</p>
+                    <p className="text-muted-foreground">Pagador: {payment.payer_email || "No informado"} · Estado: {payment.raw_status === "approved" ? "Pago aprobado" : payment.raw_status === "pending" ? "Pago pendiente" : payment.raw_status === "rejected" ? "Pago rechazado" : payment.raw_status || "No informado"}</p>
                   </div>
                   <p className="font-semibold">{payment.amount ?? "—"} {payment.currency || ""}</p>
                 </div>
