@@ -15,6 +15,25 @@ export function getPaymentStatusLabel(status?: string | null) {
   }
 }
 
+export function getMovementTypeLabel(type?: string | null) {
+  switch (type) {
+    case "ticket_sale":
+      return "Venta de entrada"
+    case "ticket_payment":
+      return "Pago de entrada"
+    case "platform_fee":
+      return "Comisión de plataforma"
+    case "organizer_payout":
+      return "Liquidación al organizador"
+    case "refund":
+      return "Reembolso"
+    case "ticket_refund":
+      return "Reembolso de entrada"
+    default:
+      return type ? type.replaceAll("_", " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase()) : "Movimiento"
+  }
+}
+
 export function getTicketStatusLabel(status?: string | null) {
   switch (status) {
     case "confirmed":

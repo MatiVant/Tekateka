@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { getMovementTypeLabel } from "@/lib/payment-status"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Calendar, Ticket, DollarSign, Users, Plus, Clock, XCircle } from "lucide-react"
@@ -98,7 +99,7 @@ export default async function AdminPage() {
 
   const { data: movements } = await adminSupabase
     .from("platform_movements")
-    .select("id, movement_type, amount, created_at, event_id, events!inner(title, organizer_id)")
+    .select("id, movement_type, amount, created_at, event_id, ticket_id, metadata, events!inner(title, organizer_id), tickets(buyer_name, buyer_email)")
     .eq("events.organizer_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50)
@@ -224,21 +225,26 @@ export default async function AdminPage() {
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
-                <tr><th className="p-4 text-left">Evento</th><th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr>
+                <tr><th className="p-4 text-left">Evento</th><th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Persona</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr>
               </thead>
               <tbody>
                 {(movements || []).map((movement) => {
                   const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
+                  const ticket = Array.isArray(movement.tickets) ? movement.tickets[0] : movement.tickets
+                  const metadata = movement.metadata as { buyer_name?: string; buyer_email?: string } | null
+                  const buyerName = ticket?.buyer_name || metadata?.buyer_name
+                  const buyerEmail = ticket?.buyer_email || metadata?.buyer_email
                   return (
                     <tr key={movement.id} className="border-t border-border">
                       <td className="p-4">{event?.title || "Evento eliminado"}</td>
-                      <td className="p-4">{movement.movement_type}</td>
+                      <td className="p-4">{getMovementTypeLabel(movement.movement_type)}</td>
+                      <td className="p-4"><div>{buyerName || "No asociada"}</div>{buyerEmail && <div className="text-xs text-muted-foreground">{buyerEmail}</div>}</td>
                       <td className="p-4">{Number(movement.amount || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</td>
                       <td className="p-4 text-muted-foreground">{new Date(movement.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td>
                     </tr>
                   )
                 })}
-                {!movements?.length && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Todavía no hay movimientos.</td></tr>}
+                {!movements?.length && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Todavía no hay movimientos.</td></tr>}
               </tbody>
             </table>
           </div>
