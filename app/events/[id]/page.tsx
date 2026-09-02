@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,6 +7,15 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { PurchaseFlow } from "@/components/purchase-flow"
 import { formatCurrency } from "@/lib/format"
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: event } = await supabase.from("events").select("title, description, image_url, venue, event_date").eq("id", id).single()
+  if (!event) return { title: "Evento | TekaTeka" }
+  const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
+  return { title: `${event.title} | TekaTeka`, description: event.description || `${event.title} - ${date} en ${event.venue}`, openGraph: { title: event.title, description: event.description || `${date} en ${event.venue}`, images: event.image_url ? [event.image_url] : undefined } }
+}
 
 export default async function EventDetailPage({
   params,

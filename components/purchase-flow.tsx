@@ -512,8 +512,11 @@ export function PurchaseFlow({
         {paymentNotice && <Alert variant={paymentNotice.includes("no se completó") ? "destructive" : "default"}><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <Alert>
           <AlertDescription className="text-sm leading-relaxed">
-            {paymentInstructions ||
-              "Por favor, realiza la transferencia bancaria y sube el comprobante. Te confirmaremos tu entrada una vez verificado el pago."}
+            {mercadoPagoLink || checkoutUrl
+              ? "Usá el botón de Mercado Pago para completar el pago. Una vez aprobado, tu entrada se confirmará automáticamente."
+              : paymentInstructions
+                ? paymentInstructions
+                : "Realizá la transferencia bancaria según las instrucciones y luego cargá el comprobante. Un organizador revisará el pago y confirmará tu entrada manualmente."}
           </AlertDescription>
         </Alert>
 

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
 import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
+import { ShareEventButton } from "@/components/admin/share-event-button"
 
 interface EventsListProps {
   userId: string
@@ -113,11 +114,12 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
 
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/events/${event.id}`}>
+                  <Link href={`/events/${event.id}?evento=${encodeURIComponent(event.title)}`}>
                     <Eye className="mr-1 h-3 w-3" />
                     Ver
                   </Link>
                 </Button>
+                <ShareEventButton eventId={event.id} eventTitle={event.title} />
                 {event.status !== "finished" && (
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/admin/events/${event.id}/edit`}>
