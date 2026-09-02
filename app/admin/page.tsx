@@ -164,18 +164,18 @@ export default async function AdminPage() {
           )}
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-          <div className="group p-6 bg-card border border-border rounded-lg hover:border-primary/30 transition-all duration-300">
-            <div className="flex items-start justify-between mb-4">
+        {/* Resumen compacto */}
+        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="p-4 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">Eventos Activos</span>
               <Calendar className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
             </div>
             <div className="text-3xl font-bold text-foreground">{totalEvents}</div>
           </div>
 
-          <div className="group p-6 bg-card border border-border rounded-lg hover:border-primary/30 transition-all duration-300">
-            <div className="flex items-start justify-between mb-4">
+          <div className="p-4 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">Entradas Vendidas</span>
               <Ticket className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
             </div>
@@ -183,16 +183,16 @@ export default async function AdminPage() {
             <p className="text-xs text-muted-foreground mt-2">{confirmedTickets} confirmadas</p>
           </div>
 
-          <div className="group p-6 bg-card border border-border rounded-lg hover:border-primary/30 transition-all duration-300">
-            <div className="flex items-start justify-between mb-4">
+          <div className="p-4 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">Ingresos Confirmados</span>
               <DollarSign className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
             </div>
             <div className="text-3xl font-bold text-foreground">${totalRevenue.toFixed(2)}</div>
           </div>
 
-          <div className="group p-6 bg-card border border-border rounded-lg hover:border-primary/30 transition-all duration-300">
-            <div className="flex items-start justify-between mb-4">
+          <div className="p-4 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">Pendientes</span>
               <Users className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
             </div>
@@ -202,6 +202,19 @@ export default async function AdminPage() {
             </Button>
           </div>
         </div>
+
+        {/* Events Section */}
+        <section className="mb-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Listado de Eventos</h2>
+            <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
+          </div>
+          <Tabs defaultValue="active" className="w-full">
+            <div className="flex items-center justify-between mb-6"><TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList></div>
+            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} /></TabsContent>
+            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} /></TabsContent>
+          </Tabs>
+        </section>
 
         {externalPayments && externalPayments.length > 0 && (
           <section className="mb-12 rounded-lg border border-amber-500/40 bg-amber-500/5 p-6" aria-labelledby="external-payments-title">
@@ -229,27 +242,7 @@ export default async function AdminPage() {
           <MovementsTable movements={movements || []} />
         </section>
 
-        {/* Events Section */}
-        <div>
-          <Tabs defaultValue="active" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold">Listado de Eventos</h2>
-                <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
-              </div>
-              <TabsList className="grid w-fit grid-cols-2">
-                <TabsTrigger value="active">Activos</TabsTrigger>
-                <TabsTrigger value="archived">Finalizados</TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value="active">
-              <EventsList userId={user.id} showArchived={false} />
-            </TabsContent>
-            <TabsContent value="archived">
-              <EventsList userId={user.id} showArchived={true} />
-            </TabsContent>
-          </Tabs>
-        </div>
+
 
         {profile?.role !== "superadmin" && (
           <div className="mt-12">
