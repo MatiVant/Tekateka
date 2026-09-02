@@ -479,8 +479,13 @@ export function EventForm({ userId, event }: EventFormProps) {
           onChange={(e) => setMercadoPagoLink(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          Proporciona el link de pago de Mercado Pago para que los compradores paguen las entradas
+          Proporciona el link de pago de Mercado Pago para que los compradores paguen las entradas.
         </p>
+        {mercadoPagoLink.trim() && (
+          <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            Importante: Mercado Pago no informará automáticamente a esta app sobre los pagos realizados con este link. El organizador deberá revisar el pago y confirmar manualmente cada entrada.
+          </p>
+        )}
       </div>
 
       {!event && (

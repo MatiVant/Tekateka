@@ -54,9 +54,9 @@ export async function POST(request: Request) {
         },
       })
 
-        const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
+        const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/ticket/${encodeURIComponent(ticket.qr_code)}`
+      const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
       const recipients = [ticket.buyer_email, organizer?.email].filter((email, index, list): email is string => Boolean(email) && list.indexOf(email) === index)
-      const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/ticket/${encodeURIComponent(ticket.qr_code)}`
 
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
