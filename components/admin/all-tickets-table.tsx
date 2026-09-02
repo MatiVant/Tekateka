@@ -19,6 +19,7 @@ import {
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
+import { getPaymentStatusLabel } from "@/lib/payment-status"
 
 interface TicketPromotion {
   id: string
@@ -181,9 +182,8 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
   }
 
   const getPaymentBadge = (status?: Ticket["payment_status"]) => {
-    const labels = { pending: "Pago pendiente", submitted: "Comprobante enviado", approved: "Pago aprobado", rejected: "Pago rechazado" }
     const className = status === "approved" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : status === "rejected" ? "bg-rose-100 text-rose-800 border-rose-200" : status === "submitted" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-muted text-muted-foreground"
-    return <Badge variant="outline" className={className}>{labels[status || "pending"]}</Badge>
+    return <Badge variant="outline" className={className}>{getPaymentStatusLabel(status)}</Badge>
   }
 
   const getStatusBadge = (status: string) => {

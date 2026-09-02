@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, User, Mail, Ticket } from 'lucide-react';
+import { getTicketStatusLabel } from '@/lib/payment-status';
 
 interface TicketDetailsProps {
   ticket: {
@@ -19,18 +20,11 @@ interface TicketDetailsProps {
 
 export function TicketDetails({ ticket }: TicketDetailsProps) {
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge className="bg-green-500">Confirmada</Badge>;
-      case 'used':
-        return <Badge variant="outline">Usada</Badge>;
-      case 'pending':
-        return <Badge variant="secondary">Pendiente</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">Cancelada</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const label = getTicketStatusLabel(status)
+    if (status === 'confirmed') return <Badge className="bg-green-500">{label}</Badge>
+    if (status === 'cancelled') return <Badge variant="destructive">{label}</Badge>
+    if (status === 'used') return <Badge variant="outline">{label}</Badge>
+    return <Badge variant="secondary">{label}</Badge>
   };
 
   return (
@@ -55,13 +49,14 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
             <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="font-medium">
-                {new Date(ticket.events.event_date).toLocaleDateString('es-ES', {
+                {new Date(ticket.events.event_date).toLocaleString('es-AR', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: 'America/Argentina/Buenos_Aires',
                 })}
               </p>
               <p className="text-sm text-muted-foreground">Fecha y hora</p>
