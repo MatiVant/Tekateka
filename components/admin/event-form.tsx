@@ -200,15 +200,20 @@ export function EventForm({ userId, event }: EventFormProps) {
       }
       return
     }
-    if (!title.trim() || !eventDate || !eventTime || !venue.trim() || !totalTickets) {
-      toast({ variant: "destructive", title: "Faltan datos obligatorios", description: "Completá título, fecha, hora, lugar y cantidad de entradas." })
-      return
-    }
-    if (!imageUrl.trim()) {
+    const missingFields: string[] = []
+    if (!title.trim()) missingFields.push("Título del evento")
+    if (!eventDate) missingFields.push("Fecha del evento")
+    if (!eventTime) missingFields.push("Hora de inicio")
+    if (!venue.trim()) missingFields.push("Lugar")
+    if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) missingFields.push("Total de entradas")
+    if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) missingFields.push("Precio")
+    if (!imageUrl.trim()) missingFields.push("Imagen del evento")
+
+    if (missingFields.length > 0) {
       toast({
         variant: "destructive",
-        title: "Falta la imagen del evento",
-        description: "Subí una imagen antes de guardar el evento.",
+        title: "Faltan datos obligatorios",
+        description: `Completá: ${missingFields.join(", ")}.`,
       })
       return
     }
@@ -297,7 +302,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="relative space-y-6">
+    <form noValidate onSubmit={handleSubmit} className="relative space-y-6">
       {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 rounded-lg bg-background/80 backdrop-blur-sm">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -588,7 +593,7 @@ export function EventForm({ userId, event }: EventFormProps) {
         <CardHeader><CardTitle>Imagen del evento</CardTitle><CardDescription>Usá una imagen horizontal para la portada.</CardDescription></CardHeader>
         <CardContent>
       <div className="space-y-2">
-        <Label>Imagen del Evento</Label>
+        <Label>Imagen del Evento *</Label>
         <div className="mt-2">
           {imagePreview ? (
             <div className="relative">
