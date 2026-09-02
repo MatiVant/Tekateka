@@ -18,15 +18,19 @@ type Movement = {
 export function MovementsTable({ movements, showOrganizer = false }: { movements: Movement[]; showOrganizer?: boolean }) {
   const [eventFilter, setEventFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("")
+  const visibleMovements = useMemo(
+    () => movements.filter((movement) => movement.movement_type !== "payment_approved" || Boolean(movement.metadata?.payment_id)),
+    [movements],
+  )
   const events = useMemo(() => {
     const map = new Map<string, string>()
-    movements.forEach((movement) => {
+    visibleMovements.forEach((movement) => {
       const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
       if (movement.event_id) map.set(movement.event_id, event?.title || "Evento eliminado")
     })
     return [...map.entries()]
-  }, [movements])
-  const filtered = movements.filter((movement) => (eventFilter === "all" || movement.event_id === eventFilter) && (!dateFilter || movement.created_at.slice(0, 10) === dateFilter))
+  }, [visibleMovements])
+  const filtered = visibleMovements.filter((movement) => (eventFilter === "all" || movement.event_id === eventFilter) && (!dateFilter || movement.created_at.slice(0, 10) === dateFilter))
 
   return <div className="space-y-4">
     <div className="flex flex-col gap-3 sm:flex-row">
