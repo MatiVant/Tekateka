@@ -1,11 +1,26 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function deleteEvent(eventId: string) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: "No autenticado" }
+
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    const { data: event, error: eventLookupError } = await supabase
+      .from("events")
+      .select("id, organizer_id, status")
+      .eq("id", eventId)
+      .single()
+
+    if (eventLookupError || !event) return { success: false, error: "Evento no encontrado" }
+    if (event.status !== "finished") return { success: false, error: "Solo se pueden eliminar eventos archivados" }
+    if (event.organizer_id !== user.id && profile?.role !== "superadmin") {
+      return { success: false, error: "No autorizado" }
+    }
 
     // Primero eliminar todos los tickets asociados
     const { error: ticketsError } = await supabase.from("tickets").delete().eq("event_id", eventId)

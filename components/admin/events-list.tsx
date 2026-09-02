@@ -5,6 +5,7 @@ import { Calendar, MapPin, Ticket, Eye, Edit } from "lucide-react"
 import Link from "next/link"
 import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
+import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
 
 interface EventsListProps {
   userId: string
@@ -132,6 +133,9 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                   </Link>
                 </Button>
                 <ArchiveEventButton eventId={event.id} isArchived={event.status === "finished"} />
+                {showArchived && event.status === "finished" && (
+                  <DeleteEventButton eventId={event.id} eventTitle={event.title} />
+                )}
               </div>
             </div>
           </div>
