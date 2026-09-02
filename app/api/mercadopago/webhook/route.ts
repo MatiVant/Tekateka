@@ -133,7 +133,9 @@ export async function POST(request: Request) {
         money_release_date: payment.money_release_date ?? null,
       },
     })
-    if (movementError) console.error("[v0] No se pudo registrar movimiento de pago:", movementError)
+    if (movementError && movementError.code !== "23505") {
+      console.error("[v0] No se pudo registrar movimiento de pago:", movementError)
+    }
   }
 
   return NextResponse.json({ received: true })
