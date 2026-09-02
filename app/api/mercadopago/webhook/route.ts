@@ -102,5 +102,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo procesar el pago" }, { status: 500 })
   }
 
+  const eventId = matchingTickets[0].event_id
+  const organizerId = connection.producer_id
+  const { data: existingMovement } = await supabase
+    .from("platform_movements")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("movement_type", "payment_approved")
+    .contains("metadata", { payment_id: String(paymentId) })
+    .maybeSingle()
+
+  if (!existingMovement && status === "approved") {
+    const grossAmount = Number(payment.transaction_amount ?? 0)
+    const netAmount = Number(payment.transaction_details?.net_received_amount ?? grossAmount)
+    const feeAmount = Math.max(0, grossAmount - netAmount)
+    const { error: movementError } = await supabase.from("platform_movements").insert({
+      event_id: eventId,
+      organizer_id: organizerId,
+      ticket_id: matchingTickets[0].id,
+      movement_type: "payment_approved",
+      amount: grossAmount,
+      metadata: {
+        payment_id: String(paymentId),
+        gross_amount: grossAmount,
+        net_received_amount: netAmount,
+        fee_amount: feeAmount,
+        currency: payment.currency_id ?? null,
+        payer_email: payment.payer?.email ?? null,
+        payment_date: payment.date_approved ?? payment.date_created ?? null,
+        money_release_date: payment.money_release_date ?? null,
+      },
+    })
+    if (movementError) console.error("[v0] No se pudo registrar movimiento de pago:", movementError)
+  }
+
   return NextResponse.json({ received: true })
 }
