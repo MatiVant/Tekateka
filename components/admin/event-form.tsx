@@ -97,27 +97,24 @@ export function EventForm({ userId, event }: EventFormProps) {
     if (!file) return
 
     // Mostrar la vista previa inmediatamente, antes de esperar la subida al servidor.
+    setFormError(null)
     const localPreviewUrl = URL.createObjectURL(file)
     setImagePreview(localPreviewUrl)
 
     // La Home recorta las imágenes en formato horizontal 16:9.
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
     if (!allowedTypes.includes(file.type)) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Usá una imagen JPG, PNG o WebP en formato horizontal (16:9)",
-      })
+      const message = "Usá una imagen JPG, PNG o WebP."
+      setFormError(message)
+      toast({ variant: "destructive", title: "Formato de imagen no válido", description: message })
       return
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "La imagen no debe superar los 5MB",
-      })
+      const message = "La imagen no debe superar los 5 MB."
+      setFormError(message)
+      toast({ variant: "destructive", title: "Imagen demasiado pesada", description: message })
       return
     }
 
@@ -137,15 +134,19 @@ export function EventForm({ userId, event }: EventFormProps) {
       })
       const ratio = dimensions.width / dimensions.height
       if (dimensions.width < 1200 || Math.abs(ratio - 16 / 9) > 0.08) {
-        throw new Error("La imagen debe ser horizontal, de al menos 1200 × 675 px y aproximadamente 16:9")
+        toast({
+          title: "Formato recomendado: 16:9",
+          description: "La imagen se puede usar, pero una proporción 16:9 de al menos 1200 × 675 px evita recortes.",
+        })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo validar la imagen"
+      const message = error instanceof Error ? error.message : "No se pudo leer la imagen"
       setFormError(message)
-      toast({ variant: "destructive", title: "Imagen inválida", description: message })
+      toast({ variant: "destructive", title: "No se pudo validar la imagen", description: message })
       return
     }
 
+    setFormError(null)
     setIsUploading(true)
 
     try {
