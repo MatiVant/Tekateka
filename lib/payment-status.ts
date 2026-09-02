@@ -17,6 +17,8 @@ export function getPaymentStatusLabel(status?: string | null) {
 
 export function getMovementTypeLabel(type?: string | null) {
   switch (type) {
+    case "ticket_created":
+      return "Entrada creada"
     case "ticket_sale":
       return "Venta de entrada"
     case "ticket_payment":
@@ -30,7 +32,7 @@ export function getMovementTypeLabel(type?: string | null) {
     case "ticket_refund":
       return "Reembolso de entrada"
     default:
-      return type ? type.replaceAll("_", " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase()) : "Movimiento"
+      return type ? type.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Movimiento"
   }
 }
 

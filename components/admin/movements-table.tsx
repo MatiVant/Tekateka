@@ -1,0 +1,51 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { getMovementTypeLabel } from "@/lib/payment-status"
+
+type Movement = {
+  id: string
+  movement_type: string | null
+  amount: number | string | null
+  created_at: string
+  event_id: string | null
+  events?: { title?: string | null } | { title?: string | null }[] | null
+  tickets?: { buyer_name?: string | null; buyer_email?: string | null } | { buyer_name?: string | null; buyer_email?: string | null }[] | null
+  metadata?: { buyer_name?: string; buyer_email?: string } | null
+}
+
+export function MovementsTable({ movements, showOrganizer = false }: { movements: Movement[]; showOrganizer?: boolean }) {
+  const [eventFilter, setEventFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("")
+  const events = useMemo(() => {
+    const map = new Map<string, string>()
+    movements.forEach((movement) => {
+      const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
+      if (movement.event_id) map.set(movement.event_id, event?.title || "Evento eliminado")
+    })
+    return [...map.entries()]
+  }, [movements])
+  const filtered = movements.filter((movement) => {
+    const matchesEvent = eventFilter === "all" || movement.event_id === eventFilter
+    const matchesDate = !dateFilter || movement.created_at.slice(0, 10) === dateFilter
+    return matchesEvent && matchesDate
+  })
+
+  return <div className="space-y-4">
+    <div className="flex flex-col gap-3 sm:flex-row">
+      <label className="flex flex-1 flex-col gap-1 text-sm font-medium">Evento
+        <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 font-normal">
+          <option value="all">Todos los eventos</option>{events.map(([id, title]) => <option key={id} value={id}>{title}</option>)}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium">Fecha
+        <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 font-normal" />
+      </label>
+      {(eventFilter !== "all" || dateFilter) && <button type="button" onClick={() => { setEventFilter("all"); setDateFilter("") }} className="self-end text-sm text-primary underline">Limpiar filtros</button>}
+    </div>
+    <div className="overflow-x-auto rounded-lg border border-border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-4 text-left">Evento</th>{showOrganizer && <th className="p-4 text-left">Organizador</th>}<th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Persona</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr></thead><tbody>
+      {filtered.map((movement) => { const event = Array.isArray(movement.events) ? movement.events[0] : movement.events; const ticket = Array.isArray(movement.tickets) ? movement.tickets[0] : movement.tickets; const buyerName = ticket?.buyer_name || movement.metadata?.buyer_name; const buyerEmail = ticket?.buyer_email || movement.metadata?.buyer_email; return <tr key={movement.id} className="border-t border-border"><td className="p-4">{event?.title || "Evento eliminado"}</td>{showOrganizer && <td className="p-4">—</td>}<td className="p-4">{getMovementTypeLabel(movement.movement_type)}</td><td className="p-4"><div>{buyerName || "No asociada"}</div>{buyerEmail && <div className="text-xs text-muted-foreground">{buyerEmail}</div>}</td><td className="p-4">{Number(movement.amount || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</td><td className="p-4 text-muted-foreground">{new Date(movement.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td></tr> })}
+      {!filtered.length && <tr><td colSpan={showOrganizer ? 6 : 5} className="p-8 text-center text-muted-foreground">No hay movimientos para estos filtros.</td></tr>}
+    </tbody></table></div>
+  </div>
+}

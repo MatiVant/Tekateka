@@ -7,6 +7,7 @@ import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Users, CheckCircle, XCircle, Clock, LayoutList } from "lucide-react"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
 import { MessagesInbox } from "@/components/superadmin/messages-inbox"
+import { MovementsTable } from "@/components/admin/movements-table"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -32,9 +33,9 @@ export default async function SuperAdminPage() {
   const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
   const { data: movements } = await supabase
     .from("platform_movements")
-    .select("id, movement_type, amount, created_at, event_id, organizer_id, events(title)")
+    .select("id, movement_type, amount, created_at, event_id, organizer_id, ticket_id, metadata, events(title), tickets(buyer_name, buyer_email)")
     .order("created_at", { ascending: false })
-    .limit(8)
+    .limit(100)
 
   const { data: rawMessages } = await supabase
     .from("organizer_messages")
@@ -139,17 +140,7 @@ export default async function SuperAdminPage() {
             <h2 className="text-xl font-bold">Últimos movimientos</h2>
             <p className="text-sm text-muted-foreground">Actividad global de tickets y pagos</p>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50"><tr><th className="p-4 text-left">Evento</th><th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr></thead>
-              <tbody>
-                {(movements || []).map((movement) => {
-                  const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
-                  return <tr key={movement.id} className="border-t border-border"><td className="p-4">{event?.title || "Evento eliminado"}</td><td className="p-4">{movement.movement_type}</td><td className="p-4">{Number(movement.amount || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</td><td className="p-4 text-muted-foreground">{new Date(movement.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td></tr>
-                })}
-              </tbody>
-            </table>
-          </div>
+          <MovementsTable movements={movements || []} showOrganizer />
         </section>
 
         <section className="mb-12">
