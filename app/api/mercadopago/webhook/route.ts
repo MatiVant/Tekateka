@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   if (!paymentResponse.ok) return NextResponse.json({ received: true })
   const payment = await paymentResponse.json()
   const ticketIds = String(payment.external_reference || "").split(",").filter(Boolean)
+  console.log("[v0] Mercado Pago webhook recibido", { paymentId: String(paymentId), status: payment.status, ticketIds, externalReference: payment.external_reference })
 
   // Los links externos no tienen external_reference de nuestra app.
   // Se registran para revisión manual y nunca confirman tickets automáticamente.
@@ -135,6 +136,8 @@ export async function POST(request: Request) {
     })
     if (movementError && movementError.code !== "23505") {
       console.error("[v0] No se pudo registrar movimiento de pago:", movementError)
+    } else {
+      console.log("[v0] Movimiento payment_approved procesado", { paymentId: String(paymentId), eventId, ticketId: matchingTickets[0].id, duplicate: movementError?.code === "23505" })
     }
   }
 
