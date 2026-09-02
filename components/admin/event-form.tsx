@@ -194,7 +194,16 @@ export function EventForm({ userId, event }: EventFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isLoading) return
+    if (isLoading || isUploading) {
+      if (isUploading) {
+        toast({ variant: "destructive", title: "Imagen todavía subiendo", description: "Esperá a que termine la carga de la imagen." })
+      }
+      return
+    }
+    if (!title.trim() || !eventDate || !eventTime || !venue.trim() || !totalTickets) {
+      toast({ variant: "destructive", title: "Faltan datos obligatorios", description: "Completá título, fecha, hora, lugar y cantidad de entradas." })
+      return
+    }
     if (!imageUrl.trim()) {
       toast({
         variant: "destructive",
