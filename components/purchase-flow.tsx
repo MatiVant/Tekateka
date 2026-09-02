@@ -245,13 +245,16 @@ export function PurchaseFlow({
 
       if (isFree || (isPwyw && priceToUse === 0)) {
         setStep("success")
-      } else {
-        const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds }) })
-        const checkoutData = await checkoutResponse.json()
-        if (!checkoutResponse.ok) throw new Error(checkoutData.error || "No se pudo iniciar el pago")
-        setCheckoutUrl(checkoutData.initPoint)
-        setStep("payment")
-      }
+  } else if (mercadoPagoLink) {
+  setCheckoutUrl(null)
+  setStep("payment")
+  } else {
+  const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds }) })
+  const checkoutData = await checkoutResponse.json()
+  if (!checkoutResponse.ok) throw new Error(checkoutData.error || "No se pudo iniciar el pago")
+  setCheckoutUrl(checkoutData.initPoint)
+  setStep("payment")
+  }
     } catch (error: unknown) {
       console.error("[v0] Error al crear reserva:", error)
       const { toast } = await import("@/hooks/use-toast")
@@ -536,20 +539,20 @@ export function PurchaseFlow({
         </div>
 
         {paymentNotice?.includes("no se completó") && <Button type="button" variant="outline" className="w-full" onClick={() => { setPaymentNotice(null); setStep("form") }}>Volver y revisar datos</Button>}
-        {checkoutUrl ? (
+  {mercadoPagoLink ? (
+  <Button asChild className="w-full">
+  <a href={mercadoPagoLink} target="_blank" rel="noopener noreferrer">Pagar con Mercado Pago</a>
+  </Button>
+  ) : checkoutUrl ? (
           <Button asChild className="w-full">
             <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Pagar con Mercado Pago</a>
           </Button>
-        ) : mercadoPagoLink ? (
-          <Button asChild className="w-full">
-            <a href={mercadoPagoLink} target="_blank" rel="noopener noreferrer">Usar link manual de pago</a>
-          </Button>
         ) : null}
 
-        {checkoutUrl ? (
+        {mercadoPagoLink ? (
+          <p className="text-center text-xs text-muted-foreground">El pago se realizará mediante el link cargado por el productor. La confirmación queda pendiente de revisión manual.</p>
+        ) : checkoutUrl ? (
           <p className="text-center text-xs text-muted-foreground">El pago se generó con el importe de esta compra.</p>
-        ) : mercadoPagoLink ? (
-          <p className="text-center text-xs text-muted-foreground">El productor no tiene Checkout Pro conectado. Podés usar el link manual.</p>
         ) : (
           <Alert variant="destructive"><AlertDescription>El productor todavía no configuró Mercado Pago.</AlertDescription></Alert>
         )}
