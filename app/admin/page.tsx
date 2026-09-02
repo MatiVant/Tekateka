@@ -96,6 +96,13 @@ export default async function AdminPage() {
     .order("created_at", { ascending: false })
     .limit(20)
 
+  const { data: movements } = await adminSupabase
+    .from("platform_movements")
+    .select("id, movement_type, amount, created_at, event_id, events!inner(title, organizer_id)")
+    .eq("events.organizer_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50)
+
   const totalEvents = events?.length || 0
   const totalTickets = tickets?.length || 0
   const confirmedTickets = tickets?.filter((t) => t.payment_status === "approved" || t.status === "confirmed").length || 0
@@ -208,6 +215,34 @@ export default async function AdminPage() {
             </div>
           </section>
         )}
+
+        <section className="mb-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Movimientos de mis eventos</h2>
+            <p className="text-sm text-muted-foreground">Actividad de tickets y pagos únicamente de tus eventos.</p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr><th className="p-4 text-left">Evento</th><th className="p-4 text-left">Movimiento</th><th className="p-4 text-left">Importe</th><th className="p-4 text-left">Fecha</th></tr>
+              </thead>
+              <tbody>
+                {(movements || []).map((movement) => {
+                  const event = Array.isArray(movement.events) ? movement.events[0] : movement.events
+                  return (
+                    <tr key={movement.id} className="border-t border-border">
+                      <td className="p-4">{event?.title || "Evento eliminado"}</td>
+                      <td className="p-4">{movement.movement_type}</td>
+                      <td className="p-4">{Number(movement.amount || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</td>
+                      <td className="p-4 text-muted-foreground">{new Date(movement.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td>
+                    </tr>
+                  )
+                })}
+                {!movements?.length && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Todavía no hay movimientos.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* Events Section */}
         <div>
