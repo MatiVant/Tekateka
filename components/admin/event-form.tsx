@@ -67,6 +67,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [imageUrl, setImageUrl] = useState(event?.image_url || "")
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null)
   const [eventType, setEventType] = useState<"paid" | "free" | "pwyw">(
     event?.price === 0 ? "free" : event?.is_pay_what_you_want ? "pwyw" : "paid",
@@ -120,27 +121,28 @@ export function EventForm({ userId, event }: EventFormProps) {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "Imagen demasiado pesada", description: "Reducila a menos de 5 MB para poder subirla." })
-      return
-    }
-
-    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const image = new Image()
-      const dimensionsUrl = URL.createObjectURL(file)
-      image.onload = () => {
-        URL.revokeObjectURL(dimensionsUrl)
-        resolve({ width: image.naturalWidth, height: image.naturalHeight })
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const image = new Image()
+        const dimensionsUrl = URL.createObjectURL(file)
+        image.onload = () => {
+          URL.revokeObjectURL(dimensionsUrl)
+          resolve({ width: image.naturalWidth, height: image.naturalHeight })
+        }
+        image.onerror = () => {
+          URL.revokeObjectURL(dimensionsUrl)
+          reject(new Error("No se pudo leer la imagen"))
+        }
+        image.src = dimensionsUrl
+      })
+      const ratio = dimensions.width / dimensions.height
+      if (dimensions.width < 1200 || Math.abs(ratio - 16 / 9) > 0.08) {
+        throw new Error("La imagen debe ser horizontal, de al menos 1200 × 675 px y aproximadamente 16:9")
       }
-      image.onerror = () => {
-        URL.revokeObjectURL(dimensionsUrl)
-        reject(new Error("No se pudo leer la imagen"))
-      }
-      image.src = dimensionsUrl
-    })
-    const ratio = dimensions.width / dimensions.height
-    if (dimensions.width < 1200 || Math.abs(ratio - 16 / 9) > 0.08) {
-      toast({ variant: "destructive", title: "Formato recomendado: 16:9", description: "Subí una imagen horizontal de al menos 1200 × 675 px para evitar recortes." })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo validar la imagen"
+      setFormError(message)
+      toast({ variant: "destructive", title: "Imagen inválida", description: message })
       return
     }
 
@@ -173,15 +175,10 @@ export function EventForm({ userId, event }: EventFormProps) {
       setImageUrl(url)
       setImagePreview(url)
     } catch (error) {
-      console.error("Error uploading image:", error)
-      // La preview local sigue visible para que el admin pueda identificar el archivo seleccionado.
-      if (!(error instanceof TypeError)) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Error al subir la imagen. Por favor intenta de nuevo.",
-        })
-      }
+      console.error("[v0] Error uploading image:", error)
+      const message = error instanceof Error ? error.message : "Error al subir la imagen. Por favor intenta de nuevo."
+      setFormError(message)
+      toast({ variant: "destructive", title: "Error al subir la imagen", description: message })
     } finally {
       setIsUploading(false)
     }
@@ -194,10 +191,11 @@ export function EventForm({ userId, event }: EventFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError(null)
     if (isLoading || isUploading) {
-      if (isUploading) {
-        toast({ variant: "destructive", title: "Imagen todavía subiendo", description: "Esperá a que termine la carga de la imagen." })
-      }
+      const message = isUploading ? "Esperá a que termine la carga de la imagen." : "El evento ya se está guardando."
+      setFormError(message)
+      toast({ variant: "destructive", title: "No se puede guardar todavía", description: message })
       return
     }
     const missingFields: string[] = []
@@ -210,11 +208,9 @@ export function EventForm({ userId, event }: EventFormProps) {
     if (!imageUrl.trim()) missingFields.push("Imagen del evento")
 
     if (missingFields.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Faltan datos obligatorios",
-        description: `Completá: ${missingFields.join(", ")}.`,
-      })
+      const message = `Completá: ${missingFields.join(", ")}.`
+      setFormError(message)
+      toast({ variant: "destructive", title: "Faltan datos obligatorios", description: message })
       return
     }
     setIsLoading(true)
@@ -273,11 +269,9 @@ export function EventForm({ userId, event }: EventFormProps) {
       // para evitar que el evento se cree dos veces.
     } catch (error: unknown) {
       console.error("[v0] Error al guardar evento:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error al guardar el evento",
-      })
+      const message = error instanceof Error ? error.message : "Error al guardar el evento"
+      setFormError(message)
+      toast({ variant: "destructive", title: "No se pudo crear el evento", description: message })
       setIsLoading(false)
     }
   }
@@ -303,6 +297,7 @@ export function EventForm({ userId, event }: EventFormProps) {
 
   return (
     <form noValidate onSubmit={handleSubmit} className="relative space-y-6">
+      {formError && <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
       {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 rounded-lg bg-background/80 backdrop-blur-sm">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
