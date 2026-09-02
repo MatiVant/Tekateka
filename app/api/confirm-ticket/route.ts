@@ -23,7 +23,8 @@ export async function POST(request: Request) {
           title,
           event_date,
           venue,
-          description
+          description,
+          organizer_id
         )
       `)
       .eq("id", ticketId)
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const qrDataUrl = await QRCode.toDataURL(ticket.qr_code, {
+      const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
         errorCorrectionLevel: "M",
         type: "image/png",
         width: 400,
@@ -53,9 +54,13 @@ export async function POST(request: Request) {
         },
       })
 
+        const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
+      const recipients = [ticket.buyer_email, organizer?.email].filter((email, index, list): email is string => Boolean(email) && list.indexOf(email) === index)
+      const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/ticket/${encodeURIComponent(ticket.qr_code)}`
+
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
-        to: ticket.buyer_email,
+        to: recipients,
         subject: `✅ Tu entrada para ${ticket.events.title} ha sido confirmada`,
         html: `
           <!DOCTYPE html>
@@ -103,6 +108,7 @@ export async function POST(request: Request) {
                     <p>Presenta este código al ingresar al evento:</p>
                     <img src="${qrDataUrl}" alt="Código QR" class="qr-code" />
                     <p>Código: <span class="code">${ticket.qr_code}</span></p>
+                    <p><a href="${ticketUrl}">Abrir mi entrada digital</a></p>
                     <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
                       💡 Guarda este email o toma una captura de pantalla del código QR
                     </p>

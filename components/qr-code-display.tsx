@@ -13,7 +13,8 @@ export function QRCodeDisplay({ qrCode, size = 200 }: QRCodeDisplayProps) {
 
   useEffect(() => {
     if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, qrCode, {
+      const ticketUrl = `${window.location.origin}/ticket/${encodeURIComponent(qrCode)}`
+      QRCode.toCanvas(canvasRef.current, ticketUrl, {
         width: size,
         margin: 2,
         errorCorrectionLevel: 'M',
