@@ -87,17 +87,26 @@ export async function createTicket(data: CreateTicketData) {
     try {
       const { data: event } = await supabase
         .from("events")
-        .select("title, mercado_pago_link")
+        .select("title, mercado_pago_link, organizer_id")
         .eq("id", data.event_id)
         .single()
 
       if (resend && event) {
+        const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
         await resend.emails.send({
           from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
           to: data.buyer_email,
           subject: `Compra recibida: ${event.title}`,
           html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Si todavía no pagaste, podés hacerlo desde la pantalla de compra.</p><p>Conservá este email: te enviaremos tus entradas cuando el pago sea confirmado.</p>`,
         })
+        if (organizer?.email && organizer.email !== data.buyer_email) {
+          await resend.emails.send({
+            from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+            to: organizer.email,
+            subject: `Nueva entrada pendiente de confirmación: ${event.title}`,
+            html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva entrada para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar la entrada cuando corresponda.</p>`,
+          })
+        }
       }
     } catch (emailError) {
       console.error("[v0] Error al enviar email:", emailError)
