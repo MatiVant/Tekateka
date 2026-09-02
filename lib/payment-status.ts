@@ -21,6 +21,14 @@ export function getMovementTypeLabel(type?: string | null) {
       return "Entrada creada"
     case "ticket_sale":
       return "Venta de entrada"
+    case "payment_approved":
+      return "Pago aprobado"
+    case "payment_pending":
+      return "Pago pendiente"
+    case "payment_rejected":
+      return "Pago rechazado"
+    case "payment_created":
+      return "Pago iniciado"
     case "ticket_payment":
       return "Pago de entrada"
     case "platform_fee":

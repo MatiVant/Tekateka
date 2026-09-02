@@ -37,6 +37,13 @@ export default async function SuperAdminPage() {
     .order("created_at", { ascending: false })
     .limit(100)
 
+  const movementOrganizerIds = [...new Set((movements || []).map((m) => m.organizer_id as string).filter(Boolean))]
+  const { data: movementOrganizers } = movementOrganizerIds.length
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", movementOrganizerIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
+  const movementOrganizerMap = new Map((movementOrganizers || []).map((p) => [p.id, p]))
+  const movementsWithOrganizers = (movements || []).map((movement) => ({ ...movement, organizer: movementOrganizerMap.get(movement.organizer_id as string) || null }))
+
   const { data: rawMessages } = await supabase
     .from("organizer_messages")
     .select("id, subject, body, priority, status, created_at, organizer_id")
@@ -140,7 +147,7 @@ export default async function SuperAdminPage() {
             <h2 className="text-xl font-bold">Últimos movimientos</h2>
             <p className="text-sm text-muted-foreground">Actividad global de tickets y pagos</p>
           </div>
-          <MovementsTable movements={movements || []} showOrganizer />
+          <MovementsTable movements={movementsWithOrganizers} showOrganizer />
         </section>
 
         <section className="mb-12">
