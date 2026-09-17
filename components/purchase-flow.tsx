@@ -49,6 +49,7 @@ export function PurchaseFlow({
 }: PurchaseFlowProps) {
   const [step, setStep] = useState<Step>("form")
   const [ticketId, setTicketId] = useState<string | null>(null)
+  const [ticketIds, setTicketIds] = useState<string[]>([])
   const [tiers, setTiers] = useState<TicketTier[]>([])
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
 
@@ -222,7 +223,7 @@ export function PurchaseFlow({
       }
 
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const ticketIds: string[] = []
+      const createdTicketIds: string[] = []
 
       for (let i = 0; i < quantity; i++) {
         const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`
@@ -242,17 +243,21 @@ export function PurchaseFlow({
             | "free",
           marketing_consent: marketingConsent,
           buyer_id: currentUser?.id ?? null,
+          // Solo se envía un único email consolidado por compra, no uno por entrada.
+          sendEmail: i === quantity - 1,
+          ticketQuantity: quantity,
         }
 
         console.log(`[v0] Creando ticket ${i + 1}/${quantity}...`, ticketData)
 
         const ticket = await createTicket(ticketData)
-        ticketIds.push(ticket.id)
+        createdTicketIds.push(ticket.id)
 
         console.log(`[v0] Ticket ${i + 1}/${quantity} creado exitosamente:`, ticket.id)
       }
 
-      setTicketId(ticketIds[0]) // Guardamos el primer ID para referencia
+      setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia
+      setTicketIds(createdTicketIds) // Guardamos todos los IDs de la compra (para el comprobante)
 
       if (isFree || (isPwyw && priceToUse === 0)) {
         setStep("success")
@@ -286,7 +291,8 @@ export function PurchaseFlow({
 
   const handleReceiptUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!receiptFile || !ticketId) return
+    const idsToUpdate = ticketIds.length > 0 ? ticketIds : ticketId ? [ticketId] : []
+    if (!receiptFile || idsToUpdate.length === 0) return
 
     setUploading(true)
     setError(null)
@@ -313,9 +319,10 @@ export function PurchaseFlow({
       const { url } = await uploadResponse.json()
       console.log("[v0] Comprobante subido exitosamente:", url)
 
-      await updateTicketReceipt(ticketId, url, receiptNotes || undefined)
+      // Un mismo comprobante corresponde a toda la compra: se aplica a todas las entradas.
+      await Promise.all(idsToUpdate.map((id) => updateTicketReceipt(id, url, receiptNotes || undefined)))
 
-      console.log("[v0] Ticket actualizado con comprobante")
+      console.log("[v0] Tickets actualizados con comprobante:", idsToUpdate)
       setStep("success")
     } catch (error: unknown) {
       console.error("[v0] Error al subir comprobante:", error)

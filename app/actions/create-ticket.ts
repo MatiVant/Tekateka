@@ -18,6 +18,8 @@ interface CreateTicketData {
   payment_method?: "mercado_pago" | "external_link" | "transfer" | "free"
   marketing_consent?: boolean
   buyer_id?: string | null
+  sendEmail?: boolean
+  ticketQuantity?: number
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -93,33 +95,40 @@ export async function createTicket(data: CreateTicketData) {
     }
 
     // Enviar email de confirmación de compra (con instrucciones de pago)
+    // Cuando la compra incluye varias entradas, se crean varios tickets pero solo
+    // se debe enviar un único email consolidado (controlado por data.sendEmail).
     try {
-      const { data: event } = await supabase
-        .from("events")
-        .select("title, mercado_pago_link, organizer_id")
-        .eq("id", data.event_id)
-        .single()
+      if (data.sendEmail !== false) {
+        const { data: event } = await supabase
+          .from("events")
+          .select("title, mercado_pago_link, organizer_id")
+          .eq("id", data.event_id)
+          .single()
 
-      if (resend && event) {
-        const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
-        const requestHeaders = await headers()
-        const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
-        const forwardedProto = requestHeaders.get("x-forwarded-proto") || (forwardedHost?.includes("localhost") ? "http" : "https")
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-        const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
-        await resend.emails.send({
-          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
-          to: data.buyer_email,
-          subject: `Compra recibida: ${event.title}`,
-          html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
-        })
-        if (organizer?.email && organizer.email !== data.buyer_email) {
+        if (resend && event) {
+          const quantity = data.ticketQuantity ?? 1
+          const totalAmount = data.final_price * quantity
+          const entradasLabel = quantity === 1 ? "entrada" : `${quantity} entradas`
+          const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
+          const requestHeaders = await headers()
+          const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
+          const forwardedProto = requestHeaders.get("x-forwarded-proto") || (forwardedHost?.includes("localhost") ? "http" : "https")
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+          const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
           await resend.emails.send({
             from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
-            to: organizer.email,
-            subject: `Nueva entrada pendiente de confirmación: ${event.title}`,
-            html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva entrada para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar la entrada cuando corresponda.</p>`,
+            to: data.buyer_email,
+            subject: `Compra recibida: ${event.title}`,
+            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p><p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
           })
+          if (organizer?.email && organizer.email !== data.buyer_email) {
+            await resend.emails.send({
+              from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+              to: organizer.email,
+              subject: `Nueva compra pendiente de confirmación: ${event.title}`,
+              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p>`,
+            })
+          }
         }
       }
     } catch (emailError) {
