@@ -31,6 +31,12 @@ export default async function AllTicketsPage() {
     .eq('events.organizer_id', user.id)
     .order('purchased_at', { ascending: false });
 
+  const { data: events } = await supabase
+    .from('events')
+    .select('id, title')
+    .eq('organizer_id', user.id)
+    .order('title', { ascending: true });
+
   return (
     <div className="min-h-screen bg-muted/30">
       
@@ -50,7 +56,7 @@ export default async function AllTicketsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <AllTicketsTable tickets={tickets || []} />
+            <AllTicketsTable tickets={tickets || []} events={events || []} />
           </CardContent>
         </Card>
       </main>

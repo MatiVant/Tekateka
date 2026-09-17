@@ -4,7 +4,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -66,35 +74,151 @@ interface Ticket {
   ticket_promotions?: TicketPromotion[]
 }
 
-interface AllTicketsTableProps {
-  tickets: Ticket[] | undefined
+interface EventOption {
+  id: string
+  title: string
 }
 
-export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
+interface AllTicketsTableProps {
+  tickets: Ticket[] | undefined
+  events?: EventOption[]
+}
+
+export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [isBulkLoading, setIsBulkLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedEventId, setSelectedEventId] = useState("all")
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false)
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false)
+  const [bulkRejectionReason, setBulkRejectionReason] = useState("")
+
+  const eventOptions = useMemo<EventOption[]>(() => {
+    if (events && events.length > 0) return events
+    const map = new Map<string, EventOption>()
+    ;(tickets ?? []).forEach((ticket) => {
+      if (ticket.events?.id) map.set(ticket.events.id, { id: ticket.events.id, title: ticket.events.title })
+    })
+    return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title))
+  }, [events, tickets])
 
   const filteredTickets = useMemo(() => {
     if (!tickets || !Array.isArray(tickets)) return []
-    if (!searchTerm.trim()) return tickets
+    let result = tickets
 
-    const search = searchTerm.toLowerCase()
-    return tickets.filter(
-      (ticket) =>
-        ticket.buyer_name.toLowerCase().includes(search) ||
-        ticket.buyer_email.toLowerCase().includes(search) ||
-        ticket.qr_code.toLowerCase().includes(search) ||
-        ticket.events.title.toLowerCase().includes(search),
-    )
-  }, [tickets, searchTerm])
+    if (selectedEventId !== "all") {
+      result = result.filter((ticket) => ticket.events?.id === selectedEventId)
+    }
+
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase()
+      result = result.filter(
+        (ticket) =>
+          ticket.buyer_name.toLowerCase().includes(search) ||
+          ticket.buyer_email.toLowerCase().includes(search) ||
+          ticket.qr_code.toLowerCase().includes(search) ||
+          ticket.events.title.toLowerCase().includes(search),
+      )
+    }
+
+    return result
+  }, [tickets, searchTerm, selectedEventId])
+
+  const toggleSelected = (ticketId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(ticketId)
+      else next.delete(ticketId)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredTickets.map((t) => t.id)))
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
+  const allVisibleSelected = filteredTickets.length > 0 && filteredTickets.every((t) => selectedIds.has(t.id))
+
+  const handleBulkApprove = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    setIsBulkLoading(true)
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          fetch("/api/confirm-ticket", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticketId: id }),
+          }),
+        ),
+      )
+      const failed = results.filter((r) => !r.ok).length
+      toast({
+        title: failed === 0 ? "Entradas confirmadas" : "Confirmación parcial",
+        description:
+          failed === 0
+            ? `${ids.length} entrada(s) confirmada(s) correctamente.`
+            : `${ids.length - failed} confirmada(s), ${failed} con error.`,
+        variant: failed === 0 ? "default" : "destructive",
+      })
+      setSelectedIds(new Set())
+      router.refresh()
+    } catch (error) {
+      handleNetworkError(error, "Error al confirmar las entradas seleccionadas")
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }
+
+  const handleBulkReject = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0 || !bulkRejectionReason.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Ingresa un motivo para el rechazo" })
+      return
+    }
+    setIsBulkLoading(true)
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          fetch("/api/reject-ticket", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticketId: id, reason: bulkRejectionReason }),
+          }),
+        ),
+      )
+      const failed = results.filter((r) => !r.ok).length
+      toast({
+        title: failed === 0 ? "Entradas rechazadas" : "Rechazo parcial",
+        description:
+          failed === 0
+            ? `${ids.length} entrada(s) rechazada(s) correctamente.`
+            : `${ids.length - failed} rechazada(s), ${failed} con error.`,
+        variant: failed === 0 ? "default" : "destructive",
+      })
+      setSelectedIds(new Set())
+      setIsBulkRejectDialogOpen(false)
+      setBulkRejectionReason("")
+      router.refresh()
+    } catch (error) {
+      handleNetworkError(error, "Error al rechazar las entradas seleccionadas")
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }
 
   if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
     return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos aún</div>
@@ -254,20 +378,67 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, email, código QR o evento..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="Buscar por nombre, email, código QR o evento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue placeholder="Filtrar por evento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los eventos</SelectItem>
+                {eventOptions.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-3">
+            <span className="text-sm font-medium">{selectedIds.size} entrada(s) seleccionada(s)</span>
+            <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Aprobar seleccionadas
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setIsBulkRejectDialogOpen(true)}
+              disabled={isBulkLoading}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Rechazar seleccionadas
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={isBulkLoading}>
+              Limpiar selección
+            </Button>
+          </div>
+        )}
 
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
+                <th className="text-left p-4 w-10">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onCheckedChange={(checked) => toggleSelectAll(Boolean(checked))}
+                    aria-label="Seleccionar todas las entradas visibles"
+                  />
+                </th>
                 <th className="text-left p-4 font-medium text-xs">Evento</th>
                 <th className="text-left p-4 font-medium text-xs">Comprador</th>
                 <th className="text-left p-4 font-medium text-xs">Tipo</th>
@@ -283,6 +454,13 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
             <tbody>
               {filteredTickets.map((ticket) => (
                 <tr key={ticket.id} className="border-t hover:bg-muted/30 text-sm">
+                  <td className="p-4">
+                    <Checkbox
+                      checked={selectedIds.has(ticket.id)}
+                      onCheckedChange={(checked) => toggleSelected(ticket.id, Boolean(checked))}
+                      aria-label={`Seleccionar entrada de ${ticket.buyer_name}`}
+                    />
+                  </td>
                   <td className="p-4 font-medium">{ticket.events.title}</td>
                   <td className="p-4">
                     <div className="flex flex-col gap-0.5">
@@ -339,9 +517,9 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
           </table>
         </div>
 
-        {filteredTickets.length === 0 && searchTerm && (
+        {filteredTickets.length === 0 && (searchTerm || selectedEventId !== "all") && (
           <div className="text-center py-8 text-muted-foreground">
-            No se encontraron tickets que coincidan con la búsqueda
+            No se encontraron tickets que coincidan con los filtros
           </div>
         )}
 
@@ -571,6 +749,51 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
             >
               <XCircle className="mr-2 h-4 w-4" />
               Rechazar Entrada
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBulkRejectDialogOpen} onOpenChange={setIsBulkRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar {selectedIds.size} entrada(s)</DialogTitle>
+            <DialogDescription>
+              Ingresa el motivo del rechazo. Cada comprador recibirá un email con esta información.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Motivo del rechazo</label>
+              <Textarea
+                placeholder="Ej: El comprobante de pago no coincide con el monto del ticket..."
+                value={bulkRejectionReason}
+                onChange={(e) => setBulkRejectionReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBulkRejectDialogOpen(false)
+                setBulkRejectionReason("")
+              }}
+              disabled={isBulkLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkReject}
+              disabled={!bulkRejectionReason.trim() || isBulkLoading}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Rechazar {selectedIds.size} entrada(s)
             </Button>
           </DialogFooter>
         </DialogContent>
