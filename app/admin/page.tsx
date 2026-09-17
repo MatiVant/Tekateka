@@ -129,7 +129,10 @@ export default async function AdminPage() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-12">
-          <MercadoPagoConnect connected={Boolean(mercadoPagoConnection)} isSuperadmin={profile?.role === "superadmin"} />
+          <div className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+            <MercadoPagoConnect connected={Boolean(mercadoPagoConnection)} isSuperadmin={profile?.role === "superadmin"} />
+            {profile?.role === "superadmin" && <div className="rounded-lg border border-primary/20 bg-card px-4 py-3"><p className="text-sm"><span className="font-medium text-primary">Superadmin</span><br /><span className="text-muted-foreground">Eventos ilimitados</span></p></div>}
+          </div>
 
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -151,25 +154,23 @@ export default async function AdminPage() {
             )}
           </div>
 
-          {/* Status banner */}
-          {profile?.role !== "superadmin" && !profile?.subscription_active && (
-            <div className="p-4 bg-card border border-border rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Plan Gratis:</span> {1 - (profile?.events_created || 0)} evento disponible
-              </p>
-            </div>
-          )}
-          {profile?.role === "superadmin" && (
-            <div className="p-4 bg-card border border-primary/20 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-primary">Superadmin</span> - Eventos ilimitados</p>
-            </div>
-          )}
-          {profile?.subscription_active && profile?.role !== "superadmin" && (
-            <div className="p-4 bg-card border border-primary/20 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-primary">Suscripción Activa</span> - Eventos ilimitados</p>
-            </div>
-          )}
         </div>
+
+        {/* Events Section */}
+        <section className="mb-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Listado de Eventos</h2>
+            <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
+          </div>
+          <Tabs defaultValue="active" className="w-full">
+            <div className="flex items-center justify-between mb-6"><TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList></div>
+            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} /></TabsContent>
+            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} /></TabsContent>
+          </Tabs>
+        </section>
+
+        {profile?.role !== "superadmin" && !profile?.subscription_active && <div className="mb-8 rounded-lg border border-border bg-card p-4"><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Plan Gratis:</span> {1 - (profile?.events_created || 0)} evento disponible</p></div>}
+        {profile?.subscription_active && profile?.role !== "superadmin" && <div className="mb-8 rounded-lg border border-primary/20 bg-card p-4"><p className="text-sm"><span className="font-medium text-primary">Suscripción Activa</span> - Eventos ilimitados</p></div>}
 
         {/* Resumen compacto */}
         <section className="mb-3">
@@ -217,19 +218,6 @@ export default async function AdminPage() {
         <section className="mb-12">
           <div className="mb-6"><h2 className="text-xl font-bold">Total histórico por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas, total cobrado, cargos de Mercado Pago y neto.</p></div>
           <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-3 text-left">Evento</th><th className="p-3 text-right">Entradas</th><th className="p-3 text-right">Cobrado</th><th className="p-3 text-right">Cargos</th><th className="p-3 text-right">Neto</th></tr></thead><tbody>{eventReports.map(({ event, count, gross, fees, net }) => <tr key={event.id} className="border-t"><td className="p-3 font-medium">{event.title}</td><td className="p-3 text-right">{count}</td><td className="p-3 text-right">{formatCurrency(gross)}</td><td className="p-3 text-right">{formatCurrency(fees)}</td><td className="p-3 text-right font-semibold">{formatCurrency(net)}</td></tr>)}{eventReports.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Todavía no hay pagos confirmados.</td></tr>}</tbody></table></div>
-        </section>
-
-        {/* Events Section */}
-        <section className="mb-12">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold">Listado de Eventos</h2>
-            <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
-          </div>
-          <Tabs defaultValue="active" className="w-full">
-            <div className="flex items-center justify-between mb-6"><TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList></div>
-            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} /></TabsContent>
-            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} /></TabsContent>
-          </Tabs>
         </section>
 
         {externalPayments && externalPayments.length > 0 && (
