@@ -42,6 +42,7 @@ export function PurchaseFlow({
   eventTitle,
   eventPrice,
   paymentInstructions,
+  paymentMethods,
   mercadoPagoLink,
   isFree = false,
   isPwyw = false,
@@ -234,7 +235,11 @@ export function PurchaseFlow({
           qr_code: qrCode,
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
-          payment_method: isFree || (isPwyw && priceToUse === 0) ? "free" : paymentMethod,
+          payment_method: (isFree || (isPwyw && priceToUse === 0) ? "free" : paymentMethod) as
+            | "mercado_pago"
+            | "external_link"
+            | "transfer"
+            | "free",
           marketing_consent: marketingConsent,
           buyer_id: currentUser?.id ?? null,
         }
