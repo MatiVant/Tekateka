@@ -15,6 +15,7 @@ interface CreateTicketData {
   qr_code: string
   promotion_code?: string
   final_price: number
+  payment_method?: "mercado_pago" | "external_link" | "transfer" | "free"
   marketing_consent?: boolean
   buyer_id?: string | null
 }
@@ -63,6 +64,7 @@ export async function createTicket(data: CreateTicketData) {
 
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
+    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.08 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.08 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
 
     const resumeToken = randomBytes(32).toString("hex")
     const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")

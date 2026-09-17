@@ -231,6 +231,7 @@ export function PurchaseFlow({
           qr_code: qrCode,
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
+          payment_method: isFree || (isPwyw && priceToUse === 0) ? "free" : paymentMethod,
           marketing_consent: marketingConsent,
           buyer_id: currentUser?.id ?? null,
         }

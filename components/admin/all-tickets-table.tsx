@@ -52,6 +52,10 @@ interface Ticket {
   rejection_reason?: string
   tier_id?: string
   final_price?: number
+  payment_method?: "mercado_pago" | "external_link" | "transfer" | "free" | null
+  charged_amount?: number
+  payment_fee_amount?: number
+  net_amount?: number
   events: {
     id: string
     title: string
@@ -252,6 +256,7 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
                 <th className="text-left p-4 font-medium text-xs">Tipo</th>
                 <th className="text-left p-4 font-medium text-xs">Promoción</th>
                 <th className="text-left p-4 font-medium text-xs">Precio</th>
+                <th className="text-left p-4 font-medium text-xs">Medio de pago</th>
                 <th className="text-left p-4 font-medium text-xs">Estado</th>
                 <th className="text-left p-4 font-medium text-xs">Pago</th>
                 <th className="text-left p-4 font-medium text-xs">Comprobante</th>
@@ -288,8 +293,9 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </td>
-                  <td className="p-4 font-semibold">{formatCurrency(ticket.final_price || ticket.events.price)}</td>
-                  <td className="p-4">{getStatusBadge(ticket.status)}</td>
+  <td className="p-4 font-semibold">{formatCurrency(ticket.final_price || ticket.events.price)}</td>
+  <td className="p-4 text-xs">{ticket.payment_method === "mercado_pago" ? "Mercado Pago (+8%)" : ticket.payment_method === "external_link" ? "Link MP" : ticket.payment_method === "transfer" ? "Transferencia" : ticket.payment_method === "free" ? "Gratis" : "—"}</td>
+  <td className="p-4">{getStatusBadge(ticket.status)}</td>
                   <td className="p-4">{getPaymentBadge(ticket.payment_status)}</td>
                   <td className="p-4">
                     {ticket.payment_receipt_url ? (
@@ -428,10 +434,12 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
                       <span>-{formatCurrency(selectedTicket.ticket_promotions[0].discount_amount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-semibold border-t pt-1 mt-1">
-                    <span>Total Pagado:</span>
-                    <span>{formatCurrency(selectedTicket.final_price || selectedTicket.events.price)}</span>
-                  </div>
+  <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+  <span>Total cobrado:</span>
+  <span>{formatCurrency(selectedTicket.charged_amount ?? selectedTicket.final_price ?? selectedTicket.events.price)}</span>
+  </div>
+  <div className="flex justify-between text-sm"><span>Gastos / comisión:</span><span>{formatCurrency(selectedTicket.payment_fee_amount ?? 0)}</span></div>
+  <div className="flex justify-between text-sm"><span>Neto:</span><span>{formatCurrency(selectedTicket.net_amount ?? selectedTicket.final_price ?? selectedTicket.events.price)}</span></div>
                 </div>
               </div>
 

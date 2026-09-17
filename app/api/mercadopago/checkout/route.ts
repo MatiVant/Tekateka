@@ -15,7 +15,8 @@ export async function POST(request: Request) {
   if (tickets.some((item) => item.event_id !== firstTicket.event_id)) return NextResponse.json({ error: "Los tickets deben pertenecer al mismo evento" }, { status: 400 })
   const accessToken = await getProducerAccessToken(event.organizer_id)
   if (!accessToken) return NextResponse.json({ error: "El productor no conectó Mercado Pago o debe reconectar su cuenta" }, { status: 409 })
-  const total = tickets.reduce((sum, item) => sum + Math.max(0, Number(item.final_price)), 0)
+  const baseTotal = tickets.reduce((sum, item) => sum + Math.max(0, Number(item.final_price)), 0)
+  const total = Math.round(baseTotal * 1.08 * 100) / 100
   const preference = await fetch("https://api.mercadopago.com/checkout/preferences", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ title: event.title, quantity: 1, unit_price: total, currency_id: "ARS" }], payer: { name: firstTicket.buyer_name, email: firstTicket.buyer_email }, external_reference: ids.join(","), notification_url: `${new URL(request.url).origin}/api/mercadopago/webhook`, back_urls: { success: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=success`, pending: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=pending`, failure: `${new URL(request.url).origin}/events/${firstTicket.event_id}?payment=failure` }, auto_return: "approved" }) })
   if (!preference.ok) return NextResponse.json({ error: "No se pudo crear el checkout de Mercado Pago" }, { status: 502 })
   const data = await preference.json()
@@ -26,6 +27,10 @@ export async function POST(request: Request) {
       mercado_pago_reference: String(data.id),
       payment_id: null,
       payment_status: "pending",
+      payment_method: "mercado_pago",
+      charged_amount: total,
+      payment_fee_amount: Math.round(baseTotal * 0.08 * 100) / 100,
+      net_amount: baseTotal,
     })
     .in("id", ids)
   return NextResponse.json({ initPoint: data.init_point, preferenceId: data.id })
