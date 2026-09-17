@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Ticket, Eye, Edit } from "lucide-react"
+import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
@@ -16,7 +16,7 @@ interface EventsListProps {
 export async function EventsList({ userId, showArchived = false }: EventsListProps) {
   const supabase = await createClient()
 
-  const query = supabase.from("events").select("*").eq("organizer_id", userId).order("event_date", { ascending: true })
+  const query = supabase.from("events").select("*").eq("organizer_id", userId)
 
   if (showArchived) {
     query.eq("status", "finished")
@@ -25,8 +25,23 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
   }
 
   const { data: events } = await query
-  const { data: confirmedTickets } = await supabase.from("tickets").select("event_id").eq("status", "confirmed")
-  const confirmedByEvent = (confirmedTickets || []).reduce<Record<string, number>>((counts, ticket) => { counts[ticket.event_id] = (counts[ticket.event_id] || 0) + 1; return counts }, {})
+  const { data: eventTickets } = await supabase.from("tickets").select("event_id, status, payment_status")
+  const salesByEvent = (eventTickets || []).reduce<Record<string, { confirmed: number; pending: number }>>((counts, ticket) => {
+    const current = counts[ticket.event_id] || { confirmed: 0, pending: 0 }
+    if (ticket.status === "confirmed" || ticket.payment_status === "approved") current.confirmed += 1
+    else if (ticket.status === "pending") current.pending += 1
+    counts[ticket.event_id] = current
+    return counts
+  }, {})
+  const now = Date.now()
+  const sortedEvents = [...(events || [])].sort((a, b) => {
+    const aTime = new Date(a.event_date).getTime()
+    const bTime = new Date(b.event_date).getTime()
+    const aFuture = aTime >= now
+    const bFuture = bTime >= now
+    if (aFuture !== bFuture) return aFuture ? -1 : 1
+    return aFuture ? aTime - bTime : bTime - aTime
+  })
 
   if (!events || events.length === 0) {
     return (
@@ -45,8 +60,11 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
 
   return (
     <div className="space-y-4">
-      {events.map((event) => {
+      {sortedEvents.map((event) => {
         const isPastEvent = new Date(event.event_date) < new Date()
+        const sales = salesByEvent[event.id] || { confirmed: 0, pending: 0 }
+        const available = Math.max(0, event.total_tickets - sales.confirmed)
+        const salesPercentage = event.total_tickets > 0 ? Math.round((sales.confirmed / event.total_tickets) * 100) : 0
 
         return (
           <div
@@ -107,11 +125,20 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 <div className="flex items-center gap-2">
                   <Ticket className="h-4 w-4" />
                   <span>
-                    {Math.max(0, event.total_tickets - (confirmedByEvent[event.id] || 0))} / {event.total_tickets} disponibles
+                    {available} / {event.total_tickets} disponibles
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 font-semibold text-foreground">${formatPrice(event.price)}</div>
+              </div>
+
+              <div className="mb-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 font-medium"><BarChart3 className="h-4 w-4 text-primary" />Ventas</span>
+                  <span className="font-semibold">{sales.confirmed} / {event.total_tickets} ({salesPercentage}%)</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, salesPercentage)}%` }} /></div>
+                {sales.pending > 0 && <p className="mt-1 text-xs text-muted-foreground">{sales.pending} pendiente{sales.pending === 1 ? "" : "s"} de confirmación</p>}
               </div>
 
               <div className="flex gap-2">
@@ -133,7 +160,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/admin/events/${event.id}/tickets`}>
                     <Ticket className="mr-1 h-3 w-3" />
-                    Tickets
+                    Ventas
                   </Link>
                 </Button>
                 <ArchiveEventButton eventId={event.id} isArchived={event.status === "finished"} />
