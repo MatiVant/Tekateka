@@ -53,6 +53,7 @@ interface Ticket {
   tier_id?: string
   final_price?: number
   payment_method?: "mercado_pago" | "external_link" | "transfer" | "free" | null
+  payment_provider?: string | null
   charged_amount?: number
   payment_fee_amount?: number
   net_amount?: number
@@ -495,7 +496,7 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
           )}
 
           <DialogFooter className="gap-2">
-  {(selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+  {selectedTicket && (selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
   <ExternalLink className="mr-2 h-4 w-4" />
   Verificar en Mercado Pago
   </Button>}
