@@ -9,12 +9,12 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Only JPG, PNG, and WebP images are allowed" }, { status: 400 })
+      return NextResponse.json({ error: "Solo se permiten archivos JPG, PNG, WebP o PDF" }, { status: 400 })
     }
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "Image must be smaller than 5 MB" }, { status: 400 })
+      return NextResponse.json({ error: "El comprobante debe pesar menos de 5 MB" }, { status: 400 })
     }
 
     // Upload to Vercel Blob
