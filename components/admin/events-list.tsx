@@ -109,10 +109,11 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span>
-                    {new Date(event.event_date).toLocaleDateString("es-ES", {
+                    {new Date(event.event_date).toLocaleDateString("es-AR", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
+                      timeZone: "America/Argentina/Buenos_Aires",
                     })}
                   </span>
                 </div>

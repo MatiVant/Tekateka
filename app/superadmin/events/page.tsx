@@ -149,12 +149,13 @@ export default async function SuperAdminEventsPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {eventDate.toLocaleDateString("es-ES", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+{eventDate.toLocaleDateString("es-AR", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      timeZone: "America/Argentina/Buenos_Aires",
+                    })}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

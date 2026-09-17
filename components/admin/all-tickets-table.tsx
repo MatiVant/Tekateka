@@ -497,7 +497,7 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
           <DialogFooter className="gap-2">
   {selectedTicket?.status === "pending" && (
   <>
-  {selectedTicket.payment_method === "mercado_pago" && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+  {(selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
   <ExternalLink className="mr-2 h-4 w-4" />
   Verificar en Mercado Pago
   </Button>}
