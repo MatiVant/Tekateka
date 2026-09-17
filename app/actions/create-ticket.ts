@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 import { createHash, randomBytes } from "node:crypto"
+import { headers } from "next/headers"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -99,7 +100,11 @@ export async function createTicket(data: CreateTicketData) {
 
       if (resend && event) {
         const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
-        const resumeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || new URL(process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "http://localhost:3000").origin}/pay/${resumeToken}`
+        const requestHeaders = await headers()
+        const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
+        const forwardedProto = requestHeaders.get("x-forwarded-proto") || (forwardedHost?.includes("localhost") ? "http" : "https")
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+        const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
         await resend.emails.send({
           from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
           to: data.buyer_email,
