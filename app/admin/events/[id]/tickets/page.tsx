@@ -22,13 +22,12 @@ export default async function EventTicketsPage({
 
   const supabase = await createClient();
 
-  // Verificar que el evento pertenece al organizador
-  const { data: event } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', id)
-    .eq('organizer_id', user.id)
-    .single();
+  // Los superadmins pueden consultar las ventas de cualquier evento; los organizadores solo los propios.
+  let eventQuery = supabase.from('events').select('*').eq('id', id);
+  if (profile?.role !== 'superadmin') {
+    eventQuery = eventQuery.eq('organizer_id', user.id);
+  }
+  const { data: event } = await eventQuery.single();
 
   if (!event) {
     notFound();
