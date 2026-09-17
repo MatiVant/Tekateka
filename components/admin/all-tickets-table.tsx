@@ -99,6 +99,22 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
     return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos aún</div>
   }
 
+  const handleVerifyPayment = async (ticketId: string) => {
+    setLoadingId(ticketId)
+    try {
+      const response = await fetch("/api/mercadopago/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "No se pudo consultar Mercado Pago")
+      toast({ title: result.status === "approved" ? "Pago confirmado" : "Estado actualizado", description: result.status === "not_found" ? result.message : `Mercado Pago informó: ${result.mpStatus}` })
+      router.refresh()
+      setIsDialogOpen(false)
+    } catch (error) {
+      toast({ title: "No se pudo verificar el pago", description: error instanceof Error ? error.message : "Intentá nuevamente.", variant: "destructive" })
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   const handleResendPaymentLink = async (ticketId: string) => {
     setLoadingId(ticketId)
     try {
@@ -481,9 +497,13 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
           <DialogFooter className="gap-2">
   {selectedTicket?.status === "pending" && (
   <>
+  {selectedTicket.payment_method === "mercado_pago" && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+  <ExternalLink className="mr-2 h-4 w-4" />
+  Verificar en Mercado Pago
+  </Button>}
   <Button variant="outline" onClick={() => handleResendPaymentLink(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
-    <Mail className="mr-2 h-4 w-4" />
-    Reenviar enlace de pago
+  <Mail className="mr-2 h-4 w-4" />
+  Reenviar enlace de pago
   </Button>
                 <Button
                   onClick={() => {
