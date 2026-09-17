@@ -34,6 +34,7 @@ interface PurchaseFlowProps {
 }
 
 type Step = "tiers" | "form" | "payment" | "receipt" | "success"
+type PaymentMethod = "mercado_pago" | "external_link" | "transfer"
 
 export function PurchaseFlow({
   eventId,
@@ -67,6 +68,7 @@ export function PurchaseFlow({
   const [discountApplied, setDiscountApplied] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(mercadoPagoLink ? "external_link" : "mercado_pago")
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
   const router = useRouter()
 
@@ -245,10 +247,13 @@ export function PurchaseFlow({
 
       if (isFree || (isPwyw && priceToUse === 0)) {
         setStep("success")
-  } else if (mercadoPagoLink) {
-  setCheckoutUrl(null)
-  setStep("payment")
-  } else {
+      } else if (paymentMethod === "transfer") {
+        setCheckoutUrl(null)
+        setStep("receipt")
+      } else if (mercadoPagoLink) {
+        setCheckoutUrl(null)
+        setStep("payment")
+      } else {
   const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds }) })
   const checkoutData = await checkoutResponse.json()
   if (!checkoutResponse.ok) throw new Error(checkoutData.error || "No se pudo iniciar el pago")
@@ -442,6 +447,19 @@ export function PurchaseFlow({
               ¡Código aplicado! Precio con descuento: {formatCurrency(finalPrice)}
             </AlertDescription>
           </Alert>
+        )}
+
+        {!isFree && (
+          <div className="space-y-3">
+            <Label>Elegí cómo pagar</Label>
+            <div className="grid gap-2">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+                <input type="radio" name="payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" />
+                <span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Mercado Pago cobrará sus cargos adicionales. No necesitás adjuntar comprobante.</span></span>
+              </label>
+              {paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"><input type="radio" name="payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">No tiene cargos adicionales. Vas a tener que adjuntar el comprobante.</span></span></label>}
+            </div>
+          </div>
         )}
 
         {error && (
