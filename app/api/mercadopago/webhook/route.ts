@@ -103,6 +103,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo procesar el pago" }, { status: 500 })
   }
 
+  const { error: ticketSyncError } = await supabase
+    .from("tickets")
+    .update({
+      payment_status: status,
+      payment_provider: "mercadopago",
+      payment_id: String(paymentId),
+      ...(status === "approved" ? { status: "confirmed" } : {}),
+    })
+    .in("id", ticketIds)
+  if (ticketSyncError) {
+    console.error("[v0] No se pudo sincronizar el estado de las entradas:", ticketSyncError)
+    return NextResponse.json({ error: "No se pudo sincronizar el pago" }, { status: 500 })
+  }
+
   const eventId = matchingTickets[0].event_id
   const organizerId = connection.producer_id
   const { data: existingMovement } = await supabase
