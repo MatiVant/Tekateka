@@ -19,6 +19,9 @@ interface EventData {
   organizer_id: string
   max_tickets_per_person: number | null
   mercado_pago_link: string | null
+  payment_methods: string[]
+  transfer_alias: string | null
+  transfer_account_holder: string | null
 }
 
 interface TicketTier {

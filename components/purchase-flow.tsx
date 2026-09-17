@@ -28,6 +28,7 @@ interface PurchaseFlowProps {
   eventTitle: string
   eventPrice: number
   paymentInstructions?: string
+  paymentMethods?: string[] | null
   mercadoPagoLink?: string | null
   isFree?: boolean
   isPwyw?: boolean
@@ -68,7 +69,9 @@ export function PurchaseFlow({
   const [discountApplied, setDiscountApplied] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(mercadoPagoLink ? "external_link" : "mercado_pago")
+  const availablePaymentMethods = paymentMethods?.length ? paymentMethods : [mercadoPagoLink ? "external_link" : "mercado_pago"]
+  const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : mercadoPagoLink ? "external_link" : "mercado_pago"
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(defaultPaymentMethod)
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
   const router = useRouter()
 
@@ -454,11 +457,11 @@ export function PurchaseFlow({
           <div className="space-y-3">
             <Label>Elegí cómo pagar</Label>
             <div className="grid gap-2">
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+              {availablePaymentMethods.includes(mercadoPagoLink ? "external_link" : "mercado_pago") && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
                 <input type="radio" name="payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" />
                 <span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Mercado Pago cobrará sus cargos adicionales. No necesitás adjuntar comprobante.</span></span>
-              </label>
-              {paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"><input type="radio" name="payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">No tiene cargos adicionales. Vas a tener que adjuntar el comprobante.</span></span></label>}
+              </label>}
+              {availablePaymentMethods.includes("transfer") && paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"><input type="radio" name="payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">No tiene cargos adicionales. Vas a tener que adjuntar el comprobante.</span></span></label>}
             </div>
           </div>
         )}

@@ -159,8 +159,13 @@ export default async function EventDetailPage({
                     eventId={event.id}
                     eventTitle={event.title}
                     eventPrice={Number(event.price)}
-                    paymentInstructions={event.payment_instructions}
-                    mercadoPagoLink={event.mercado_pago_link}
+                  paymentInstructions={[
+                    event.payment_instructions,
+                    event.transfer_alias ? `Alias: ${event.transfer_alias}` : null,
+                    event.transfer_account_holder ? `Cuenta a nombre de: ${event.transfer_account_holder}` : null,
+                  ].filter(Boolean).join("\n") || undefined}
+                  paymentMethods={event.payment_methods}
+                  mercadoPagoLink={event.mercado_pago_link}
                     isFree={isFree}
                     isPwyw={isPwyw}
                   />

@@ -31,6 +31,9 @@ interface EventFormProps {
     is_pay_what_you_want: boolean
     max_tickets_per_person?: number
     mercado_pago_link?: string | null
+    payment_methods?: string[] | null
+    transfer_alias?: string | null
+    transfer_account_holder?: string | null
   }
 }
 
@@ -74,6 +77,9 @@ export function EventForm({ userId, event }: EventFormProps) {
   )
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState(event?.max_tickets_per_person?.toString() || "")
   const [mercadoPagoLink, setMercadoPagoLink] = useState(event?.mercado_pago_link || "")
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(event?.payment_methods?.length ? event.payment_methods : ["mercado_pago", "transfer"])
+  const [transferAlias, setTransferAlias] = useState(event?.transfer_alias || "")
+  const [transferAccountHolder, setTransferAccountHolder] = useState(event?.transfer_account_holder || "")
   const [ticketTiers, setTicketTiers] = useState<
     Array<{
       name: string
@@ -246,6 +252,9 @@ export function EventForm({ userId, event }: EventFormProps) {
         organizer_id: userId,
         max_tickets_per_person: maxTicketsPerPerson ? Number.parseInt(maxTicketsPerPerson) : null,
         mercado_pago_link: mercadoPagoLink || null,
+        payment_methods: paymentMethods,
+        transfer_alias: transferAlias.trim() || null,
+        transfer_account_holder: transferAccountHolder.trim() || null,
       }
 
       const tiersToSave = ticketTiers.map((tier, index) => ({
@@ -467,6 +476,13 @@ export function EventForm({ userId, event }: EventFormProps) {
         <p className="text-xs text-muted-foreground">
           Cantidad máxima de entradas que puede comprar una persona. Dejar vacío para sin límite.
         </p>
+      </div>
+
+      <div className="space-y-3 rounded-lg border p-4">
+        <div><Label>Métodos de pago habilitados</Label><p className="text-xs text-muted-foreground">Elegí cómo pueden pagar las entradas.</p></div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paymentMethods.includes("mercado_pago")} onChange={(e) => setPaymentMethods((current) => e.target.checked ? [...new Set([...current, "mercado_pago"])] : current.filter((method) => method !== "mercado_pago"))} /> Mercado Pago</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paymentMethods.includes("transfer")} onChange={(e) => setPaymentMethods((current) => e.target.checked ? [...new Set([...current, "transfer"])] : current.filter((method) => method !== "transfer"))} /> Transferencia bancaria</label>
+        {paymentMethods.includes("transfer") && <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="transferAlias">Alias</Label><Input id="transferAlias" value={transferAlias} onChange={(e) => setTransferAlias(e.target.value)} placeholder="mi.alias" /></div><div className="space-y-2"><Label htmlFor="transferAccountHolder">Cuenta a nombre de</Label><Input id="transferAccountHolder" value={transferAccountHolder} onChange={(e) => setTransferAccountHolder(e.target.value)} placeholder="Nombre y apellido" /></div></div>}
       </div>
 
       <div className="space-y-2">
