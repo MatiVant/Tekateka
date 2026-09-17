@@ -22,13 +22,14 @@ interface EventCardProps {
     image_url: string | null
     location_url?: string | null
     status: string
+    confirmed_count?: number
   }
   featured?: boolean
 }
 
 export function EventCard({ event, featured = false }: EventCardProps) {
   const eventDate = new Date(event.event_date)
-  const [confirmedCount, setConfirmedCount] = useState(0)
+  const [confirmedCount, setConfirmedCount] = useState(event.confirmed_count ?? 0)
   const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
   const isAvailable = event.status === "active" && realAvailableTickets > 0
 

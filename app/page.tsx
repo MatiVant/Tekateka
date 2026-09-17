@@ -14,8 +14,20 @@ export default async function HomePage() {
     .in("status", ["active", "inactive", "sold_out"])
     .order("event_date", { ascending: true })
 
-  const featuredEvents = events?.slice(0, 3) || []
-  const regularEvents = events?.slice(3) || []
+  const { data: confirmedTickets } = await supabase
+    .from("tickets")
+    .select("event_id")
+    .eq("status", "confirmed")
+  const confirmedByEvent = (confirmedTickets || []).reduce<Record<string, number>>((counts, ticket) => {
+    counts[ticket.event_id] = (counts[ticket.event_id] || 0) + 1
+    return counts
+  }, {})
+  const eventsWithAvailability = (events || []).map((event) => ({
+    ...event,
+    confirmed_count: confirmedByEvent[event.id] || 0,
+  }))
+  const featuredEvents = eventsWithAvailability.slice(0, 3)
+  const regularEvents = eventsWithAvailability.slice(3)
 
   return (
     <div className="min-h-screen bg-background">
