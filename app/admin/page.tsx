@@ -13,6 +13,9 @@ import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(amount)
+
 export default async function AdminPage() {
   const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
 
