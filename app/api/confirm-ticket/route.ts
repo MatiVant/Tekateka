@@ -34,9 +34,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 })
     }
 
+    const wasAlreadyConfirmed = ticket.status === "confirmed"
     const { error: updateError } = await supabase.from("tickets").update({ status: "confirmed" }).eq("id", ticketId)
 
     if (updateError) throw updateError
+
+    if (!wasAlreadyConfirmed) {
+      const { data: event } = await supabase.from("events").select("available_tickets").eq("id", ticket.event_id).single()
+      if (event && Number(event.available_tickets) > 0) {
+        await supabase.from("events").update({ available_tickets: Number(event.available_tickets) - 1 }).eq("id", ticket.event_id)
+      }
+      if (ticket.tier_id) {
+        const { data: tier } = await supabase.from("ticket_tiers").select("available_quantity").eq("id", ticket.tier_id).single()
+        if (tier && Number(tier.available_quantity) > 0) {
+          await supabase.from("ticket_tiers").update({ available_quantity: Number(tier.available_quantity) - 1 }).eq("id", ticket.tier_id)
+        }
+      }
+    }
 
     if (!resend) {
       return NextResponse.json({ success: true, warning: "Email no configurado" })

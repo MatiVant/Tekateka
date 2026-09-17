@@ -172,6 +172,10 @@ export default async function AdminPage() {
         </div>
 
         {/* Resumen compacto */}
+        <section className="mb-3">
+          <h2 className="text-xl font-bold">Total histórico</h2>
+          <p className="text-sm text-muted-foreground">Resumen acumulado de todos tus eventos.</p>
+        </section>
         <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="p-4 bg-card border border-border rounded-lg">
             <div className="flex items-center justify-between mb-2">
