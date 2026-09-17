@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
+import { createHash, randomBytes } from "node:crypto"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -62,6 +63,11 @@ export async function createTicket(data: CreateTicketData) {
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
 
+    const resumeToken = randomBytes(32).toString("hex")
+    const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
+    const resumeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+    const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)
+    if (tokenError) throw new Error("No se pudo preparar el enlace de pago")
 
     // Si hay código de promoción, guardarlo en la tabla de relación
     if (data.promotion_code) {
@@ -93,11 +99,12 @@ export async function createTicket(data: CreateTicketData) {
 
       if (resend && event) {
         const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
+        const resumeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || new URL(process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "http://localhost:3000").origin}/pay/${resumeToken}`
         await resend.emails.send({
           from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
           to: data.buyer_email,
           subject: `Compra recibida: ${event.title}`,
-          html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Si todavía no pagaste, podés hacerlo desde la pantalla de compra.</p><p>Conservá este email: te enviaremos tus entradas cuando el pago sea confirmado.</p>`,
+          html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de entradas para <strong>${event.title}</strong>.</p><p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
         })
         if (organizer?.email && organizer.email !== data.buyer_email) {
           await resend.emails.send({
