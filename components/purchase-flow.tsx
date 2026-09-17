@@ -593,6 +593,18 @@ export function PurchaseFlow({
   if (step === "receipt") {
     return (
       <form onSubmit={handleReceiptUpload} className="space-y-4">
+        <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Cantidad:</span>
+            <span className="font-medium">
+              {quantity} {quantity === 1 ? "entrada" : "entradas"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Total a pagar:</span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(finalPrice * quantity)}</span>
+          </div>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="receipt">Comprobante de Pago</Label>
           <div className="flex items-center gap-2">
