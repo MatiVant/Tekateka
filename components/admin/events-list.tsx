@@ -25,6 +25,8 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
   }
 
   const { data: events } = await query
+  const { data: confirmedTickets } = await supabase.from("tickets").select("event_id").eq("status", "confirmed")
+  const confirmedByEvent = (confirmedTickets || []).reduce<Record<string, number>>((counts, ticket) => { counts[ticket.event_id] = (counts[ticket.event_id] || 0) + 1; return counts }, {})
 
   if (!events || events.length === 0) {
     return (
@@ -105,7 +107,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 <div className="flex items-center gap-2">
                   <Ticket className="h-4 w-4" />
                   <span>
-                    {event.available_tickets} / {event.total_tickets} disponibles
+                    {Math.max(0, event.total_tickets - (confirmedByEvent[event.id] || 0))} / {event.total_tickets} disponibles
                   </span>
                 </div>
 

@@ -28,7 +28,9 @@ interface EventCardProps {
 
 export function EventCard({ event, featured = false }: EventCardProps) {
   const eventDate = new Date(event.event_date)
-  const isAvailable = event.status === "active" && event.available_tickets > 0
+  const [confirmedCount, setConfirmedCount] = useState(0)
+  const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
+  const isAvailable = event.status === "active" && realAvailableTickets > 0
 
   const [minPrice, setMinPrice] = useState<number | null>(null)
 
@@ -36,6 +38,8 @@ export function EventCard({ event, featured = false }: EventCardProps) {
     const fetchMinPrice = async () => {
       try {
         const supabase = createClient()
+        const { count } = await supabase.from("tickets").select("id", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "confirmed")
+        setConfirmedCount(count ?? 0)
         const { data: tiers } = await supabase
           .from("ticket_tiers")
           .select("base_price")
@@ -72,11 +76,11 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         {!isAvailable && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
             <Badge variant="destructive" className="text-base px-4 py-2 font-semibold">
-              {event.status === "sold_out" || event.available_tickets === 0 ? "Agotado" : "No Disponible"}
+              {event.status === "sold_out" || realAvailableTickets === 0 ? "Agotado" : "No Disponible"}
             </Badge>
           </div>
         )}
-        {isAvailable && event.available_tickets <= Math.max(5, Math.ceil(event.total_tickets * 0.1)) && (
+        {isAvailable && realAvailableTickets <= Math.max(5, Math.ceil(event.total_tickets * 0.1)) && (
           <Badge className="absolute bottom-4 left-4 bg-primary text-primary-foreground">Últimos lugares</Badge>
         )}
 
@@ -140,7 +144,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
           <div className="flex items-center gap-2.5 text-sm">
             <Ticket className="h-4 w-4 text-primary shrink-0" />
             <span className="text-foreground/80">
-              {event.available_tickets} de {event.total_tickets} disponibles
+              {realAvailableTickets} de {event.total_tickets} disponibles
             </span>
           </div>
         </div>

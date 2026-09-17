@@ -177,7 +177,7 @@ export default async function SuperAdminEventsPage() {
                         <div className="bg-muted/50 rounded-lg p-4">
                           <p className="text-xs text-muted-foreground mb-1">Entradas Totales</p>
                           <p className="text-2xl font-bold">{event.total_tickets}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{event.available_tickets} disponibles</p>
+                          <p className="text-xs text-muted-foreground mt-1">{Math.max(0, event.total_tickets - (stats.confirmed || 0))} disponibles</p>
                         </div>
 
                         <div className="bg-muted/50 rounded-lg p-4">
