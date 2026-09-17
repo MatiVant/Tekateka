@@ -11,7 +11,10 @@ import { formatCurrency } from "@/lib/format"
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
-  const { data: event } = await supabase.from("events").select("title, description, image_url, venue, event_date").or(`id.eq.${id},slug.eq.${id}`).maybeSingle()
+  const eventQuery = /^[0-9a-f-]{36}$/i.test(id)
+    ? supabase.from("events").select("title, description, image_url, venue, event_date").eq("id", id).maybeSingle()
+    : supabase.from("events").select("title, description, image_url, venue, event_date").eq("slug", id).maybeSingle()
+  const { data: event } = await eventQuery
   if (!event) return { title: "Evento | TekaTeka" }
   const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
   return { title: `${event.title} | TekaTeka`, description: event.description || `${event.title} - ${date} en ${event.venue}`, openGraph: { title: event.title, description: event.description || `${date} en ${event.venue}`, images: event.image_url ? [event.image_url] : undefined } }
@@ -25,7 +28,10 @@ export default async function EventDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: event, error } = await supabase.from("events").select("*").or(`id.eq.${id},slug.eq.${id}`).maybeSingle()
+  const eventQuery = /^[0-9a-f-]{36}$/i.test(id)
+    ? supabase.from("events").select("*").eq("id", id).maybeSingle()
+    : supabase.from("events").select("*").eq("slug", id).maybeSingle()
+  const { data: event, error } = await eventQuery
 
   if (error || !event) {
     console.error("[v0] Error fetching event:", error)
@@ -41,7 +47,7 @@ export default async function EventDetailPage({
   const { data: minPriceTier } = await supabase
     .from("ticket_tiers")
     .select("base_price")
-    .eq("event_id", id)
+    .eq("event_id", event.id)
     .order("base_price", { ascending: true })
     .limit(1)
     .maybeSingle()
