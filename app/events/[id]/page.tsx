@@ -11,7 +11,7 @@ import { formatCurrency } from "@/lib/format"
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
-  const { data: event } = await supabase.from("events").select("title, description, image_url, venue, event_date").eq("id", id).single()
+  const { data: event } = await supabase.from("events").select("title, description, image_url, venue, event_date").or(`id.eq.${id},slug.eq.${id}`).maybeSingle()
   if (!event) return { title: "Evento | TekaTeka" }
   const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
   return { title: `${event.title} | TekaTeka`, description: event.description || `${event.title} - ${date} en ${event.venue}`, openGraph: { title: event.title, description: event.description || `${date} en ${event.venue}`, images: event.image_url ? [event.image_url] : undefined } }
@@ -25,7 +25,7 @@ export default async function EventDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: event, error } = await supabase.from("events").select("*").eq("id", id).single()
+  const { data: event, error } = await supabase.from("events").select("*").or(`id.eq.${id},slug.eq.${id}`).maybeSingle()
 
   if (error || !event) {
     console.error("[v0] Error fetching event:", error)

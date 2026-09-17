@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createUniqueEventSlug } from '@/lib/slugify'
 
 interface EventData {
   title: string
@@ -52,11 +53,13 @@ export async function saveEvent(
       throw new Error('La imagen del evento es obligatoria y debe haberse subido correctamente')
     }
 
+    const slug = await createUniqueEventSlug(supabase, eventData.title, eventId)
+
     if (eventId) {
       // Actualizar evento existente
       const { error: updateError } = await supabase
         .from('events')
-        .update(eventData)
+        .update({ ...eventData, slug })
         .eq('id', eventId)
 
       if (updateError) throw updateError
@@ -68,7 +71,7 @@ export async function saveEvent(
       // Crear nuevo evento
       const { data: newEvent, error: insertError } = await supabase
         .from('events')
-        .insert(eventData)
+        .insert({ ...eventData, slug })
         .select()
         .single()
 

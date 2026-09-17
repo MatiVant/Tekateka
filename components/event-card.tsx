@@ -148,7 +148,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
 
       <CardFooter className={`border-t border-border/50 ${featured ? "p-6" : "p-5"} pt-4`}>
         <Button asChild disabled={!isAvailable} className="w-full group/btn" size={featured ? "lg" : "default"}>
-          <Link href={`/events/${event.id}`} className="flex items-center justify-center gap-2">
+          <Link href={`/events/${event.slug || event.id}`} className="flex items-center justify-center gap-2">
             {isAvailable ? "Comprar entradas" : "Ver detalles"}
             <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
           </Link>

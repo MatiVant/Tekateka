@@ -131,7 +131,7 @@ export default async function SuperAdminEventsPage() {
 
                     <div className="lg:col-span-5 space-y-3">
                       <div>
-                        <Link href={`/events/${event.id}`} className="hover:underline">
+                        <Link href={`/events/${event.slug || event.id}`} className="hover:underline">
                           <h3 className="text-xl font-bold">{event.title}</h3>
                         </Link>
                         <p className="text-sm text-muted-foreground mt-1">

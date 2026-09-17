@@ -4,10 +4,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Share2, Check, Copy } from "lucide-react"
 
-export function ShareEventButton({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
+export function ShareEventButton({ eventId, eventTitle, eventSlug }: { eventId: string; eventTitle: string; eventSlug?: string | null }) {
   const [copied, setCopied] = useState(false)
   const share = async () => {
-    const url = `${window.location.origin}/events/${eventId}?evento=${encodeURIComponent(eventTitle.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/gi, "-").replace(/^-|-$/g, ""))}`
+    const url = `${window.location.origin}/events/${eventSlug || eventId}`
     if (navigator.share) {
       await navigator.share({ title: eventTitle, text: `Mirá este evento: ${eventTitle}`, url })
       return

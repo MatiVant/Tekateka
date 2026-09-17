@@ -114,12 +114,12 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
 
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/events/${event.id}?evento=${encodeURIComponent(event.title)}`}>
+                  <Link href={`/events/${event.slug || event.id}`}>
                     <Eye className="mr-1 h-3 w-3" />
                     Ver
                   </Link>
                 </Button>
-                <ShareEventButton eventId={event.id} eventTitle={event.title} />
+                <ShareEventButton eventId={event.id} eventTitle={event.title} eventSlug={event.slug} />
                 {event.status !== "finished" && (
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/admin/events/${event.id}/edit`}>
