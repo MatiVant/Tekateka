@@ -40,9 +40,10 @@ export async function POST(request: Request) {
     if (updateError) throw updateError
 
     if (!wasAlreadyConfirmed) {
-      const { data: event } = await supabase.from("events").select("available_tickets").eq("id", ticket.event_id).single()
-      if (event && Number(event.available_tickets) > 0) {
-        await supabase.from("events").update({ available_tickets: Number(event.available_tickets) - 1 }).eq("id", ticket.event_id)
+      const { data: event } = await supabase.from("events").select("total_tickets").eq("id", ticket.event_id).single()
+      if (event) {
+        const { count: confirmedCount } = await supabase.from("tickets").select("id", { count: "exact", head: true }).eq("event_id", ticket.event_id).eq("status", "confirmed")
+        await supabase.from("events").update({ available_tickets: Math.max(0, Number(event.total_tickets) - (confirmedCount ?? 0)) }).eq("id", ticket.event_id)
       }
       if (ticket.tier_id) {
         const { data: tier } = await supabase.from("ticket_tiers").select("available_quantity").eq("id", ticket.tier_id).single()

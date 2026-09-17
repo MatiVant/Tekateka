@@ -38,8 +38,15 @@ export default async function EventDetailPage({
     notFound()
   }
 
+  const { count: confirmedTickets } = await supabase
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", event.id)
+    .eq("status", "confirmed")
+  const confirmedCount = confirmedTickets ?? 0
+  const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
   const eventDate = new Date(event.event_date)
-  const isAvailable = event.status === "active" && event.available_tickets > 0
+  const isAvailable = event.status === "active" && realAvailableTickets > 0
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
@@ -112,7 +119,7 @@ export default async function EventDetailPage({
               <div className="flex items-center gap-3">
                 <Ticket className="h-5 w-5 text-muted-foreground" />
                 <span className="text-lg">
-                  {event.available_tickets} entradas disponibles de {event.total_tickets}
+                  {realAvailableTickets} entradas disponibles de {event.total_tickets}
                 </span>
               </div>
             </div>

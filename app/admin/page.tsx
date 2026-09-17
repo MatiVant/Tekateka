@@ -215,7 +215,7 @@ export default async function AdminPage() {
         </div>
 
         <section className="mb-12">
-          <div className="mb-6"><h2 className="text-xl font-bold">Informe financiero por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas, total cobrado, cargos de Mercado Pago y neto.</p></div>
+          <div className="mb-6"><h2 className="text-xl font-bold">Total histórico por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas, total cobrado, cargos de Mercado Pago y neto.</p></div>
           <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-3 text-left">Evento</th><th className="p-3 text-right">Entradas</th><th className="p-3 text-right">Cobrado</th><th className="p-3 text-right">Cargos</th><th className="p-3 text-right">Neto</th></tr></thead><tbody>{eventReports.map(({ event, count, gross, fees, net }) => <tr key={event.id} className="border-t"><td className="p-3 font-medium">{event.title}</td><td className="p-3 text-right">{count}</td><td className="p-3 text-right">{formatCurrency(gross)}</td><td className="p-3 text-right">{formatCurrency(fees)}</td><td className="p-3 text-right font-semibold">{formatCurrency(net)}</td></tr>)}{eventReports.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Todavía no hay pagos confirmados.</td></tr>}</tbody></table></div>
         </section>
 
