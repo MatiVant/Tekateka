@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -93,6 +93,20 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
 
   if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
     return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos aún</div>
+  }
+
+  const handleResendPaymentLink = async (ticketId: string) => {
+    setLoadingId(ticketId)
+    try {
+      const response = await fetch("/api/resend-payment-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "No se pudo reenviar el enlace")
+      toast({ title: "Enlace reenviado", description: "El comprador recibirá un nuevo enlace para continuar el pago." })
+    } catch (error) {
+      toast({ title: "No se pudo reenviar", description: error instanceof Error ? error.message : "Intentá nuevamente.", variant: "destructive" })
+    } finally {
+      setLoadingId(null)
+    }
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -457,8 +471,12 @@ export function AllTicketsTable({ tickets }: AllTicketsTableProps) {
           )}
 
           <DialogFooter className="gap-2">
-            {selectedTicket?.status === "pending" && (
-              <>
+  {selectedTicket?.status === "pending" && (
+  <>
+  <Button variant="outline" onClick={() => handleResendPaymentLink(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+    <Mail className="mr-2 h-4 w-4" />
+    Reenviar enlace de pago
+  </Button>
                 <Button
                   onClick={() => {
                     handleStatusChange(selectedTicket.id, "confirmed")
