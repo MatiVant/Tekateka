@@ -118,12 +118,12 @@ export async function createTicket(data: CreateTicketData) {
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
           const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `https://${forwardedHost}` : "https://tktk.buholabs.com.ar")
           const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(data.qr_code)}`
-          const qrDataUrl = await (await import("qrcode")).default.toDataURL(ticketUrl, { width: 400, margin: 2, errorCorrectionLevel: "M" })
+          const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
           await resend.emails.send({
             from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
             to: data.buyer_email,
             subject: `Tu entrada gratuita: ${eventDetails?.title || "TekaTeka"}`,
-            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;text-align:center"><h1>Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada gratuita para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><img src="${qrDataUrl}" alt="Código QR de entrada" style="width:280px;height:280px" /><p><strong>Presentá este QR al ingresar.</strong></p><p><a href="${ticketUrl}">Abrir entrada digital</a></p></div>`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;text-align:center"><h1>Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada gratuita para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><img src="${qrImageUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto" /><p><strong>Presentá este QR al ingresar.</strong></p><p><a href="${ticketUrl}">Abrir entrada digital</a></p></div>`,
           })
         }
       } catch (freeEmailError) {
