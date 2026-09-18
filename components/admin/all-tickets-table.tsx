@@ -482,7 +482,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                       <div className="flex flex-col gap-1">
                         {ticket.ticket_promotions.map((promo) => (
                           <Badge key={promo.id} variant="secondary" className="text-xs">
-                            {promo.promotion_codes.code}
+                            {promo.promotion_codes.promotion_type === "protocol" || ticket.final_price === 0 ? `${promo.promotion_codes.code} · Gratis` : `${promo.promotion_codes.code} · Descuento`}
                           </Badge>
                         ))}
                       </div>
