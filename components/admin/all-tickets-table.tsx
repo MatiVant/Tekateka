@@ -525,17 +525,11 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           </div>
         )}
 
-        <div className="flex justify-between items-center p-4 bg-muted/30 rounded-lg">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground mb-1">Total de tickets</p>
-            <p className="text-2xl font-bold">{tickets.length}</p>
-          </div>
-          <div className="space-y-1 text-right">
-            <p className="text-sm text-muted-foreground">Total confirmados</p>
-            <p className="text-2xl font-bold text-green-600">
-              {tickets.filter((t) => t.status === "confirmed").length}
-            </p>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-4 p-4 bg-muted/30 rounded-lg">
+          <div><p className="text-sm text-muted-foreground">Total de tickets</p><p className="text-2xl font-bold">{tickets.length}</p></div>
+          <div><p className="text-sm text-muted-foreground">Confirmados</p><p className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "confirmed").length}</p></div>
+          <div><p className="text-sm text-muted-foreground">Gratis</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) === 0 || t.payment_method === "free").length}</p></div>
+          <div><p className="text-sm text-muted-foreground">Con descuento</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) > 0 && Boolean(t.ticket_promotions?.length)).length}</p></div>
         </div>
       </div>
 
