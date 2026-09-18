@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { ArrowRight, BarChart3, CheckCircle2, CircleHelp, ClipboardList, Eye, LayoutDashboard, Link2, Plus, ShieldCheck, Ticket, Users } from "lucide-react"
+import { ArrowRight, BarChart3, CheckCircle2, CircleHelp, ClipboardList, Eye, Gift, LayoutDashboard, Link2, Plus, Repeat2, ShieldCheck, Ticket, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -51,6 +51,32 @@ export default function HelpPage() {
             <GuideCard icon={BarChart3} title="5. Consultá el resumen" text="El panel muestra entradas confirmadas, pendientes y el resumen económico. Los movimientos detallados están disponibles desde su informe separado." />
             <GuideCard icon={Link2} title="6. Compartí con artistas" text="Generá un enlace privado por evento. Podés permitir que el artista vea quién compró, incluyendo teléfono si el comprador lo informó, o dejar solo los totales." />
           </div>
+
+          <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary"><Gift className="h-5 w-5" /></div>
+              <div className="w-full">
+                <h3 className="text-xl font-bold">Cómo usar los códigos de promoción</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Creá códigos desde la configuración del evento y compartilos con tu público.</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  <PromoGuide icon={Gift} title="Entrada gratis o 100%" text="El comprador obtiene una sola entrada sin pagar. No verá transferencia ni Mercado Pago: la entrada se confirma directamente como gratuita." />
+                  <PromoGuide icon={Ticket} title="Descuento parcial" text="El comprador obtiene una sola entrada y paga el importe final luego del descuento. Ese es el valor que verá en el resumen y en la transferencia." />
+                  <PromoGuide icon={Repeat2} title="2x1" text="El comprador recibe exactamente 2 entradas y paga el valor de 1. La cantidad se fija automáticamente y no puede modificarse mientras el código esté aplicado." />
+                </div>
+                <div className="mt-5 rounded-xl border bg-background/70 p-4 text-sm leading-6">
+                  <p className="font-semibold">Para crear un 2x1</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+                    <li>Entrá al evento como administrador.</li>
+                    <li>Abrí <strong className="text-foreground">Códigos de promoción</strong> y creá uno nuevo.</li>
+                    <li>Elegí el tipo <strong className="text-foreground">2x1 (Paga 1, lleva 2)</strong>.</li>
+                    <li>Definí el código, el límite de usos y, si querés, las fechas de vigencia.</li>
+                    <li>Compartí el código con tus compradores.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </section>
 
         <section id="artistas" className="scroll-mt-8 rounded-2xl border bg-card p-6 sm:p-8">
@@ -60,10 +86,15 @@ export default function HelpPage() {
         <section id="compradores" className="scroll-mt-8">
           <div className="mb-5 flex items-center gap-3"><div className="rounded-lg bg-primary/10 p-2 text-primary"><Ticket className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Para compradores</h2><p className="text-muted-foreground">Tu compra queda acompañada en cada paso.</p></div></div>
           <div className="grid gap-4 md:grid-cols-3"><GuideCard icon={Ticket} title="Elegí tus entradas" text="Seleccioná cantidad, promociones o modalidades 2x1 cuando estén disponibles." /><GuideCard icon={ClipboardList} title="Revisá antes de pagar" text="Confirmá nombre, email, cantidad, total y medio de pago en la pantalla de revisión." /><GuideCard icon={CheckCircle2} title="Recibí y confirmá" text="Por transferencia, copiá el Alias, enviá el comprobante y esperá la revisión. Por Mercado Pago, el estado se actualiza automáticamente." /></div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <InfoPoint icon={Gift} text="Un código gratis o con descuento permite una sola entrada." />
+            <InfoPoint icon={Repeat2} text="Un código 2x1 fija automáticamente dos entradas por el precio de una." />
+            <InfoPoint icon={CheckCircle2} text="Si el total es gratis, la entrada se confirma sin transferencia ni pago online." />
+          </div>
         </section>
 
         <section id="soporte" className="scroll-mt-8">
-          <Card><CardHeader><CardTitle className="flex items-center gap-2"><CircleHelp className="h-5 w-5 text-primary" />Preguntas frecuentes</CardTitle></CardHeader><CardContent className="grid gap-5 md:grid-cols-2"><Faq question="¿Puedo usar TekaTeka sin crear una cuenta?" answer="Sí. Podés consultar esta guía y comprar entradas sin usuario. La cuenta es necesaria para administrar eventos." /><Faq question="¿Qué pasa si pago por transferencia?" answer="Vas a ver el Alias y el titular de la cuenta, podés copiar el Alias y luego adjuntar un comprobante. El productor revisará y confirmará el pago." /><Faq question="¿Puedo compartir el acceso con un artista?" answer="Sí. Desde las ventas del evento generá un enlace privado y elegí si puede ver la lista de compradores o solo los totales." /><Faq question="¿Qué hago si escribí mal mi email?" answer="Usá Volver atrás antes de continuar al pago para corregir tus datos. Si ya completaste la compra, contactá al productor del evento." /></CardContent></Card>
+          <Card><CardHeader><CardTitle className="flex items-center gap-2"><CircleHelp className="h-5 w-5 text-primary" />Preguntas frecuentes</CardTitle></CardHeader><CardContent className="grid gap-5 md:grid-cols-2"><Faq question="¿Puedo usar TekaTeka sin crear una cuenta?" answer="Sí. Podés consultar esta guía y comprar entradas sin usuario. La cuenta es necesaria para administrar eventos." /><Faq question="¿Qué pasa si pago por transferencia?" answer="Vas a ver el Alias y el titular de la cuenta, podés copiar el Alias y luego adjuntar un comprobante. El productor revisará y confirmará el pago." /><Faq question="¿Puedo compartir el acceso con un artista?" answer="Sí. Desde las ventas del evento generá un enlace privado y elegí si puede ver la lista de compradores o solo los totales." /><Faq question="¿Cómo funciona un código 2x1?" answer="Al aplicarlo, la compra queda configurada con 2 entradas y el comprador paga el valor de 1. La cantidad no puede aumentarse ni reducirse mientras el código esté aplicado." /><Faq question="¿Puedo usar un código para varias entradas?" answer="Los códigos gratis y de descuento parcial permiten 1 entrada por compra. Solo el tipo 2x1 permite obtener 2 entradas." /><Faq question="¿Qué hago si escribí mal mi email?" answer="Usá Volver atrás antes de continuar al pago para corregir tus datos. Si ya completaste la compra, contactá al productor del evento." /></CardContent></Card>
         </section>
 
         <section className="flex flex-col items-start justify-between gap-4 rounded-2xl bg-primary p-6 text-primary-foreground sm:flex-row sm:items-center sm:p-8"><div><h2 className="text-xl font-bold">¿Listo para empezar?</h2><p className="mt-1 text-primary-foreground/80">Creá tu cuenta y publicá tu primer evento.</p></div><Button variant="secondary" asChild><Link href="/auth/sign-up">Empezar ahora <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></section>
@@ -74,5 +105,6 @@ export default function HelpPage() {
 
 function GuideCard({ icon: Icon, title, text }: { icon: typeof Plus; title: string; text: string }) { return <Card><CardHeader className="pb-3"><CardTitle className="flex items-center gap-3 text-base"><Icon className="h-5 w-5 text-primary" />{title}</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">{text}</p></CardContent></Card> }
 function InfoPoint({ icon: Icon, text }: { icon: typeof Eye; text: string }) { return <div className="flex gap-3 text-sm leading-6"><Icon className="mt-1 h-4 w-4 shrink-0 text-primary" /><span>{text}</span></div> }
+function PromoGuide({ icon: Icon, title, text }: { icon: typeof Gift; title: string; text: string }) { return <div className="rounded-xl border bg-background/70 p-4"><Icon className="h-5 w-5 text-primary" /><h4 className="mt-3 font-semibold">{title}</h4><p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p></div> }
 function Faq({ question, answer }: { question: string; answer: string }) { return <div className="border-l-2 border-primary/30 pl-4"><h3 className="font-semibold">{question}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{answer}</p></div> }
 
