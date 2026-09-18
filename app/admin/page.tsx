@@ -11,6 +11,8 @@ import { EventsList } from "@/components/admin/events-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
+import { PendingOwnershipTransfers } from "@/components/admin/pending-ownership-transfers"
+import { getPendingTransfers } from "@/app/actions/event-ownership-transfer"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
 const formatCurrency = (amount: number) =>
@@ -25,6 +27,7 @@ export default async function AdminPage() {
 
   const supabase = await createClient()
   const adminSupabase = createAdminClient()
+  const pendingTransfers = await getPendingTransfers()
   const { data: mercadoPagoConnection } = await adminSupabase.from("mercadopago_connections").select("id").eq("producer_id", user.id).maybeSingle()
 
   // El trigger de la BD actualiza automáticamente el estado
@@ -135,6 +138,7 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <PendingOwnershipTransfers transfers={pendingTransfers} />
         {/* Header */}
         <div className="mb-12">
           <div className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">

@@ -7,6 +7,8 @@ import { ArrowLeft, Settings, Ticket } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { EventForm } from "@/components/admin/event-form"
+import { EventOwnershipTransfer } from "@/components/admin/event-ownership-transfer"
+import { getPendingTransfersForEvent } from "@/app/actions/event-ownership-transfer"
 
 export default async function EditEventPage({
   params,
@@ -21,6 +23,7 @@ export default async function EditEventPage({
   }
 
   const supabase = await createClient()
+  const currentTransfer = await getPendingTransfersForEvent(id)
 
   const { data: event } = await supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single()
 
@@ -65,6 +68,8 @@ export default async function EditEventPage({
             <EventForm userId={user.id} event={event} />
           </CardContent>
         </Card>
+
+        <EventOwnershipTransfer eventId={id} currentTransfer={currentTransfer} />
       </main>
     </div>
   )

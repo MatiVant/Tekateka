@@ -91,7 +91,7 @@ export function PendingOwnershipTransfers({ transfers }: PendingOwnershipTransfe
                   </h4>
                   <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                     <p>
-                      <span className="font-medium text-foreground">Dueño actual:</span> {transfer.proposed_owner_email}
+                      <span className="font-medium text-foreground">Transferencia ofrecida por:</span> el dueño actual del evento
                     </p>
                     {transfer.events?.event_date && (
                       <p className="flex items-center gap-2">

@@ -92,22 +92,20 @@ export async function acceptOwnershipTransfer(transferId: string) {
       throw new Error('Solicitud no encontrada')
     }
 
-    // Actualizar la transferencia
-    const { error: updateTransferError } = await supabase
+    const adminSupabase = createAdminClient()
+    const { error: updateTransferError } = await adminSupabase
       .from('event_ownership_transfers')
-      .update({
-        status: 'accepted',
-        responded_at: new Date().toISOString(),
-      })
+      .update({ status: 'accepted', responded_at: new Date().toISOString() })
       .eq('id', transferId)
+      .eq('status', 'pending')
 
     if (updateTransferError) throw updateTransferError
 
-    // Actualizar el dueño del evento
-    const { error: updateEventError } = await supabase
+    const { error: updateEventError } = await adminSupabase
       .from('events')
       .update({ organizer_id: currentUser.id })
       .eq('id', transfer.event_id)
+      .eq('organizer_id', transfer.current_owner_id)
 
     if (updateEventError) throw updateEventError
 
@@ -200,6 +198,15 @@ export async function cancelOwnershipTransfer(transferId: string) {
     console.error('[v0] Error cancelling ownership transfer:', error)
     throw error
   }
+}
+
+export async function getPendingTransfersForEvent(eventId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+  const { data, error } = await supabase.from('event_ownership_transfers').select('id, proposed_owner_email, created_at').eq('event_id', eventId).eq('current_owner_id', user.id).eq('status', 'pending').maybeSingle()
+  if (error) throw error
+  return data
 }
 
 export async function getPendingTransfers() {
