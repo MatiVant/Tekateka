@@ -35,7 +35,7 @@ interface PurchaseFlowProps {
   isPwyw?: boolean
 }
 
-type Step = "tiers" | "form" | "payment" | "receipt" | "success"
+type Step = "tiers" | "form" | "review" | "payment" | "receipt" | "success"
 type PaymentMethod = "mercado_pago" | "external_link" | "transfer"
 
 export function PurchaseFlow({
@@ -209,8 +209,13 @@ export function PurchaseFlow({
     setStep("form")
   }
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+    setStep("review")
+  }
+
+  const handlePurchaseSubmit = async () => {
     setIsLoading(true)
     setError(null)
 
@@ -271,7 +276,7 @@ export function PurchaseFlow({
         setCheckoutUrl(null)
         setStep("payment")
       } else {
-  const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds }) })
+  const checkoutResponse = await fetch("/api/mercadopago/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds: createdTicketIds }) })
   const checkoutData = await checkoutResponse.json()
   if (!checkoutResponse.ok) throw new Error(checkoutData.error || "No se pudo iniciar el pago")
   setCheckoutUrl(checkoutData.initPoint)
@@ -468,19 +473,6 @@ export function PurchaseFlow({
           </Alert>
         )}
 
-        {!isFree && (
-          <div className="space-y-3">
-            <Label>Elegí cómo pagar</Label>
-            <div className="grid gap-2">
-              {availablePaymentMethods.includes(mercadoPagoLink ? "external_link" : "mercado_pago") && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-                <input type="radio" name="payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" />
-                <span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Mercado Pago cobrará sus cargos adicionales. No necesitás adjuntar comprobante.</span></span>
-              </label>}
-              {availablePaymentMethods.includes("transfer") && paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3"><input type="radio" name="payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">No tiene cargos adicionales. Vas a tener que adjuntar el comprobante.</span></span></label>}
-            </div>
-          </div>
-        )}
-
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -540,6 +532,51 @@ export function PurchaseFlow({
           </Button>
         </div>
       </form>
+    )
+  }
+
+  if (step === "review") {
+    const reviewTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Paso 2 de 2</p>
+              <h3 className="mt-1 text-xl font-semibold">Revisá tu compra</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Confirmá tus datos y elegí cómo pagar.</p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Antes de pagar</span>
+          </div>
+
+          <div className="divide-y rounded-lg border">
+            <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Nombre</span><span className="text-right font-medium">{name}</span></div>
+            <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Email</span><span className="break-all text-right font-medium">{email}</span></div>
+            <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Entradas</span><span className="font-medium">{quantity} {quantity === 1 ? "entrada" : "entradas"}</span></div>
+            <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total</span><span className="text-xl font-bold text-primary">{isFree ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
+          </div>
+        </div>
+
+        {!isFree && (
+          <div className="space-y-3">
+            <Label>Elegí cómo pagar</Label>
+            <div className="grid gap-2">
+              {availablePaymentMethods.includes(mercadoPagoLink ? "external_link" : "mercado_pago") && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" /><span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Serás redirigido para completar el pago.</span></span></label>}
+              {availablePaymentMethods.includes("transfer") && paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">Luego vas a adjuntar el comprobante.</span></span></label>}
+            </div>
+          </div>
+        )}
+
+        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>Volver atrás</Button>
+          <Button type="button" className="flex-1" onClick={handlePurchaseSubmit} disabled={isLoading}>
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree ? "Confirmar entradas" : "Continuar al pago"}
+          </Button>
+        </div>
+      </div>
     )
   }
 
