@@ -99,12 +99,17 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
             {user && <ThemeToggle />}
             {user ? (
               <>
-                {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
-                {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
-                {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
-                <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
-                <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut} aria-busy={isLoggingOut}>
-                  <LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}
+                <div className="hidden items-center gap-1 sm:flex">
+                  {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
+                  {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
+                  {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
+                  <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
+                  <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut} aria-busy={isLoggingOut}>
+                    <LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}
+                  </Button>
+                </div>
+                <Button variant="outline" size="icon" className="rounded-full border-[#d8c9b4] sm:hidden" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={isMenuOpen}>
+                  {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </Button>
               </>
             ) : (
@@ -120,9 +125,17 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
             )}
           </div>
         </div>
-        {!user && isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
-          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
-          <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
+        {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
+          {user ? <>
+            {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin</Link></Button>}
+            {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}
+            {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets</Link></Button>}
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil</Link></Button>
+            <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
+          </> : <>
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
+            <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
+          </>}
         </div>}
       </div>
     </nav>
