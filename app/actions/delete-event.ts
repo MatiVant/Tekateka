@@ -11,15 +11,17 @@ export async function deleteEvent(eventId: string) {
     if (!user) return { success: false, error: "No autenticado" }
 
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-    const { data: event, error: eventLookupError } = await supabase
+    const isSuperadmin = profile?.role === "superadmin"
+    const lookupClient = isSuperadmin ? createAdminClient() : supabase
+    const { data: event, error: eventLookupError } = await lookupClient
       .from("events")
       .select("id, organizer_id, status")
       .eq("id", eventId)
       .single()
 
     if (eventLookupError || !event) return { success: false, error: "Evento no encontrado" }
-    if (event.status !== "finished") return { success: false, error: "Solo se pueden eliminar eventos archivados" }
-    if (event.organizer_id !== user.id && profile?.role !== "superadmin") {
+    if (event.status !== "finished" && !isSuperadmin) return { success: false, error: "Solo se pueden eliminar eventos archivados" }
+    if (event.organizer_id !== user.id && !isSuperadmin) {
       return { success: false, error: "No autorizado" }
     }
 

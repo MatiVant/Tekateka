@@ -70,7 +70,7 @@ export function DeleteEventButton({ eventId, eventTitle }: DeleteEventButtonProp
         <AlertDialogHeader>
           <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acción eliminará permanentemente el evento <strong>{eventTitle}</strong> y todos sus tickets, tipos de
+            Esta acción eliminará permanentemente el evento <strong>{eventTitle}</strong>, sin importar su estado, y todos sus tickets, tipos de
             entrada y códigos promocionales asociados. Esta acción no se puede deshacer.
           </AlertDialogDescription>
         </AlertDialogHeader>
