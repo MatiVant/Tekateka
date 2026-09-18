@@ -567,12 +567,13 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-4">
-          <div><p className="text-sm text-muted-foreground">Total de tickets</p><p className="text-2xl font-bold">{tickets.length}</p></div>
-          <div><p className="text-sm text-muted-foreground">Confirmados</p><p className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "confirmed").length}</p></div>
-          <div><p className="text-sm text-muted-foreground">Gratis</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) === 0 || t.payment_method === "free").length}</p></div>
-          <div><p className="text-sm text-muted-foreground">Con descuento</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) > 0 && Boolean(t.ticket_promotions?.length)).length}</p></div>
-        </div>
+  <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-5">
+  <div><p className="text-sm text-muted-foreground">Total histórico</p><p className="text-2xl font-bold">{tickets.length}</p></div>
+  <div><p className="text-sm text-muted-foreground">Confirmados</p><p className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "confirmed").length}</p></div>
+  <div><p className="text-sm text-muted-foreground">Recaudación histórica</p><p className="text-xl font-bold">{formatCurrency(tickets.reduce((total, ticket) => total + (Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price) || 0), 0))}</p></div>
+  <div><p className="text-sm text-muted-foreground">Gratis</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) === 0 || t.payment_method === "free").length}</p></div>
+  <div><p className="text-sm text-muted-foreground">Con descuento</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) > 0 && Boolean(t.ticket_promotions?.length)).length}</p></div>
+  </div>
       </div>
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
