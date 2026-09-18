@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { LogOut } from "lucide-react"
+import { LogOut, Menu, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -19,6 +19,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   const [user, setUser] = useState(initialUser)
   const [profile, setProfile] = useState(initialProfile)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -84,16 +85,16 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-foreground/10 bg-background/90 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b border-[#e7dcc8] bg-[#f4eddf]/95 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-[4.25rem] items-center justify-between">
           <Link href="/" className="flex items-center gap-2" aria-label="TekaTeka, volver al inicio">
             <Image src="/tekateka-logo.png" alt="TekaTeka — Tus eventos. Tus entradas." width={220} height={74} priority className="hidden h-11 w-auto object-contain sm:block" />
             <Image src="/tekateka-mark.png" alt="TekaTeka" width={48} height={48} priority className="h-10 w-10 object-contain sm:hidden" />
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
-            <Button variant="ghost" className="hidden sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>
+            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>
             {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
             {user && <ThemeToggle />}
             {user ? (
@@ -108,12 +109,21 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
               </>
             ) : (
               <>
-                <Button variant="ghost" className="px-2 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button>
-                <Button className="px-3 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
+                <div className="hidden items-center gap-1 sm:flex">
+                  <Button variant="ghost" className="rounded-full px-2 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/login">Iniciar sesión</Link></Button>
+                  <Button className="rounded-full px-3 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
+                </div>
+                <Button variant="outline" size="icon" className="rounded-full border-[#d8c9b4] sm:hidden" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={isMenuOpen}>
+                  {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
               </>
             )}
           </div>
         </div>
+        {!user && isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
+          <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
+        </div>}
       </div>
     </nav>
   )
