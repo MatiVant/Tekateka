@@ -4,26 +4,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Paleta noche clara: superficies luminosas y azul petróleo */
-  --background: oklch(0.965 0.018 235);
-  --foreground: oklch(0.22 0.035 235);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.035 235);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.035 235);
-  --primary: oklch(0.43 0.11 235);
-  --primary-foreground: oklch(0.99 0.005 235);
-  --secondary: oklch(0.93 0.025 235);
-  --secondary-foreground: oklch(0.25 0.04 235);
-  --muted: oklch(0.92 0.018 235);
-  --muted-foreground: oklch(0.48 0.035 235);
-  --accent: oklch(0.72 0.14 35);
-  --accent-foreground: oklch(0.22 0.035 35);
-  --destructive: oklch(0.58 0.19 27);
-  --destructive-foreground: oklch(0.99 0.005 27);
-  --border: oklch(0.88 0.025 235);
-  --input: oklch(0.98 0.008 235);
-  --ring: oklch(0.43 0.11 235);
+  --background: oklch(0.965 0.025 86);
+  --foreground: oklch(0.16 0.015 55);
+  --card: oklch(0.985 0.012 86);
+  --card-foreground: oklch(0.16 0.015 55);
+  --popover: oklch(0.985 0.012 86);
+  --popover-foreground: oklch(0.16 0.015 55);
+  --primary: oklch(0.64 0.205 40);
+  --primary-foreground: oklch(0.985 0.012 86);
+  --secondary: oklch(0.91 0.035 86);
+  --secondary-foreground: oklch(0.2 0.02 55);
+  --muted: oklch(0.92 0.025 86);
+  --muted-foreground: oklch(0.43 0.025 55);
+  --accent: oklch(0.72 0.17 40);
+  --accent-foreground: oklch(0.16 0.015 55);
+  --destructive: oklch(0.55 0.18 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.83 0.035 76);
+  --input: oklch(0.99 0.01 86);
+  --ring: oklch(0.64 0.205 40);
   --chart-1: oklch(0.43 0.11 235);
   --chart-2: oklch(0.72 0.14 35);
   --chart-3: oklch(0.6 0.18 270);
@@ -77,8 +76,8 @@
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-serif: "Outfit", "Outfit Fallback";
+  --font-sans: "Geist", "DM Sans", sans-serif;
+  --font-serif: "Outfit", "Archivo", sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -124,7 +123,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(oklch(0.25 0.02 55 / 0.06) 0.6px, transparent 0.6px);
+    background-size: 7px 7px;
   }
+  ::selection { background: var(--primary); color: var(--primary-foreground); }
+  .teka-paper { background: color-mix(in oklch, var(--card) 88%, var(--background)); border: 1px solid var(--border); border-radius: 1.25rem; box-shadow: 0 12px 35px oklch(0.2 0.02 55 / 0.07); }
+  .teka-ink { color: var(--foreground); }
+  .teka-orange-line { background: var(--primary); height: 0.25rem; width: 5rem; }
+  .teka-editorial { position: relative; isolation: isolate; }
+  .teka-editorial::after { content: "✳"; position: absolute; right: 1.5rem; top: 1rem; color: var(--primary); font-size: 2rem; z-index: -1; }
+  @media (max-width: 640px) { body { background-size: 9px 9px; } }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif tracking-tight;
   }

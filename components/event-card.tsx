@@ -61,7 +61,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
 
   return (
     <Card
-      className={`group overflow-hidden bg-card hover:border-primary/40 transition-all duration-500 event-card-glow ${featured ? "h-full" : ""}`}
+      className={`group overflow-hidden rounded-2xl border-foreground/10 bg-card/80 transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${featured ? "h-full" : ""}`}
     >
       <div className={`relative overflow-hidden bg-muted ${featured ? "aspect-[16/10]" : "aspect-video"}`}>
         <img
@@ -152,7 +152,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
       </CardContent>
 
       <CardFooter className={`border-t border-border/50 ${featured ? "p-6" : "p-5"} pt-4`}>
-        <Button asChild disabled={!isAvailable} className="w-full group/btn" size={featured ? "lg" : "default"}>
+        <Button asChild disabled={!isAvailable} className="w-full rounded-full font-bold group/btn" size={featured ? "lg" : "default"}>
           <Link href={`/events/${event.slug || event.id}`} className="flex items-center justify-center gap-2">
             {isAvailable ? "Comprar entradas" : "Ver detalles"}
             <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />

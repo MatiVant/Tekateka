@@ -34,16 +34,14 @@ export default async function HomePage() {
       <section className="relative overflow-hidden min-h-[600px] flex items-center" style={{ backgroundImage: 'url(/hero-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl teka-editorial">
             <div className="mb-8">
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 text-balance leading-[1.1] text-foreground">
-                Descubre eventos
+              <p className="mb-5 text-sm font-bold uppercase tracking-[0.24em] text-primary">Más cultura. Más encuentros.</p>
+              <h1 className="max-w-2xl text-6xl font-black leading-[0.9] tracking-[-0.07em] text-balance md:text-8xl">
+                Descubrí qué está pasando cerca tuyo.
               </h1>
-              <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-primary">Eventos cerca tuyo</p>
-              <p className="text-xl md:text-2xl text-muted-foreground text-pretty max-w-2xl leading-relaxed">
-                Compra entradas de forma segura e instantánea para los mejores eventos
-              </p>
-              <Button asChild size="lg" className="mt-8"><Link href="#eventos">Explorar eventos</Link></Button>
+              <p className="mt-7 max-w-xl text-xl leading-relaxed text-muted-foreground md:text-2xl">Eventos, música, teatro, fiestas y encuentros independientes.</p>
+              <Button asChild size="lg" className="mt-8 rounded-full px-7 font-bold"><Link href="#eventos">Ver qué hay hoy <span aria-hidden="true">→</span></Link></Button>
             </div>
           </div>
         </div>
@@ -54,8 +52,8 @@ export default async function HomePage() {
           <section className="mb-20">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2">Próximos eventos</h2>
-                <p className="text-muted-foreground">No te pierdas estos espectáculos</p>
+                <h2 className="text-3xl font-black tracking-[-0.04em] md:text-5xl">Qué está pasando <span className="text-primary">↓</span></h2>
+                <p className="mt-3 text-muted-foreground">Elegí tu próximo encuentro.</p>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

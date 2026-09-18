@@ -84,16 +84,16 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   }
 
   return (
-    <nav className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-foreground/10 bg-background/90 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <Image src="/tekateka-isologo.png" alt="TekaTeka" width={32} height={32} className="h-8 w-auto" />
-            <span className="text-xl font-bold text-primary">TekaTeka</span>
+            <span className="text-xl font-black tracking-[-0.06em] text-foreground">Teka<span className="text-primary">Teka</span><span className="ml-2 hidden text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:inline">Más cultura</span></span>
           </Link>
 
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <Button variant="ghost" asChild><Link href="/ayuda">Ayuda</Link></Button>
+          <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+            <Button variant="ghost" className="hidden sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>
             {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
             {user && <ThemeToggle />}
             {user ? (
@@ -108,8 +108,8 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button>
-                <Button asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
+                <Button variant="ghost" className="px-2 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/login">Iniciar Sesión</Link></Button>
+                <Button className="px-3 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
               </>
             )}
           </div>
