@@ -110,7 +110,27 @@ export async function createTicket(data: CreateTicketData) {
       await supabase.rpc("increment_promotion_uses", { promo_id: appliedPromotion.id })
     }
 
-    if (isFreeTicket) return createdTicket
+    if (isFreeTicket) {
+      try {
+        if (resend && data.sendEmail !== false) {
+          const { data: eventDetails } = await supabase.from("events").select("title").eq("id", data.event_id).single()
+          const requestHeaders = await headers()
+          const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `https://${forwardedHost}` : "https://tktk.buholabs.com.ar")
+          const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(data.qr_code)}`
+          const qrDataUrl = await (await import("qrcode")).default.toDataURL(ticketUrl, { width: 400, margin: 2, errorCorrectionLevel: "M" })
+          await resend.emails.send({
+            from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+            to: data.buyer_email,
+            subject: `Tu entrada gratuita: ${eventDetails?.title || "TekaTeka"}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;text-align:center"><h1>Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada gratuita para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><img src="${qrDataUrl}" alt="Código QR de entrada" style="width:280px;height:280px" /><p><strong>Presentá este QR al ingresar.</strong></p><p><a href="${ticketUrl}">Abrir entrada digital</a></p></div>`,
+          })
+        }
+      } catch (freeEmailError) {
+        console.error("[v0] Error al enviar QR de entrada gratuita:", freeEmailError)
+      }
+      return createdTicket
+    }
 
     // Enviar email de confirmación de compra (con instrucciones de pago)
     // Cuando la compra incluye varias entradas, se crean varios tickets pero solo
