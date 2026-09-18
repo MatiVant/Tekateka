@@ -255,6 +255,20 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     }
   }
 
+  const handleResendTicket = async (ticketId: string) => {
+  setLoadingId(ticketId)
+  try {
+  const response = await fetch("/api/resend-ticket", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }) })
+  const result = await response.json()
+  if (!response.ok) throw new Error(result.error || "No se pudo reenviar la entrada")
+  toast({ title: "Entrada reenviada", description: "El email con el QR fue enviado nuevamente al comprador." })
+  } catch (error) {
+  toast({ title: "No se pudo reenviar", description: error instanceof Error ? error.message : "Intentá nuevamente.", variant: "destructive" })
+  } finally {
+  setLoadingId(null)
+  }
+  }
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     setLoadingId(ticketId)
     try {
@@ -671,7 +685,11 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           )}
 
           <DialogFooter className="gap-2">
-  {selectedTicket && (selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+          {selectedTicket?.status === "confirmed" && <Button variant="outline" onClick={() => handleResendTicket(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
+          <Mail className="mr-2 h-4 w-4" />
+          Reenviar entrada con QR
+          </Button>}
+          {selectedTicket && (selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
   <ExternalLink className="mr-2 h-4 w-4" />
   Verificar en Mercado Pago
   </Button>}
