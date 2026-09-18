@@ -553,7 +553,9 @@ export function PurchaseFlow({
   }
 
   if (step === "review") {
-    const reviewTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
+    const reviewBaseTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
+    const reviewFee = paymentMethod === "mercado_pago" ? Math.round(reviewBaseTotal * 0.10 * 100) / 100 : 0
+    const reviewTotal = reviewBaseTotal + reviewFee
 
     return (
       <div className="space-y-5">
@@ -571,7 +573,8 @@ export function PurchaseFlow({
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Nombre</span><span className="text-right font-medium">{name}</span></div>
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Email</span><span className="break-all text-right font-medium">{email}</span></div>
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Entradas</span><span className="font-medium">{quantity} {quantity === 1 ? "entrada" : "entradas"}</span></div>
-            <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total</span><span className="text-xl font-bold text-primary">{isFree ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
+            {reviewFee > 0 && <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Cargo de Mercado Pago (10%)</span><span>{formatCurrency(reviewFee)}</span></div>}
+            <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total a pagar</span><span className="text-xl font-bold text-primary">{isFree ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
           </div>
         </div>
 

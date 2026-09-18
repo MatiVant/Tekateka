@@ -67,7 +67,7 @@ export async function createTicket(data: CreateTicketData) {
 
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
-    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", buyer_phone: data.buyer_phone?.trim() || null, charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.08 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.08 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
+    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", buyer_phone: data.buyer_phone?.trim() || null, charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
 
     const resumeToken = randomBytes(32).toString("hex")
     const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
@@ -120,7 +120,7 @@ export async function createTicket(data: CreateTicketData) {
             from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
             to: data.buyer_email,
             subject: `Compra recibida: ${event.title}`,
-            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${data.payment_method === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
+            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${data.payment_method === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${data.payment_method === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${data.payment_method === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
           })
           if (organizer?.email && organizer.email !== data.buyer_email) {
             await resend.emails.send({
