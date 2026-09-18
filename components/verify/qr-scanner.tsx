@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,10 @@ export function QRScanner({ userId }: QRScannerProps) {
   const [scanMode, setScanMode] = useState<'camera' | 'manual'>('manual');
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanFrameRef = useRef<number | null>(null);
   const [result, setResult] = useState<{
     type: 'success' | 'error' | 'warning';
     message: string;
@@ -110,6 +114,49 @@ export function QRScanner({ userId }: QRScannerProps) {
     }
   };
 
+  useEffect(() => {
+    if (scanMode !== 'camera' || result) return;
+    let active = true;
+    const startCamera = async () => {
+      setCameraError(null);
+      const BarcodeDetectorClass = (window as Window & { BarcodeDetector?: new (options?: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>> } }).BarcodeDetector;
+      if (!BarcodeDetectorClass) {
+        setCameraError('Tu navegador no permite detectar QR desde la cámara. Usá el modo manual.');
+        return;
+      }
+      try {
+        const detector = new BarcodeDetectorClass({ formats: ['qr_code'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        streamRef.current = stream;
+        if (!videoRef.current || !active) return;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        const scan = async () => {
+          if (!active || !videoRef.current) return;
+          const codes = await detector.detect(videoRef.current);
+          const value = codes[0]?.rawValue;
+          if (value) {
+            const match = value.match(/\/ticket\/([^/?#]+)/);
+            await verifyTicket(decodeURIComponent(match?.[1] ?? value));
+            return;
+          }
+          scanFrameRef.current = requestAnimationFrame(scan);
+        };
+        scanFrameRef.current = requestAnimationFrame(scan);
+      } catch (error) {
+        console.error('[v0] Error al iniciar lector QR:', error);
+        setCameraError('No se pudo acceder a la cámara. Revisá los permisos o usá el modo manual.');
+      }
+    };
+    void startCamera();
+    return () => {
+      active = false;
+      if (scanFrameRef.current) cancelAnimationFrame(scanFrameRef.current);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
+  }, [scanMode, result]);
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim()) {
@@ -174,21 +221,8 @@ export function QRScanner({ userId }: QRScannerProps) {
       {/* Modo cámara */}
       {scanMode === 'camera' && !result && (
         <div className="space-y-4">
-          <Alert>
-            <Camera className="h-4 w-4" />
-            <AlertDescription>
-              La funcionalidad de escaneo por cámara requiere permisos de acceso a la cámara.
-              Por ahora, puedes usar el modo manual para ingresar el código.
-            </AlertDescription>
-          </Alert>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setScanMode('manual')}
-          >
-            Usar Modo Manual
-          </Button>
+          {cameraError ? <Alert variant="destructive"><Camera className="h-4 w-4" /><AlertDescription>{cameraError}</AlertDescription></Alert> : <div className="overflow-hidden rounded-xl border bg-black"><video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline /><p className="p-3 text-center text-sm text-white">Apuntá la cámara al QR de la entrada</p></div>}
+          <Button type="button" variant="outline" className="w-full" onClick={() => setScanMode('manual')}>Usar modo manual</Button>
         </div>
       )}
 
