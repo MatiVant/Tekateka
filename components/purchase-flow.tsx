@@ -59,6 +59,7 @@ export function PurchaseFlow({
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [promotionCode, setPromotionCode] = useState("")
   const [quantity, setQuantity] = useState(1)
@@ -243,6 +244,7 @@ export function PurchaseFlow({
           tier_id: selectedTierId,
           buyer_name: name,
           buyer_email: email,
+          buyer_phone: phone.trim() || null,
           qr_code: qrCode,
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
@@ -388,8 +390,21 @@ export function PurchaseFlow({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Teléfono <span className="text-muted-foreground">(opcional)</span></Label>
+            <Input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="Ej: 11 1234 5678"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Solo lo usaremos si necesitamos contactarte por una urgencia del evento.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"

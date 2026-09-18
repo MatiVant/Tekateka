@@ -51,6 +51,7 @@ interface Ticket {
   id: string
   buyer_name: string
   buyer_email: string
+  buyer_phone?: string | null
   qr_code: string
   status: string
   payment_status?: "pending" | "submitted" | "approved" | "rejected"
@@ -466,6 +467,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{ticket.buyer_name}</span>
                       <span className="text-xs text-muted-foreground">{ticket.buyer_email}</span>
+                      {ticket.buyer_phone && <span className="text-xs text-muted-foreground">Tel: {ticket.buyer_phone}</span>}
                     </div>
                   </td>
                   <td className="p-4 text-xs">
@@ -578,8 +580,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Comprador</p>
                   <p className="font-medium">{selectedTicket.buyer_name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedTicket.buyer_email}</p>
-                </div>
+            <p className="text-sm text-muted-foreground">{selectedTicket.buyer_email}</p>
+            {selectedTicket.buyer_phone && <p className="text-sm text-muted-foreground">Tel: {selectedTicket.buyer_phone}</p>}
+          </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Evento</p>
                   <p className="font-medium">{selectedTicket.events.title}</p>

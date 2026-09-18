@@ -12,6 +12,7 @@ interface CreateTicketData {
   tier_id: string | null
   buyer_name: string
   buyer_email: string
+  buyer_phone?: string | null
   qr_code: string
   promotion_code?: string
   final_price: number
@@ -66,7 +67,7 @@ export async function createTicket(data: CreateTicketData) {
 
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
-    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.08 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.08 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
+    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", buyer_phone: data.buyer_phone?.trim() || null, charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.08 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.08 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
 
     const resumeToken = randomBytes(32).toString("hex")
     const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
@@ -126,7 +127,7 @@ export async function createTicket(data: CreateTicketData) {
               from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
               to: organizer.email,
               subject: `Nueva compra pendiente de confirmación: ${event.title}`,
-              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p>`,
+              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingres�� al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p>`,
             })
           }
         }
