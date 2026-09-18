@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MovementsTable } from "@/components/admin/movements-table"
+import { MovementsReportButton } from "@/components/admin/movements-report-button"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Calendar, Ticket, DollarSign, Users, Plus, Clock, XCircle } from "lucide-react"
@@ -246,12 +246,8 @@ export default async function AdminPage() {
           </section>
         )}
 
-        <section className="mb-12">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold">Movimientos de mis eventos</h2>
-            <p className="text-sm text-muted-foreground">Actividad de tickets y pagos únicamente de tus eventos.</p>
-          </div>
-          <MovementsTable movements={movements || []} />
+        <section className="mb-12 flex justify-end">
+          <MovementsReportButton movements={movements || []} />
         </section>
 
 
