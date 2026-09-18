@@ -150,6 +150,7 @@ export function PurchaseFlow({
       setError(null)
       setDiscountApplied(false)
       setPromotionType(null)
+      setQuantity(1)
       setFinalPrice(basePrice)
       return
     }
@@ -163,8 +164,10 @@ export function PurchaseFlow({
         return
       }
 
+      const nextPromotionType = result.promotionType ?? null
       setFinalPrice(result.finalPrice)
-      setPromotionType(result.promotionType ?? null)
+      setPromotionType(nextPromotionType)
+      setQuantity(nextPromotionType === "2x1" ? 2 : 1)
       setDiscountApplied(true)
       setError(null)
     } catch (error) {
@@ -409,15 +412,20 @@ export function PurchaseFlow({
             min="1"
             max={effectiveMaxTickets}
             required
-            value={quantity}
-            onChange={(e) =>
-              setQuantity(Math.max(1, Math.min(effectiveMaxTickets, Number.parseInt(e.target.value) || 1)))
-            }
-          />
+value={quantity}
+  disabled={Boolean(discountApplied && promotionType !== "2x1")}
+  onChange={(e) =>
+  setQuantity(Math.max(1, Math.min(effectiveMaxTickets, Number.parseInt(e.target.value) || 1)))
+  }
+  />
           <p className="text-xs text-muted-foreground">
-            {maxTicketsPerPerson
-              ? `Máximo ${effectiveMaxTickets} entradas por persona para este evento`
-              : "Máximo 10 entradas por compra"}
+  {discountApplied && promotionType === "2x1"
+  ? "Este código incluye 2 entradas por el valor de 1"
+  : discountApplied
+  ? "Este código permite obtener 1 sola entrada"
+  : maxTicketsPerPerson
+  ? `Máximo ${effectiveMaxTickets} entradas por persona para este evento`
+  : "Máximo 10 entradas por compra"}
           </p>
         </div>
 

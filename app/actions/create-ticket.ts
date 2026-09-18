@@ -44,6 +44,8 @@ export async function createTicket(data: CreateTicketData) {
       const { data: promo } = await supabase.from("promotion_codes").select("id, promotion_type, discount_value, max_uses, current_uses, valid_from, valid_until, is_active").eq("event_id", data.event_id).eq("code", data.promotion_code.trim().toUpperCase()).single()
       const today = new Date().toISOString().slice(0, 10)
       if (!promo || !promo.is_active || (promo.max_uses && promo.current_uses >= promo.max_uses) || (promo.valid_from && today < promo.valid_from) || (promo.valid_until && today > promo.valid_until)) throw new Error("Código de promoción inválido o expirado")
+      if (promo.promotion_type === "2x1" && data.ticketQuantity !== 2) throw new Error("El código 2x1 requiere exactamente 2 entradas")
+      if (promo.promotion_type !== "2x1" && data.ticketQuantity !== 1) throw new Error("Este código permite comprar una sola entrada")
       appliedPromotion = promo
       if (promo.promotion_type === "protocol") serverPrice = 0
       if (promo.promotion_type === "percentage") serverPrice = serverPrice * (1 - Number(promo.discount_value) / 100)
