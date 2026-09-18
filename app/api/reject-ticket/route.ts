@@ -34,6 +34,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 })
     }
 
+    if (ticket.status === "cancelled") {
+      return NextResponse.json({ error: "La entrada ya estaba cancelada" }, { status: 409 })
+    }
+
+    const { data: ticketPromotion } = await supabase
+      .from("ticket_promotions")
+      .select("promotion_code_id")
+      .eq("ticket_id", ticketId)
+      .maybeSingle()
+
     // Actualizar el ticket con estado rechazado y motivo
     const { error: updateError } = await supabase
       .from("tickets")
@@ -46,6 +56,20 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error("[v0] Error al rechazar ticket:", updateError)
       return NextResponse.json({ error: "Error al rechazar el ticket" }, { status: 500 })
+    }
+
+    if (ticketPromotion?.promotion_code_id) {
+      const { data: promotion } = await supabase
+        .from("promotion_codes")
+        .select("current_uses")
+        .eq("id", ticketPromotion.promotion_code_id)
+        .single()
+      if (promotion) {
+        await supabase
+          .from("promotion_codes")
+          .update({ current_uses: Math.max(0, Number(promotion.current_uses || 0) - 1) })
+          .eq("id", ticketPromotion.promotion_code_id)
+      }
     }
 
     if (!resend) {

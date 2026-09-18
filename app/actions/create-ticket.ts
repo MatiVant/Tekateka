@@ -53,6 +53,7 @@ export async function createTicket(data: CreateTicketData) {
           .select("ticket_id, tickets!inner(event_id, buyer_email)")
           .eq("promotion_code_id", promo.id)
           .eq("tickets.event_id", data.event_id)
+          .neq("tickets.status", "cancelled")
           .ilike("tickets.buyer_email", normalizedEmail)
           .limit(1)
           .maybeSingle()
