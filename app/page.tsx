@@ -43,7 +43,7 @@ export default async function HomePage() {
                 Descubrí qué está pasando cerca tuyo.
               </h1>
               <p className="mt-7 max-w-xl text-xl leading-relaxed text-muted-foreground md:text-2xl">Eventos, música, teatro, fiestas y encuentros independientes.</p>
-              <Button asChild size="lg" className="mt-8 rounded-full px-7 font-bold"><Link href="#eventos">Ver qué hay hoy <span aria-hidden="true">→</span></Link></Button>
+              <Button asChild size="lg" className="mt-8 rounded-full px-7 font-bold"><Link href="#eventos">Ver todos los eventos <span aria-hidden="true">→</span></Link></Button>
             </div>
           </div>
         </div>

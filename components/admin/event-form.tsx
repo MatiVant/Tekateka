@@ -357,8 +357,11 @@ export function EventForm({ userId, event }: EventFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="eventTime">Hora de inicio *</Label>
-          <Input id="eventTime" type="time" required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="h-11 cursor-pointer" />
-          <p className="text-xs text-muted-foreground">Elegí la hora desde el reloj.</p>
+<Input id="eventTime" type="time" list="common-event-times" step={60} required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="h-11 cursor-pointer" />
+  <datalist id="common-event-times">
+    {Array.from({ length: 24 }, (_, hour) => [0, 15, 30, 45].map((minute) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)).flat().map((time) => <option key={time} value={time} />)}
+  </datalist>
+  <p className="text-xs text-muted-foreground">Sugerencias cada 15 minutos. También podés escribir otra hora exacta.</p>
         </div>
 
         <div className="space-y-2">
