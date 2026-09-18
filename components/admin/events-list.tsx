@@ -69,9 +69,9 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
         return (
           <div
             key={event.id}
-            className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+            className="flex min-w-0 flex-col items-stretch gap-4 overflow-hidden rounded-xl border p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:p-4"
           >
-            <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+            <div className="h-44 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-24">
               <img
                 src={
                   event.image_url || `/placeholder.svg?height=100&width=100&query=${encodeURIComponent(event.title)}`
@@ -82,8 +82,8 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-lg text-pretty line-clamp-1">{event.title}</h3>
+              <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+                <h3 className="min-w-0 flex-1 font-semibold text-lg text-pretty line-clamp-2">{event.title}</h3>
                 <Badge
                   variant={
                     event.status === "active"
@@ -142,8 +142,8 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 {sales.pending > 0 && <p className="mt-1 text-xs text-muted-foreground">{sales.pending} pendiente{sales.pending === 1 ? "" : "s"} de confirmación</p>}
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
+              <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                <Button variant="outline" size="sm" className="min-w-0" asChild>
                   <Link href={`/events/${event.slug || event.id}`}>
                     <Eye className="mr-1 h-3 w-3" />
                     Ver
@@ -151,15 +151,15 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 </Button>
                 <ShareEventButton eventId={event.id} eventTitle={event.title} eventSlug={event.slug} />
                 {event.status !== "finished" && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/events/${event.id}/edit`}>
+                  <Button variant="outline" size="sm" className="min-w-0" asChild>
+                    <Link href={`/admin/events/${event.id}/edit`} className="min-w-0">
                       <Edit className="mr-1 h-3 w-3" />
                       Editar
                     </Link>
                   </Button>
                 )}
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/events/${event.id}/tickets`}>
+                <Button variant="outline" size="sm" className="min-w-0" asChild>
+                  <Link href={`/admin/events/${event.id}/tickets`} className="min-w-0">
                     <Ticket className="mr-1 h-3 w-3" />
                     Ventas
                   </Link>
