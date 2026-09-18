@@ -156,13 +156,14 @@ export function PurchaseFlow({
         .from("promotion_codes")
         .select("*")
         .eq("event_id", eventId)
-        .eq("code", promotionCode.toUpperCase())
+        .eq("code", promotionCode.trim().toUpperCase())
         .eq("is_active", true)
-        .gte("valid_until", today)
-        .lte("valid_from", today)
-        .single()
+        .maybeSingle()
 
-      if (promoError || !promoData) {
+      const startsBeforeToday = !promoData?.valid_from || promoData.valid_from <= today
+      const endsAfterToday = !promoData?.valid_until || promoData.valid_until >= today
+
+      if (promoError || !promoData || !startsBeforeToday || !endsAfterToday) {
         setError("Código de promoción inválido o expirado")
         setDiscountApplied(false)
         const selectedTier = tiers.find((t) => t.id === selectedTierId)
