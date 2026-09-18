@@ -164,8 +164,9 @@ export default async function EventDetailPage({
                     event.transfer_alias ? `Alias: ${event.transfer_alias}` : null,
                     event.transfer_account_holder ? `Cuenta a nombre de: ${event.transfer_account_holder}` : null,
                   ].filter(Boolean).join("\n") || undefined}
-                  paymentMethods={event.payment_methods}
-                  mercadoPagoLink={event.mercado_pago_link}
+  paymentMethods={event.payment_methods}
+  transferAlias={event.transfer_alias}
+  mercadoPagoLink={event.mercado_pago_link}
                     isFree={isFree}
                     isPwyw={isPwyw}
                   />

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
@@ -28,6 +28,7 @@ interface PurchaseFlowProps {
   eventTitle: string
   eventPrice: number
   paymentInstructions?: string
+  transferAlias?: string | null
   paymentMethods?: string[] | null
   mercadoPagoLink?: string | null
   isFree?: boolean
@@ -42,6 +43,7 @@ export function PurchaseFlow({
   eventTitle,
   eventPrice,
   paymentInstructions,
+  transferAlias,
   paymentMethods,
   mercadoPagoLink,
   isFree = false,
@@ -71,6 +73,7 @@ export function PurchaseFlow({
   const [discountApplied, setDiscountApplied] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
+  const [copiedAlias, setCopiedAlias] = useState(false)
   const availablePaymentMethods = paymentMethods?.length ? paymentMethods : [mercadoPagoLink ? "external_link" : "mercado_pago"]
   const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : mercadoPagoLink ? "external_link" : "mercado_pago"
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(defaultPaymentMethod)
@@ -546,7 +549,31 @@ export function PurchaseFlow({
         {paymentNotice && <Alert variant={paymentNotice.includes("no se completó") ? "destructive" : "default"}><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <Alert>
           <AlertDescription className="text-sm leading-relaxed">
-            {mercadoPagoLink || checkoutUrl
+            {paymentMethod === "transfer" && transferAlias ? (
+              <div className="space-y-3">
+                <p>Realizá la transferencia al siguiente Alias y luego cargá el comprobante.</p>
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Alias</p>
+                    <p className="truncate font-semibold tracking-wide">{transferAlias}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(transferAlias)
+                      setCopiedAlias(true)
+                      window.setTimeout(() => setCopiedAlias(false), 2000)
+                    }}
+                    aria-label="Copiar Alias"
+                  >
+                    {copiedAlias ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                    {copiedAlias ? "Copiado" : "Copiar Alias"}
+                  </Button>
+                </div>
+              </div>
+            ) : mercadoPagoLink || checkoutUrl
               ? "Usá el botón de Mercado Pago para completar el pago. Una vez aprobado, tu entrada se confirmará automáticamente."
               : paymentInstructions
                 ? paymentInstructions
