@@ -443,7 +443,35 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           </div>
         )}
 
-        <div className="rounded-lg border overflow-x-auto">
+        <div className="space-y-3 md:hidden">
+          {filteredTickets.map((ticket) => (
+            <article key={ticket.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <Checkbox checked={selectedIds.has(ticket.id)} onCheckedChange={(checked) => toggleSelected(ticket.id, Boolean(checked))} aria-label={`Seleccionar entrada de ${ticket.buyer_name}`} className="mt-1" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="min-w-0 flex-1 truncate font-semibold">{ticket.buyer_name}</h3>
+                    {getStatusBadge(ticket.status)}
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>
+                  <p className="mt-3 text-sm font-medium">{ticket.events.title}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <span>Tipo: <strong className="text-foreground">{ticket.ticket_tiers?.name || "General"}</strong></span>
+                    <span>Pago: <strong className="text-foreground">{ticket.payment_status || "—"}</strong></span>
+                    <span>Precio: <strong className="text-foreground">{Number(ticket.final_price) === 0 ? "Gratis" : formatCurrency(ticket.final_price ?? ticket.events.price)}</strong></span>
+                    <span>Medio: <strong className="text-foreground">{ticket.payment_method === "free" ? "Gratis" : ticket.payment_method || "—"}</strong></span>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    {ticket.payment_receipt_url && <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button>}
+                    <Button size="sm" className="flex-1" onClick={() => viewTicketDetails(ticket)}><Eye className="mr-2 h-4 w-4" />Detalles</Button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-lg border md:block">
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
@@ -539,7 +567,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-4 p-4 bg-muted/30 rounded-lg">
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-4">
           <div><p className="text-sm text-muted-foreground">Total de tickets</p><p className="text-2xl font-bold">{tickets.length}</p></div>
           <div><p className="text-sm text-muted-foreground">Confirmados</p><p className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "confirmed").length}</p></div>
           <div><p className="text-sm text-muted-foreground">Gratis</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) === 0 || t.payment_method === "free").length}</p></div>
