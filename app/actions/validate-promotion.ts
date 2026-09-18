@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@/lib/supabase/admin';
 
 interface ValidationResult {
   isValid: boolean;
@@ -15,11 +16,12 @@ export async function validatePromotion(
   basePrice: number
 ): Promise<ValidationResult> {
   const supabase = await createServerClient();
+  const adminSupabase = createAdminClient();
   
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: promoData, error: fetchError } = await supabase
+    const { data: promoData, error: fetchError } = await adminSupabase
       .from('promotion_codes')
       .select('*')
       .eq('event_id', eventId)
@@ -35,7 +37,7 @@ export async function validatePromotion(
         isValid: false,
         discountAmount: 0,
         finalPrice: basePrice,
-        error: 'Código de promoción inválido o expirado',
+        error: fetchError ? `No se pudo consultar el código: ${fetchError.message}` : 'Código de promoción inválido o expirado',
       };
     }
 
