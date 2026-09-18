@@ -101,7 +101,7 @@ export async function createTicket(data: CreateTicketData) {
       if (data.sendEmail !== false) {
         const { data: event } = await supabase
           .from("events")
-          .select("title, mercado_pago_link, organizer_id")
+          .select("title, mercado_pago_link, transfer_alias, transfer_account_holder, organizer_id")
           .eq("id", data.event_id)
           .single()
 
@@ -119,7 +119,7 @@ export async function createTicket(data: CreateTicketData) {
             from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
             to: data.buyer_email,
             subject: `Compra recibida: ${event.title}`,
-            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p><p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
+            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${data.payment_method === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>Tu pago queda pendiente de confirmación. Podés retomar la compra desde este enlace:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
           })
           if (organizer?.email && organizer.email !== data.buyer_email) {
             await resend.emails.send({
