@@ -87,9 +87,9 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
     <nav className="sticky top-0 z-50 border-b border-foreground/10 bg-background/90 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src="/tekateka-isologo.png" alt="TekaTeka" width={32} height={32} className="h-8 w-auto" />
-            <span className="text-xl font-black tracking-[-0.06em] text-foreground">Teka<span className="text-primary">Teka</span><span className="ml-2 hidden text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:inline">Más cultura</span></span>
+          <Link href="/" className="flex items-center gap-2" aria-label="TekaTeka, volver al inicio">
+            <Image src="/tekateka-logo.png" alt="TekaTeka — Tus eventos. Tus entradas." width={220} height={74} priority className="hidden h-11 w-auto object-contain sm:block" />
+            <Image src="/tekateka-mark.png" alt="TekaTeka" width={48} height={48} priority className="h-10 w-10 object-contain sm:hidden" />
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">

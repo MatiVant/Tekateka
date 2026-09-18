@@ -3,6 +3,7 @@ import { EventCard } from "@/components/event-card"
 import { Sparkles, Calendar, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 export default async function HomePage() {
@@ -35,6 +36,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl teka-editorial">
+            <Image src="/tekateka-mark.png" alt="Isotipo TekaTeka" width={72} height={72} className="mb-5 h-16 w-16 object-contain rounded-xl" priority />
             <div className="mb-8">
               <p className="mb-5 text-sm font-bold uppercase tracking-[0.24em] text-primary">Más cultura. Más encuentros.</p>
               <h1 className="max-w-2xl text-6xl font-black leading-[0.9] tracking-[-0.07em] text-balance md:text-8xl">
