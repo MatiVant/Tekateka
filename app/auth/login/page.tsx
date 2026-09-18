@@ -55,14 +55,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-muted/30">
-      <div className="w-full max-w-sm">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
-            <CardDescription>Ingresa tu email y contraseña para acceder</CardDescription>
+    <div className="flex min-h-svh w-full items-center justify-center bg-[#f4eddf] px-5 py-8 text-[#171717] sm:px-8 sm:py-12">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center sm:mb-10">
+          <Link href="/" className="inline-block text-[2.25rem] font-black tracking-[-0.08em] text-[#171717] sm:text-[2.75rem]">Te<span className="text-[#f4511e]">k</span>aTeka</Link>
+          <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-[#6b6258]">Más cultura. Más encuentros.</p>
+        </div>
+        <Card className="rounded-[1.75rem] border-[#e7dcc8] bg-[#fffdf7] shadow-[0_18px_50px_rgba(78,59,38,0.12)]">
+          <CardHeader className="px-6 pb-2 pt-7 text-left sm:px-8 sm:pt-8">
+            <CardTitle className="text-[1.8rem] tracking-[-0.04em]">Iniciar sesión</CardTitle>
+            <CardDescription className="mt-1 text-[#6b6258]">Entrá para ver tus entradas y eventos.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 pb-7 pt-5 sm:px-8 sm:pb-8">
             <form onSubmit={handleLogin}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-2">
