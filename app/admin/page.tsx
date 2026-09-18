@@ -121,7 +121,15 @@ export default async function AdminPage() {
       .reduce((sum, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? ticket.events.price ?? 0), 0) || 0
   const eventReports = (events || []).map((event: any) => {
     const eventTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && (ticket.payment_status === "approved" || ticket.status === "confirmed"))
-    return { event, count: eventTickets.length, gross: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0), fees: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.payment_fee_amount ?? 0), 0), net: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0) }
+    const eventPendingTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && ticket.payment_status !== "approved" && ticket.status === "pending")
+    return {
+      event,
+      count: eventTickets.length,
+      pendingCount: eventPendingTickets.length,
+      gross: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0),
+      fees: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.payment_fee_amount ?? 0), 0),
+      net: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
+    }
   })
 
   return (
@@ -216,8 +224,8 @@ export default async function AdminPage() {
         </div>
 
         <section className="mb-12">
-          <div className="mb-6"><h2 className="text-xl font-bold">Total histórico por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas, total cobrado, cargos de Mercado Pago y neto.</p></div>
-          <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-3 text-left">Evento</th><th className="p-3 text-right">Entradas</th><th className="p-3 text-right">Cobrado</th><th className="p-3 text-right">Cargos</th><th className="p-3 text-right">Neto</th></tr></thead><tbody>{eventReports.map(({ event, count, gross, fees, net }) => <tr key={event.id} className="border-t"><td className="p-3 font-medium">{event.title}</td><td className="p-3 text-right">{count}</td><td className="p-3 text-right">{formatCurrency(gross)}</td><td className="p-3 text-right">{formatCurrency(fees)}</td><td className="p-3 text-right font-semibold">{formatCurrency(net)}</td></tr>)}{eventReports.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Todavía no hay pagos confirmados.</td></tr>}</tbody></table></div>
+          <div className="mb-6"><h2 className="text-xl font-bold">Total histórico por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas y pendientes de confirmación, total cobrado, cargos de Mercado Pago y neto.</p></div>
+          <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-3 text-left">Evento</th><th className="p-3 text-right">Confirmadas</th><th className="p-3 text-right">Pendientes</th><th className="p-3 text-right">Cobrado</th><th className="p-3 text-right">Cargos</th><th className="p-3 text-right">Neto</th></tr></thead><tbody>{eventReports.map(({ event, count, pendingCount, gross, fees, net }) => <tr key={event.id} className="border-t"><td className="p-3 font-medium">{event.title}</td><td className="p-3 text-right">{count}</td><td className="p-3 text-right">{pendingCount > 0 ? <span className="text-amber-600 dark:text-amber-500 font-medium">{pendingCount}</span> : pendingCount}</td><td className="p-3 text-right">{formatCurrency(gross)}</td><td className="p-3 text-right">{formatCurrency(fees)}</td><td className="p-3 text-right font-semibold">{formatCurrency(net)}</td></tr>)}{eventReports.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Todavía no hay ventas.</td></tr>}</tbody></table></div>
         </section>
 
         {externalPayments && externalPayments.length > 0 && (
