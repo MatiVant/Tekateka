@@ -46,6 +46,19 @@ export async function createTicket(data: CreateTicketData) {
       if (!promo || !promo.is_active || (promo.max_uses && promo.current_uses >= promo.max_uses) || (promo.valid_from && today < promo.valid_from) || (promo.valid_until && today > promo.valid_until)) throw new Error("Código de promoción inválido o expirado")
       if (promo.promotion_type === "2x1" && data.ticketQuantity !== 2) throw new Error("El código 2x1 requiere exactamente 2 entradas")
       if (promo.promotion_type !== "2x1" && data.ticketQuantity !== 1) throw new Error("Este código permite comprar una sola entrada")
+      if (promo.promotion_type === "protocol") {
+        const normalizedEmail = data.buyer_email.trim().toLowerCase()
+        const { data: previousUse, error: previousUseError } = await supabase
+          .from("ticket_promotions")
+          .select("ticket_id, tickets!inner(event_id, buyer_email)")
+          .eq("promotion_code_id", promo.id)
+          .eq("tickets.event_id", data.event_id)
+          .ilike("tickets.buyer_email", normalizedEmail)
+          .limit(1)
+          .maybeSingle()
+        if (previousUseError) throw new Error("No se pudo verificar el uso del código")
+        if (previousUse) throw new Error("Ya usaste este código de entrada gratuita")
+      }
       appliedPromotion = promo
       if (promo.promotion_type === "protocol") serverPrice = 0
       if (promo.promotion_type === "percentage") serverPrice = serverPrice * (1 - Number(promo.discount_value) / 100)
@@ -72,7 +85,9 @@ export async function createTicket(data: CreateTicketData) {
 
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
-    await supabase.from("tickets").update({ payment_method: data.payment_method ?? "mercado_pago", buyer_phone: data.buyer_phone?.trim() || null, charged_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: data.final_price }).eq("id", createdTicket.id)
+    const isFreeTicket = Math.max(0, serverPrice) === 0
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: isFreeTicket ? "free" : data.payment_method ?? "mercado_pago", payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price }).eq("id", createdTicket.id)
+    if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
     const resumeToken = randomBytes(32).toString("hex")
     const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
@@ -94,6 +109,8 @@ export async function createTicket(data: CreateTicketData) {
       if (promotionError) console.error("[v0] Error al guardar promoción del ticket:", promotionError)
       await supabase.rpc("increment_promotion_uses", { promo_id: appliedPromotion.id })
     }
+
+    if (isFreeTicket) return createdTicket
 
     // Enviar email de confirmación de compra (con instrucciones de pago)
     // Cuando la compra incluye varias entradas, se crean varios tickets pero solo
