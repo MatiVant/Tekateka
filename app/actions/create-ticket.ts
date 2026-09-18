@@ -32,6 +32,8 @@ export async function createTicket(data: CreateTicketData) {
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
 
     let serverPrice = Number(event.price || 0)
+    const originalPrice = serverPrice
+    let appliedPromotion: { id: string; promotion_type: string; discount_value: number; max_uses: number | null; current_uses: number; valid_from: string | null; valid_until: string | null } | null = null
     if (data.tier_id) {
       const { data: tier, error: tierError } = await supabase.from("ticket_tiers").select("base_price, available_quantity").eq("id", data.tier_id).eq("event_id", data.event_id).single()
       if (tierError || !tier || tier.available_quantity < 1) throw new Error("Tipo de entrada no disponible")
@@ -39,9 +41,10 @@ export async function createTicket(data: CreateTicketData) {
     }
     if (event.is_pay_what_you_want) serverPrice = data.final_price
     if (data.promotion_code) {
-      const { data: promo } = await supabase.from("promotion_codes").select("promotion_type, discount_value, max_uses, current_uses, valid_from, valid_until, is_active").eq("event_id", data.event_id).eq("code", data.promotion_code.trim().toUpperCase()).single()
+      const { data: promo } = await supabase.from("promotion_codes").select("id, promotion_type, discount_value, max_uses, current_uses, valid_from, valid_until, is_active").eq("event_id", data.event_id).eq("code", data.promotion_code.trim().toUpperCase()).single()
       const today = new Date().toISOString().slice(0, 10)
       if (!promo || !promo.is_active || (promo.max_uses && promo.current_uses >= promo.max_uses) || (promo.valid_from && today < promo.valid_from) || (promo.valid_until && today > promo.valid_until)) throw new Error("Código de promoción inválido o expirado")
+      appliedPromotion = promo
       if (promo.promotion_type === "protocol") serverPrice = 0
       if (promo.promotion_type === "percentage") serverPrice = serverPrice * (1 - Number(promo.discount_value) / 100)
       if (promo.promotion_type === "fixed") serverPrice = Math.max(0, serverPrice - Number(promo.discount_value))
@@ -75,24 +78,19 @@ export async function createTicket(data: CreateTicketData) {
     const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)
     if (tokenError) throw new Error("No se pudo preparar el enlace de pago")
 
-    // Si hay código de promoción, guardarlo en la tabla de relación
-    if (data.promotion_code) {
-      const { data: promoData } = await supabase
-        .from("promotion_codes")
-        .select("id")
-        .eq("event_id", data.event_id)
-        .eq("code", data.promotion_code.toUpperCase())
-        .single()
+    // Guardar el código y el detalle del descuento aplicado en la entrada.
+    if (appliedPromotion) {
+      const discountAmount = Math.max(0, originalPrice - Math.max(0, serverPrice))
+      const { error: promotionError } = await supabase.from("ticket_promotions").insert({
+        ticket_id: createdTicket.id,
+        promotion_code_id: appliedPromotion.id,
+        original_price: originalPrice,
+        discount_amount: discountAmount,
+        final_price: Math.max(0, serverPrice),
+      })
 
-      if (promoData) {
-        await supabase.from("ticket_promotions").insert({
-          ticket_id: createdTicket.id,
-          promotion_code_id: promoData.id,
-        })
-
-        // Incrementar el contador de usos
-        await supabase.rpc("increment_promotion_uses", { promo_id: promoData.id })
-      }
+      if (promotionError) console.error("[v0] Error al guardar promoción del ticket:", promotionError)
+      await supabase.rpc("increment_promotion_uses", { promo_id: appliedPromotion.id })
     }
 
     // Enviar email de confirmación de compra (con instrucciones de pago)

@@ -490,7 +490,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </td>
-  <td className="p-4 font-semibold">{formatCurrency(ticket.final_price || ticket.events.price)}</td>
+  <td className="p-4 font-semibold">{Number(ticket.final_price) === 0 ? <Badge variant="secondary">Gratis</Badge> : formatCurrency(ticket.final_price ?? ticket.events.price)}</td>
   <td className="p-4 text-xs">{ticket.payment_method === "mercado_pago" ? "Mercado Pago (+10%)" : ticket.payment_method === "external_link" ? "Link MP" : ticket.payment_method === "transfer" ? "Transferencia" : ticket.payment_method === "free" ? "Gratis" : "—"}</td>
   <td className="p-4">{getStatusBadge(ticket.status)}</td>
                   <td className="p-4">{getPaymentBadge(ticket.payment_status)}</td>
