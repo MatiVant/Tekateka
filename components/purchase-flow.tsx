@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
+import { validatePromotion as validatePromotionServer } from "@/app/actions/validate-promotion"
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
@@ -142,57 +143,25 @@ export function PurchaseFlow({
   }
 
   const validatePromotion = async () => {
+    const selectedTier = tiers.find((t) => t.id === selectedTierId)
+    const basePrice = selectedTier?.base_price || eventPrice
     if (!promotionCode.trim()) {
       setError(null)
       setDiscountApplied(false)
-      const selectedTier = tiers.find((t) => t.id === selectedTierId)
-      setFinalPrice(selectedTier?.base_price || eventPrice)
+      setFinalPrice(basePrice)
       return
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0]
-      const { data: promoData, error: promoError } = await supabase
-        .from("promotion_codes")
-        .select("*")
-        .eq("event_id", eventId)
-        .eq("code", promotionCode.trim().toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle()
-
-      const startsBeforeToday = !promoData?.valid_from || promoData.valid_from <= today
-      const endsAfterToday = !promoData?.valid_until || promoData.valid_until >= today
-
-      if (promoError || !promoData || !startsBeforeToday || !endsAfterToday) {
-        setError("Código de promoción inválido o expirado")
+      const result = await validatePromotionServer(eventId, promotionCode, basePrice)
+      if (!result.isValid) {
+        setError(result.error || "Código de promoción inválido o expirado")
         setDiscountApplied(false)
-        const selectedTier = tiers.find((t) => t.id === selectedTierId)
-        setFinalPrice(selectedTier?.base_price || eventPrice)
+        setFinalPrice(basePrice)
         return
       }
 
-      if (promoData.max_uses && promoData.current_uses >= promoData.max_uses) {
-        setError("Este código de promoción ya alcanzó el límite de usos")
-        setDiscountApplied(false)
-        const selectedTier = tiers.find((t) => t.id === selectedTierId)
-        setFinalPrice(selectedTier?.base_price || eventPrice)
-        return
-      }
-
-      const selectedTier = tiers.find((t) => t.id === selectedTierId)
-      let price = selectedTier?.base_price || eventPrice
-
-      if (promoData.promotion_type === "protocol") {
-        price = 0
-      } else if (promoData.promotion_type === "percentage") {
-        price = price - (price * promoData.discount_value) / 100
-      } else if (promoData.promotion_type === "fixed") {
-        price = Math.max(0, price - promoData.discount_value)
-      } else if (promoData.promotion_type === "2x1") {
-        price = price / 2
-      }
-
-      setFinalPrice(Math.max(0, price))
+      setFinalPrice(result.finalPrice)
       setDiscountApplied(true)
       setError(null)
     } catch (error) {

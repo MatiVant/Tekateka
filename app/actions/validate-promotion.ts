@@ -1,7 +1,6 @@
 'use server';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 
 interface ValidationResult {
   isValid: boolean;
@@ -24,13 +23,14 @@ export async function validatePromotion(
       .from('promotion_codes')
       .select('*')
       .eq('event_id', eventId)
-      .eq('code', promotionCode.toUpperCase())
+      .eq('code', promotionCode.trim().toUpperCase())
       .eq('is_active', true)
-      .gte('valid_until', today)
-      .lte('valid_from', today)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !promoData) {
+    const validFrom = !promoData?.valid_from || promoData.valid_from <= today;
+    const validUntil = !promoData?.valid_until || promoData.valid_until >= today;
+
+    if (fetchError || !promoData || !validFrom || !validUntil) {
       return {
         isValid: false,
         discountAmount: 0,
@@ -52,7 +52,10 @@ export async function validatePromotion(
     let discountAmount = 0;
     let finalPrice = basePrice;
 
-    if (promoData.promotion_type === 'percentage') {
+    if (promoData.promotion_type === 'protocol') {
+      discountAmount = basePrice;
+      finalPrice = 0;
+    } else if (promoData.promotion_type === 'percentage') {
       discountAmount = (basePrice * promoData.discount_value) / 100;
       finalPrice = basePrice - discountAmount;
     } else if (promoData.promotion_type === 'fixed') {
