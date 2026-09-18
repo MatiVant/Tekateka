@@ -151,11 +151,11 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className={`border-t border-border/50 ${featured ? "p-6" : "p-5"} pt-4`}>
-        <Button asChild disabled={!isAvailable} className="w-full rounded-full font-bold group/btn" size={featured ? "lg" : "default"}>
-          <Link href={`/events/${event.slug || event.id}`} className="flex items-center justify-center gap-2">
-            {isAvailable ? "Comprar entradas" : "Ver detalles"}
-            <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+      <CardFooter className={`min-w-0 border-t border-border/50 ${featured ? "p-5 sm:p-6" : "p-4 sm:p-5"} pt-4`}>
+        <Button asChild disabled={!isAvailable} className="min-w-0 w-full rounded-full px-3 font-bold group/btn" size={featured ? "lg" : "default"}>
+          <Link href={`/events/${event.slug || event.id}`} className="flex min-w-0 items-center justify-center gap-2 text-center">
+            <span className="min-w-0 truncate">{isAvailable ? "Comprar entradas" : "Ver detalles"}</span>
+            <ArrowRight className="h-4 w-4 shrink-0 group-hover/btn:translate-x-1 transition-transform" />
           </Link>
         </Button>
       </CardFooter>
