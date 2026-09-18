@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check } from "lucide-react"
+import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check, Minus, Plus } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
 import { validatePromotion as validatePromotionServer } from "@/app/actions/validate-promotion"
@@ -406,18 +406,49 @@ export function PurchaseFlow({
 
         <div className="space-y-2">
           <Label htmlFor="quantity">Cantidad de Entradas</Label>
-          <Input
-            id="quantity"
-            type="number"
-            min="1"
-            max={effectiveMaxTickets}
-            required
-value={quantity}
-  disabled={Boolean(discountApplied && promotionType !== "2x1")}
-  onChange={(e) =>
-  setQuantity(Math.max(1, Math.min(effectiveMaxTickets, Number.parseInt(e.target.value) || 1)))
-  }
-  />
+          {(() => {
+            const stepperDisabled = Boolean(discountApplied && promotionType !== "2x1")
+            return (
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-full bg-transparent"
+                  disabled={stepperDisabled || quantity <= 1}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  aria-label="Quitar una entrada"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Input
+                  id="quantity"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max={effectiveMaxTickets}
+                  required
+                  value={quantity}
+                  disabled={stepperDisabled}
+                  onChange={(e) =>
+                    setQuantity(Math.max(1, Math.min(effectiveMaxTickets, Number.parseInt(e.target.value) || 1)))
+                  }
+                  className="h-11 flex-1 text-center text-lg font-semibold"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-full bg-transparent"
+                  disabled={stepperDisabled || quantity >= effectiveMaxTickets}
+                  onClick={() => setQuantity((q) => Math.min(effectiveMaxTickets, q + 1))}
+                  aria-label="Agregar una entrada"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          })()}
           <p className="text-xs text-muted-foreground">
   {discountApplied && promotionType === "2x1"
   ? "Este código incluye 2 entradas por el valor de 1"
