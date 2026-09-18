@@ -29,6 +29,7 @@ interface PurchaseFlowProps {
   eventPrice: number
   paymentInstructions?: string
   transferAlias?: string | null
+  transferAccountHolder?: string | null
   paymentMethods?: string[] | null
   mercadoPagoLink?: string | null
   isFree?: boolean
@@ -44,6 +45,7 @@ export function PurchaseFlow({
   eventPrice,
   paymentInstructions,
   transferAlias,
+  transferAccountHolder,
   paymentMethods,
   mercadoPagoLink,
   isFree = false,
@@ -433,7 +435,7 @@ export function PurchaseFlow({
 
         {isPwyw && (
           <div className="space-y-2">
-            <Label htmlFor="custom-price">¿Cuánto querés aportar? (opcional)</Label>
+            <Label htmlFor="custom-price">��Cuánto querés aportar? (opcional)</Label>
             <Input
               id="custom-price"
               type="number"
@@ -563,7 +565,7 @@ export function PurchaseFlow({
             <Label>Elegí cómo pagar</Label>
             <div className="grid gap-2">
               {availablePaymentMethods.includes(mercadoPagoLink ? "external_link" : "mercado_pago") && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" /><span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Serás redirigido para completar el pago.</span></span></label>}
-              {availablePaymentMethods.includes("transfer") && paymentInstructions && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">Luego vas a adjuntar el comprobante.</span></span></label>}
+              {availablePaymentMethods.includes("transfer") && (paymentInstructions || transferAlias || transferAccountHolder) && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} className="mt-1" /><span><span className="block font-medium">Transferencia bancaria</span><span className="block text-xs text-muted-foreground">Luego vas a adjuntar el comprobante.</span></span></label>}
             </div>
           </div>
         )}
@@ -586,35 +588,31 @@ export function PurchaseFlow({
         {paymentNotice && <Alert variant={paymentNotice.includes("no se completó") ? "destructive" : "default"}><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <Alert>
           <AlertDescription className="text-sm leading-relaxed">
-            {paymentMethod === "transfer" && transferAlias ? (
+            {paymentMethod === "transfer" ? (
               <div className="space-y-3">
-                <p>Realizá la transferencia al siguiente Alias y luego cargá el comprobante.</p>
-                <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Alias</p>
-                    <p className="truncate font-semibold tracking-wide">{transferAlias}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
+                <p>Realizá la transferencia y luego cargá el comprobante.</p>
+                <div className="space-y-3 rounded-md border bg-background p-3">
+                  {transferAlias && <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Alias</p>
+                      <p className="truncate font-semibold tracking-wide">{transferAlias}</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={async () => {
                       await navigator.clipboard.writeText(transferAlias)
                       setCopiedAlias(true)
                       window.setTimeout(() => setCopiedAlias(false), 2000)
-                    }}
-                    aria-label="Copiar Alias"
-                  >
-                    {copiedAlias ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                    {copiedAlias ? "Copiado" : "Copiar Alias"}
-                  </Button>
+                    }} aria-label="Copiar Alias">
+                      {copiedAlias ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                      {copiedAlias ? "Copiado" : "Copiar Alias"}
+                    </Button>
+                  </div>}
+                  {transferAccountHolder && <p className="text-sm"><span className="text-muted-foreground">Cuenta a nombre de:</span> <span className="font-medium">{transferAccountHolder}</span></p>}
+                  {paymentInstructions && <p className="whitespace-pre-line text-sm text-muted-foreground">{paymentInstructions}</p>}
                 </div>
               </div>
             ) : mercadoPagoLink || checkoutUrl
               ? "Usá el botón de Mercado Pago para completar el pago. Una vez aprobado, tu entrada se confirmará automáticamente."
-              : paymentInstructions
-                ? paymentInstructions
-                : "Realizá la transferencia bancaria según las instrucciones y luego cargá el comprobante. Un organizador revisará el pago y confirmará tu entrada manualmente."}
+              : "Realizá el pago para continuar."}
           </AlertDescription>
         </Alert>
 
