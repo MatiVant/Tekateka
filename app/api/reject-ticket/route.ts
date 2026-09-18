@@ -72,6 +72,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (ticket.status === "confirmed" || ticket.payment_status === "approved") {
+      const { data: event } = await supabase.from("events").select("available_tickets").eq("id", ticket.event_id).single()
+      if (event) await supabase.from("events").update({ available_tickets: Number(event.available_tickets || 0) + 1 }).eq("id", ticket.event_id)
+      if (ticket.tier_id) {
+        const { data: tier } = await supabase.from("ticket_tiers").select("available_quantity").eq("id", ticket.tier_id).single()
+        if (tier) await supabase.from("ticket_tiers").update({ available_quantity: Number(tier.available_quantity || 0) + 1 }).eq("id", ticket.tier_id)
+      }
+    }
+
+    const { error: deleteError } = await supabase.from("tickets").delete().eq("id", ticketId)
+    if (deleteError) {
+      console.error("[v0] Error al eliminar ticket cancelado:", deleteError)
+      return NextResponse.json({ error: "La entrada no pudo eliminarse" }, { status: 500 })
+    }
+
     if (!resend) {
       return NextResponse.json({ success: true, warning: "Email no configurado" })
     }
