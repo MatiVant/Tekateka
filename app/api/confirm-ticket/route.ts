@@ -59,16 +59,7 @@ export async function POST(request: Request) {
 
     try {
       const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/ticket/${encodeURIComponent(ticket.qr_code)}`
-      const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
-        errorCorrectionLevel: "M",
-        type: "image/png",
-        width: 400,
-        margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#FFFFFF",
-        },
-      })
+      const qrImageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
 
       const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
       const recipients = [ticket.buyer_email, organizer?.email].filter((email, index, list): email is string => Boolean(email) && list.indexOf(email) === index)
@@ -76,7 +67,7 @@ export async function POST(request: Request) {
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
         to: recipients,
-        subject: `✅ Tu entrada para ${ticket.events.title} ha sido confirmada`,
+        subject: `Tu entrada está confirmada: ${ticket.events.title}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -85,20 +76,19 @@ export async function POST(request: Request) {
               <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-                .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-                .qr-container { text-align: center; margin: 30px 0; padding: 20px; background: white; border-radius: 8px; }
-                .qr-code { max-width: 400px; width: 100%; height: auto; margin: 20px auto; display: block; }
-                .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1; }
-                .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
-                .code { font-family: monospace; font-size: 18px; font-weight: bold; color: #6366f1; background: #f3f4f6; padding: 10px; border-radius: 4px; display: inline-block; }
+                .header { background: #f4eddf; color: #171717; padding: 18px 0 22px; text-align: left; border-bottom: 4px solid #f4511e; }
+                .content { background: #fffdf7; padding: 30px; border: 1px solid #e7dcc8; border-radius: 0 0 18px 18px; }
+                .qr-container { text-align: center; margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e7dcc8; border-radius: 16px; }
+                .qr-code { width: 280px; height: 280px; margin: 20px auto; display: block; }
+                .info-box { background: #f4eddf; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #f4511e; }
+                .footer { text-align: center; color: #6b6258; font-size: 14px; margin-top: 30px; }
+                .code { font-family: monospace; font-size: 18px; font-weight: bold; color: #f4511e; background: #f4eddf; padding: 10px; border-radius: 6px; display: inline-block; }
               </style>
             </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1 style="margin: 0; font-size: 28px;">🎉 ¡Entrada Confirmada!</h1>
-                  <p style="margin: 10px 0 0 0; opacity: 0.9;">Tu pago ha sido verificado</p>
+            <body style="margin:0;background:#f4eddf;color:#171717;font-family:Arial,sans-serif;">
+              <div class="container" style="max-width:620px;margin:0 auto;padding:28px 18px;">
+                <div class="header" style="background:#f4eddf;color:#171717;padding:12px 0 22px;text-align:left;border-bottom:4px solid #f4511e;">
+                  <img src="${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/tekateka-logo.png" alt="TekaTeka — Tus eventos. Tus entradas." width="220" style="display:block;width:220px;height:auto;">
                 </div>
                 <div class="content">
                   <p>Hola <strong>${ticket.buyer_name}</strong>,</p>
@@ -121,7 +111,7 @@ export async function POST(request: Request) {
                   <div class="qr-container">
                     <h2 style="color: #6366f1;">🎫 Tu Código QR</h2>
                     <p>Presenta este código al ingresar al evento:</p>
-                    <img src="${qrDataUrl}" alt="Código QR" class="qr-code" />
+                    <img src="${qrImageUrl}" alt="Código QR" class="qr-code" width="280" height="280" />
                     <p>Código: <span class="code">${ticket.qr_code}</span></p>
                     <p><a href="${ticketUrl}">Abrir mi entrada digital</a></p>
                     <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
