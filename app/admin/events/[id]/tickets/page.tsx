@@ -7,6 +7,8 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
+import { ArtistShareLinks } from '@/components/admin/artist-share-links';
+import { getArtistShareLinks } from '@/app/actions/artist-share-links';
 
 export default async function EventTicketsPage({
   params,
@@ -34,6 +36,8 @@ export default async function EventTicketsPage({
   }
 
   // Obtener tickets del evento
+  const shareLinks = await getArtistShareLinks(id);
+
   const { data: tickets } = await supabase
     .from('tickets')
     .select(`
@@ -68,6 +72,7 @@ export default async function EventTicketsPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <ArtistShareLinks eventId={id} initialLinks={shareLinks} />
             <AllTicketsTable tickets={tickets || []} />
           </CardContent>
         </Card>
