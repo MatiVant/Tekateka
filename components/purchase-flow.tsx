@@ -75,6 +75,7 @@ export function PurchaseFlow({
   const [error, setError] = useState<string | null>(null)
   const [finalPrice, setFinalPrice] = useState(eventPrice)
   const [discountApplied, setDiscountApplied] = useState(false)
+  const [promotionType, setPromotionType] = useState<string | null>(null)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
   const [copiedAlias, setCopiedAlias] = useState(false)
@@ -148,6 +149,7 @@ export function PurchaseFlow({
     if (!promotionCode.trim()) {
       setError(null)
       setDiscountApplied(false)
+      setPromotionType(null)
       setFinalPrice(basePrice)
       return
     }
@@ -162,6 +164,7 @@ export function PurchaseFlow({
       }
 
       setFinalPrice(result.finalPrice)
+      setPromotionType(result.promotionType ?? null)
       setDiscountApplied(true)
       setError(null)
     } catch (error) {
@@ -195,7 +198,7 @@ export function PurchaseFlow({
     try {
       let priceToUse = 0
 
-      if (isFree) {
+      if (isFree || (discountApplied && finalPrice === 0)) {
         priceToUse = 0
       } else if (isPwyw) {
         priceToUse = Number.parseFloat(customPrice) || 0
@@ -218,7 +221,7 @@ export function PurchaseFlow({
           qr_code: qrCode,
           promotion_code: promotionCode || undefined,
           final_price: priceToUse,
-          payment_method: (isFree || (isPwyw && priceToUse === 0) ? "free" : paymentMethod) as
+          payment_method: (priceToUse === 0 ? "free" : paymentMethod) as
             | "mercado_pago"
             | "external_link"
             | "transfer"
@@ -241,7 +244,7 @@ export function PurchaseFlow({
       setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia
       setTicketIds(createdTicketIds) // Guardamos todos los IDs de la compra (para el comprobante)
 
-      if (isFree || (isPwyw && priceToUse === 0)) {
+      if (priceToUse === 0) {
         setStep("success")
       } else if (paymentMethod === "transfer") {
         setCheckoutUrl(null)
@@ -544,12 +547,12 @@ export function PurchaseFlow({
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Email</span><span className="break-all text-right font-medium">{email}</span></div>
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Entradas</span><span className="font-medium">{quantity} {quantity === 1 ? "entrada" : "entradas"}</span></div>
             {reviewFee > 0 && <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Cargo de Mercado Pago (10%)</span><span>{formatCurrency(reviewFee)}</span></div>}
-            <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total a pagar</span><span className="text-xl font-bold text-primary">{isFree ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
+            <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total a pagar</span><span className="text-xl font-bold text-primary">{isFree || finalPrice === 0 ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
           </div>
         </div>
 
-        {!isFree && (
-          <div className="space-y-3">
+{!isFree && finalPrice > 0 && (
+  <div className="space-y-3">
             <Label>Elegí cómo pagar</Label>
             <div className="grid gap-2">
               {availablePaymentMethods.includes(mercadoPagoLink ? "external_link" : "mercado_pago") && <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="review-payment-method" checked={paymentMethod === (mercadoPagoLink ? "external_link" : "mercado_pago")} onChange={() => setPaymentMethod(mercadoPagoLink ? "external_link" : "mercado_pago")} className="mt-1" /><span><span className="block font-medium">{mercadoPagoLink ? "Link de Mercado Pago" : "Mercado Pago"}</span><span className="block text-xs text-muted-foreground">Serás redirigido para completar el pago.</span></span></label>}
@@ -563,7 +566,7 @@ export function PurchaseFlow({
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>Volver atrás</Button>
           <Button type="button" className="flex-1" onClick={handlePurchaseSubmit} disabled={isLoading}>
-            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree ? "Confirmar entradas" : "Continuar al pago"}
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree || finalPrice === 0 ? "Obtener entrada gratis" : "Continuar al pago"}
           </Button>
         </div>
       </div>

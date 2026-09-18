@@ -8,6 +8,7 @@ interface ValidationResult {
   discountAmount: number;
   finalPrice: number;
   error?: string;
+  promotionType?: string;
 }
 
 export async function validatePromotion(
@@ -71,8 +72,9 @@ export async function validatePromotion(
     return {
       isValid: true,
       discountAmount,
-      finalPrice: Math.max(0, finalPrice),
-    };
+        finalPrice: Math.max(0, finalPrice),
+        promotionType: promoData.promotion_type,
+      };
   } catch (error) {
     console.error('[v0] Error validating promotion:', error);
     return {
