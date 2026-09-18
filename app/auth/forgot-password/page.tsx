@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
     setMessage(null)
     const supabase = createClient()
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/auth/reset-password`,
     })
     if (resetError) setError(resetError.message)
     else setMessage("Si existe una cuenta con ese email, te enviamos un enlace para cambiar la contraseña.")

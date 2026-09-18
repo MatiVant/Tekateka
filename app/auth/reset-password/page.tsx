@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
@@ -14,6 +14,15 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("code")
+    if (!code) return
+    const supabase = createClient()
+    void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      if (exchangeError) setError("Este enlace venció o ya fue utilizado. Solicitá uno nuevo.")
+    })
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
