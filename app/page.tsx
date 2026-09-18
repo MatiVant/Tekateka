@@ -31,7 +31,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <section className="relative overflow-hidden min-h-[600px] flex items-center" style={{ backgroundImage: 'url(/hero-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <section className="relative overflow-hidden min-h-[600px] flex items-center" style={{ backgroundImage: 'url(/tekateka-home.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl teka-editorial">
