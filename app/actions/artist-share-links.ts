@@ -54,6 +54,6 @@ export async function getArtistShareLinks(eventId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  const { data } = await supabase.from("artist_share_links").select("id, label, created_at, expires_at, revoked_at, last_accessed_at, permissions").eq("event_id", eventId).eq("created_by", user.id).order("created_at", { ascending: false })
+  const { data } = await supabase.from("artist_share_links").select("id, label, created_at, expires_at, revoked_at, last_accessed_at, permissions").eq("event_id", eventId).eq("created_by", user.id).is("revoked_at", null).order("created_at", { ascending: false })
   return data ?? []
 } 

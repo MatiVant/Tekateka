@@ -34,7 +34,7 @@ export function ArtistShareLinks({ eventId, initialLinks }: { eventId: string; i
 
   async function revoke(id: string) {
     setBusy(true)
-    try { await revokeArtistShareLink(id, eventId); setLinks((current) => current.map((link) => link.id === id ? { ...link, revoked_at: new Date().toISOString() } : link)) }
+    try { await revokeArtistShareLink(id, eventId); setLinks((current) => current.filter((link) => link.id !== id)) }
     finally { setBusy(false) }
   }
 
