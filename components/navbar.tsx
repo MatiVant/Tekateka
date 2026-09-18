@@ -93,6 +93,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </Link>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Button variant="ghost" asChild><Link href="/ayuda">Ayuda</Link></Button>
             {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
             {user && <ThemeToggle />}
             {user ? (
