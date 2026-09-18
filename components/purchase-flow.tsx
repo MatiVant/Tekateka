@@ -689,8 +689,22 @@ export function PurchaseFlow({
             <span className="text-xl font-bold text-primary">{formatCurrency(finalPrice * quantity)}</span>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="receipt">Comprobante de Pago</Label>
+  {paymentMethod === "transfer" && (transferAlias || transferAccountHolder) && <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+  <div>
+  <p className="font-semibold">Datos para hacer la transferencia</p>
+  <p className="text-sm text-muted-foreground">Antes de enviar el comprobante, realizá la transferencia a estos datos.</p>
+  </div>
+  {transferAlias && <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
+  <div className="min-w-0"><p className="text-xs text-muted-foreground">Alias</p><p className="truncate font-semibold tracking-wide">{transferAlias}</p></div>
+  <Button type="button" variant="outline" size="sm" onClick={async () => { await navigator.clipboard.writeText(transferAlias); setCopiedAlias(true); window.setTimeout(() => setCopiedAlias(false), 2000) }}>
+  {copiedAlias ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}{copiedAlias ? "Copiado" : "Copiar"}
+  </Button>
+  </div>}
+  {transferAccountHolder && <p className="text-sm"><span className="text-muted-foreground">A nombre de:</span> <span className="font-medium">{transferAccountHolder}</span></p>}
+  </div>}
+
+  <div className="space-y-2">
+  <Label htmlFor="receipt">Comprobante de Pago</Label>
           <div className="flex items-center gap-2">
             <Input
               id="receipt"
