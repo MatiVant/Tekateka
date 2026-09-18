@@ -12,12 +12,24 @@ const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono
 const _outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" })
 
 export const metadata: Metadata = {
-  title: "TekaTeka - Venta de Entradas",
-  description: "Plataforma de gestión y venta de entradas para eventos y espectáculos",
+  title: "TekaTeka — Tus eventos. Tus entradas.",
+  description: "Descubrí eventos, comprá entradas y compartí tus encuentros con TekaTeka.",
   generator: "v0.app",
   icons: {
-    icon: "/tekateka-isologo.png",
-    apple: "/tekateka-isologo.png",
+    icon: [{ url: "/tekateka-mark.png", type: "image/png" }],
+    shortcut: ["/tekateka-mark.png"],
+    apple: [{ url: "/tekateka-mark.png", type: "image/png" }],
+  },
+  openGraph: {
+    title: "TekaTeka — Tus eventos. Tus entradas.",
+    description: "Más cultura. Más encuentros.",
+    images: [{ url: "/tekateka-logo.png", width: 2048, height: 768, alt: "TekaTeka — Tus eventos. Tus entradas." }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TekaTeka — Tus eventos. Tus entradas.",
+    description: "Más cultura. Más encuentros.",
+    images: ["/tekateka-logo.png"],
   },
 }
 
