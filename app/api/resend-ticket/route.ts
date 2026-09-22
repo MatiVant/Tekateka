@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
     const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(ticket.qr_code)}`
     const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
-    const eventDate = new Date(ticket.events.event_date).toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+    const eventDate = new Date(ticket.events.event_date).toLocaleString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })
 
     const { error: emailError } = await resend.emails.send({
       from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",

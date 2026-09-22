@@ -97,13 +97,14 @@ export async function POST(request: Request) {
                   <div class="info-box">
                     <h2 style="margin-top: 0; color: #6366f1;">📅 Detalles del Evento</h2>
                     <p><strong>Evento:</strong> ${ticket.events.title}</p>
-                    <p><strong>Fecha:</strong> ${new Date(ticket.events.event_date).toLocaleDateString("es-AR", {
+                    <p><strong>Fecha:</strong> ${new Date(ticket.events.event_date).toLocaleString("es-AR", {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",
+                      timeZone: "America/Argentina/Buenos_Aires",
                     })}</p>
                     <p><strong>Lugar:</strong> ${ticket.events.venue}</p>
                   </div>
