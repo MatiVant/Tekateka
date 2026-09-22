@@ -237,7 +237,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                     </Badge>
                   </TableCell>
                   <TableCell>{organizer.events_created_count}</TableCell>
-                  <TableCell>{new Date(organizer.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(organizer.created_at).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       {organizer.organizer_status === "pending" && (

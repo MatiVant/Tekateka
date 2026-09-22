@@ -87,12 +87,13 @@ export function EventOwnershipTransfer({ eventId, currentTransfer }: EventOwners
               <p className="text-sm text-muted-foreground">Solicitud pendiente enviada a:</p>
               <p className="font-medium">{currentTransfer.proposed_owner_email}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Enviada: {new Date(currentTransfer.created_at).toLocaleDateString('es-ES', {
+                Enviada: {new Date(currentTransfer.created_at).toLocaleString('es-AR', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: 'America/Argentina/Buenos_Aires',
                 })}
               </p>
             </div>

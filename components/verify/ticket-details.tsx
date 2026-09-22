@@ -96,12 +96,13 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
         <div className="pt-2">
           <p className="text-xs text-muted-foreground">
             Comprado el{' '}
-            {new Date(ticket.purchased_at).toLocaleDateString('es-ES', {
+            {new Date(ticket.purchased_at).toLocaleString('es-AR', {
               day: 'numeric',
               month: 'long',
               year: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
+              timeZone: 'America/Argentina/Buenos_Aires',
             })}
           </p>
         </div>

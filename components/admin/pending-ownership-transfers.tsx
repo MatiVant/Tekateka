@@ -96,20 +96,22 @@ export function PendingOwnershipTransfers({ transfers }: PendingOwnershipTransfe
                     {transfer.events?.event_date && (
                       <p className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        {new Date(transfer.events.event_date).toLocaleDateString('es-ES', {
+                        {new Date(transfer.events.event_date).toLocaleDateString('es-AR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
+                          timeZone: 'America/Argentina/Buenos_Aires',
                         })}
                       </p>
                     )}
                     <p className="text-xs">
-                      Solicitud: {new Date(transfer.created_at).toLocaleDateString('es-ES', {
+                      Solicitud: {new Date(transfer.created_at).toLocaleString('es-AR', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
+                        timeZone: 'America/Argentina/Buenos_Aires',
                       })}
                     </p>
                   </div>

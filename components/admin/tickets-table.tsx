@@ -92,12 +92,13 @@ export function TicketsTable({ tickets, eventPrice }: TicketsTableProps) {
                   <td className="p-4 font-mono text-xs">{ticket.qr_code}</td>
                   <td className="p-4">{getStatusBadge(ticket.status)}</td>
                   <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(ticket.purchased_at).toLocaleDateString('es-ES', {
+                    {new Date(ticket.purchased_at).toLocaleString('es-AR', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'America/Argentina/Buenos_Aires',
                     })}
                   </td>
                   <td className="p-4 font-semibold">{formatPrice(eventPrice)}</td>
