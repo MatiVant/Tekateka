@@ -10,10 +10,11 @@ import { createClient } from '@/lib/supabase/client';
 import { TicketDetails } from './ticket-details';
 
 interface QRScannerProps {
-  userId: string;
+  userId?: string;
+  checkerToken?: string;
 }
 
-export function QRScanner({ userId }: QRScannerProps) {
+export function QRScanner({ userId, checkerToken }: QRScannerProps) {
   const [scanMode, setScanMode] = useState<'camera' | 'manual'>('manual');
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -32,6 +33,14 @@ export function QRScanner({ userId }: QRScannerProps) {
     setResult(null);
 
     try {
+      if (checkerToken) {
+        const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, qrCode: qrCode.trim() }) })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload.error || 'No se pudo verificar')
+        setResult({ type: payload.type, message: payload.message, ticket: payload.ticket })
+        return
+      }
+
       const supabase = createClient();
 
       // Buscar el ticket por QR code
