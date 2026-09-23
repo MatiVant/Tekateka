@@ -20,7 +20,10 @@ interface EventCardProps {
     available_tickets: number
     total_tickets: number
     image_url: string | null
+    image_position_x?: number
+    image_position_y?: number
     location_url?: string | null
+    slug?: string | null
     status: string
     confirmed_count?: number
   }
@@ -66,6 +69,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
           }
           alt={event.title}
           className="object-cover w-full h-full group-hover:scale-103 transition-transform duration-700"
+          style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 

@@ -36,6 +36,8 @@ interface EventFormProps {
     transfer_account_holder?: string | null
     sales_start_at?: string | null
     sales_end_at?: string | null
+    image_position_x?: number
+    image_position_y?: number
   }
 }
 
@@ -62,7 +64,7 @@ export function EventForm({ userId, event }: EventFormProps) {
     argentinaDateTime ? `${argentinaDateTime.year}-${argentinaDateTime.month}-${argentinaDateTime.day}` : "",
   )
   const [eventTime, setEventTime] = useState(
-    argentinaDateTime ? `${argentinaDateTime.hour}:${argentinaDateTime.minute}` : "",
+    argentinaDateTime ? `${argentinaDateTime.hour}:${argentinaDateTime.minute}` : "00:00",
   )
   const [salesStartAt, setSalesStartAt] = useState(event?.sales_start_at ? event.sales_start_at.slice(0, 16) : "")
   const [salesEndAt, setSalesEndAt] = useState(event?.sales_end_at ? event.sales_end_at.slice(0, 16) : "")
@@ -76,6 +78,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null)
+  const [imagePosition, setImagePosition] = useState({ x: event?.image_position_x ?? 50, y: event?.image_position_y ?? 50 })
   const [eventType, setEventType] = useState<"paid" | "free" | "pwyw">(
     event?.price === 0 ? "free" : event?.is_pay_what_you_want ? "pwyw" : "paid",
   )
@@ -202,6 +205,15 @@ export function EventForm({ userId, event }: EventFormProps) {
   const handleRemoveImage = () => {
     setImageUrl("")
     setImagePreview(null)
+    setImagePosition({ x: 50, y: 50 })
+  }
+
+  const handleImagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!imagePreview) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = Math.round(((event.clientX - rect.left) / rect.width) * 100)
+    const y = Math.round(((event.clientY - rect.top) / rect.height) * 100)
+    setImagePosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -256,6 +268,8 @@ export function EventForm({ userId, event }: EventFormProps) {
         total_tickets: Number.parseInt(totalTickets),
         available_tickets: event ? event.total_tickets : Number.parseInt(totalTickets),
         image_url: imageUrl || null,
+        image_position_x: imagePosition.x,
+        image_position_y: imagePosition.y,
         status: "active",
         organizer_id: userId,
         max_tickets_per_person: maxTicketsPerPerson ? Number.parseInt(maxTicketsPerPerson) : null,
@@ -371,9 +385,9 @@ export function EventForm({ userId, event }: EventFormProps) {
           <Label htmlFor="eventTime">Hora de inicio *</Label>
 <Input id="eventTime" type="time" list="common-event-times" step={60} required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="h-11 cursor-pointer" />
   <datalist id="common-event-times">
-    {Array.from({ length: 24 }, (_, hour) => [0, 15, 30, 45].map((minute) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)).flat().map((time) => <option key={time} value={time} />)}
+  {Array.from({ length: 24 }, (_, hour) => [0, 10, 20, 30, 40, 50].map((minute) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)).flat().map((time) => <option key={time} value={time} />)}
   </datalist>
-  <p className="text-xs text-muted-foreground">Sugerencias cada 15 minutos. También podés escribir otra hora exacta.</p>
+  <p className="text-xs text-muted-foreground">Sugerencias cada 10 minutos. También podés escribir otra hora exacta.</p>
   </div>
 
   <div className="md:col-span-2 rounded-lg border border-dashed p-4 space-y-3">
@@ -641,11 +655,21 @@ export function EventForm({ userId, event }: EventFormProps) {
         <div className="mt-2">
           {imagePreview ? (
             <div className="relative">
-              <img
-                src={imagePreview || "/placeholder.svg"}
-                alt="Preview"
-                className="w-full h-64 object-cover rounded-lg border-2 border-border"
-              />
+              <div
+                className="relative h-64 w-full cursor-crosshair touch-none overflow-hidden rounded-lg border-2 border-border"
+                onPointerDown={handleImagePointerDown}
+                title="Hacé clic o tocá la parte de la imagen que querés mostrar"
+              >
+                <img
+                  src={imagePreview || "/placeholder.svg"}
+                  alt="Preview del encuadre"
+                  className="h-full w-full object-cover"
+                  style={{ objectPosition: `${imagePosition.x}% ${imagePosition.y}%` }}
+                />
+                <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 to-transparent p-3 text-center text-xs font-medium text-white">
+                  Tocá la imagen para elegir el encuadre
+                </div>
+              </div>
               <Button
                 type="button"
                 variant="destructive"

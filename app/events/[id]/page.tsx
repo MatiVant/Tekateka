@@ -15,8 +15,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const supabase = await createClient()
   const eventQuery = /^[0-9a-f-]{36}$/i.test(id)
-    ? supabase.from("events").select("title, description, image_url, venue, event_date").eq("id", id).maybeSingle()
-    : supabase.from("events").select("title, description, image_url, venue, event_date").eq("slug", id).maybeSingle()
+    ? supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date").eq("id", id).maybeSingle()
+    : supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date").eq("slug", id).maybeSingle()
   const { data: event } = await eventQuery
   if (!event) return { title: "Evento | TekaTeka" }
   const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
@@ -86,8 +86,9 @@ export default async function EventDetailPage({
                   `/placeholder.svg?height=600&width=1000&query=evento+${encodeURIComponent(event.title) || "/placeholder.svg"}`
                 }
                 alt={event.title}
-                className="object-cover w-full h-full"
-              />
+  className="object-cover w-full h-full"
+  style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
+  />
             </div>
 
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-balance">{event.title}</h1>

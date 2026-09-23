@@ -15,6 +15,8 @@ interface EventData {
   total_tickets: number
   available_tickets: number
   image_url: string | null
+  image_position_x: number
+  image_position_y: number
   status: string
   organizer_id: string
   max_tickets_per_person: number | null
