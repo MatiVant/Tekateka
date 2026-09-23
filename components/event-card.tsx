@@ -36,27 +36,31 @@ export function EventCard({ event, featured = false }: EventCardProps) {
   const [minPrice, setMinPrice] = useState<number | null>(null)
 
   useEffect(() => {
-    const fetchMinPrice = async () => {
+    const fetchEventStats = async () => {
       try {
         const supabase = createClient()
-        const { count } = await supabase.from("tickets").select("id", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "confirmed")
+        const [{ count }, { data: tiers }] = await Promise.all([
+          supabase.from("tickets").select("id", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "confirmed"),
+          supabase.from("ticket_tiers").select("base_price").eq("event_id", event.id).order("base_price", { ascending: true }).limit(1),
+        ])
         setConfirmedCount(count ?? 0)
-        const { data: tiers } = await supabase
-          .from("ticket_tiers")
-          .select("base_price")
-          .eq("event_id", event.id)
-          .order("base_price", { ascending: true })
-          .limit(1)
-
-        if (tiers && tiers.length > 0) {
-          setMinPrice(tiers[0].base_price)
-        }
+        if (tiers && tiers.length > 0) setMinPrice(tiers[0].base_price)
       } catch (error) {
-        console.error("Error al obtener precio mínimo:", error)
+        console.error("Error al obtener estadísticas del evento:", error)
       }
     }
 
-    fetchMinPrice()
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchEventStats()
+    }
+
+    fetchEventStats()
+    document.addEventListener("visibilitychange", refreshWhenVisible)
+    window.addEventListener("pageshow", refreshWhenVisible)
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenVisible)
+      window.removeEventListener("pageshow", refreshWhenVisible)
+    }
   }, [event.id])
 
   return (

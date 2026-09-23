@@ -8,6 +8,9 @@ import { notFound } from "next/navigation"
 import { PurchaseFlow } from "@/components/purchase-flow"
 import { formatCurrency } from "@/lib/format"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
