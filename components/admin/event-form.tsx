@@ -382,40 +382,17 @@ export function EventForm({ userId, event }: EventFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label>Hora de inicio *</Label>
-          <div className="flex h-14 items-center gap-2 rounded-xl border border-input bg-background px-3 shadow-sm">
-            <div className="flex flex-1 items-center justify-center gap-1 font-mono text-2xl font-semibold tracking-tight">
-              <Input
-                id="eventHour"
-                type="number"
-                min="0"
-                max="23"
-                required
-                aria-label="Hora (00 a 23)"
-                value={eventTime.split(":")[0] || "00"}
-                onChange={(e) => {
-                  const hour = Math.max(0, Math.min(23, Number.parseInt(e.target.value || "0", 10)))
-                  setEventTime(`${String(hour).padStart(2, "0")}:${eventTime.split(":")[1] || "00"}`)
-                }}
-                className="h-10 w-16 border-0 bg-transparent p-0 text-center text-2xl font-semibold shadow-none focus-visible:ring-0"
-              />
-              <span className="text-muted-foreground">:</span>
-              <div className="relative flex-1">
-                <select
-                  id="eventMinute"
-                  required
-                  aria-label="Minutos"
-                  value={eventTime.split(":")[1] || "00"}
-                  onChange={(e) => setEventTime(`${eventTime.split(":")[0] || "00"}:${e.target.value}`)}
-                  className="h-10 w-full appearance-none border-0 bg-transparent p-0 text-center font-mono text-2xl font-semibold outline-none"
-                >
-                  {["00", "10", "20", "30", "40", "50"].map((minute) => <option key={minute} value={minute}>{minute}</option>)}
-                </select>
-              </div>
-            </div>
-            <span className="text-xs text-muted-foreground">hs</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Hora de 00 a 23. Minutos en intervalos de 10.</p>
+          <Label htmlFor="eventTime">Hora de inicio *</Label>
+          <Input
+            id="eventTime"
+            type="time"
+            step={600}
+            required
+            value={eventTime || "00:00"}
+            onChange={(e) => setEventTime(e.target.value)}
+            className="h-11 cursor-pointer"
+          />
+          <p className="text-xs text-muted-foreground">Elegí la hora en formato de 24 horas. Los minutos avanzan de 10 en 10.</p>
         </div>
 
   <div className="md:col-span-2 rounded-lg border border-dashed p-4 space-y-3">
