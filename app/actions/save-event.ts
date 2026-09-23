@@ -22,6 +22,8 @@ interface EventData {
   payment_methods: string[]
   transfer_alias: string | null
   transfer_account_holder: string | null
+  sales_start_at: string | null
+  sales_end_at: string | null
 }
 
 interface TicketTier {
@@ -32,6 +34,8 @@ interface TicketTier {
   quantity: number
   available_quantity: number
   tier_order: number
+  sales_start_at?: string | null
+  sales_end_at?: string | null
 }
 
 export async function saveEvent(

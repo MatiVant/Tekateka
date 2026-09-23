@@ -49,7 +49,10 @@ export default async function EventDetailPage({
   const confirmedCount = confirmedTickets ?? 0
   const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
   const eventDate = new Date(event.event_date)
-  const isAvailable = event.status === "active" && realAvailableTickets > 0
+  const now = Date.now()
+  const beforeSalesStart = event.sales_start_at && now < new Date(event.sales_start_at).getTime()
+  const afterSalesEnd = event.sales_end_at && now >= new Date(event.sales_end_at).getTime()
+  const isAvailable = event.status === "active" && realAvailableTickets > 0 && !beforeSalesStart && !afterSalesEnd
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
@@ -172,9 +175,13 @@ export default async function EventDetailPage({
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    {event.status === "sold_out"
-                      ? "Las entradas para este evento están agotadas."
-                      : "Este evento ya no está disponible para compra."}
+                    {beforeSalesStart
+                      ? `La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}.`
+                      : afterSalesEnd
+                        ? "La venta para este evento ya finalizó."
+                        : event.status === "sold_out"
+                          ? "Las entradas para este evento están agotadas."
+                          : "Este evento ya no está disponible para compra."}
                   </p>
                 )}
               </CardContent>

@@ -34,6 +34,8 @@ interface EventFormProps {
     payment_methods?: string[] | null
     transfer_alias?: string | null
     transfer_account_holder?: string | null
+    sales_start_at?: string | null
+    sales_end_at?: string | null
   }
 }
 
@@ -62,6 +64,8 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [eventTime, setEventTime] = useState(
     argentinaDateTime ? `${argentinaDateTime.hour}:${argentinaDateTime.minute}` : "",
   )
+  const [salesStartAt, setSalesStartAt] = useState(event?.sales_start_at ? event.sales_start_at.slice(0, 16) : "")
+  const [salesEndAt, setSalesEndAt] = useState(event?.sales_end_at ? event.sales_end_at.slice(0, 16) : "")
 
   const [venue, setVenue] = useState(event?.venue || "")
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
@@ -86,6 +90,8 @@ export function EventForm({ userId, event }: EventFormProps) {
       description: string
       base_price: string
       quantity: string
+      sales_start_at: string
+      sales_end_at: string
     }>
   >([])
   const [showTierForm, setShowTierForm] = useState(false)
@@ -94,6 +100,8 @@ export function EventForm({ userId, event }: EventFormProps) {
     description: "",
     base_price: "",
     quantity: "",
+    sales_start_at: "",
+    sales_end_at: "",
   })
   const router = useRouter()
   const { toast } = useToast()
@@ -255,6 +263,8 @@ export function EventForm({ userId, event }: EventFormProps) {
         payment_methods: paymentMethods,
         transfer_alias: transferAlias.trim() || null,
         transfer_account_holder: transferAccountHolder.trim() || null,
+        sales_start_at: salesStartAt ? new Date(salesStartAt).toISOString() : null,
+        sales_end_at: salesEndAt ? new Date(salesEndAt).toISOString() : null,
       }
 
       const tiersToSave = ticketTiers.map((tier, index) => ({
@@ -263,6 +273,8 @@ export function EventForm({ userId, event }: EventFormProps) {
         base_price: Number.parseFloat(tier.base_price),
         quantity: Number.parseInt(tier.quantity),
         available_quantity: Number.parseInt(tier.quantity),
+        sales_start_at: tier.sales_start_at ? new Date(tier.sales_start_at).toISOString() : null,
+        sales_end_at: tier.sales_end_at ? new Date(tier.sales_end_at).toISOString() : null,
         tier_order: index,
       }))
 
@@ -297,7 +309,7 @@ export function EventForm({ userId, event }: EventFormProps) {
     }
 
     setTicketTiers([...ticketTiers, { ...tierFormData }])
-    setTierFormData({ name: "", description: "", base_price: "", quantity: "" })
+    setTierFormData({ name: "", description: "", base_price: "", quantity: "", sales_start_at: "", sales_end_at: "" })
     setShowTierForm(false)
   }
 
@@ -362,10 +374,18 @@ export function EventForm({ userId, event }: EventFormProps) {
     {Array.from({ length: 24 }, (_, hour) => [0, 15, 30, 45].map((minute) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)).flat().map((time) => <option key={time} value={time} />)}
   </datalist>
   <p className="text-xs text-muted-foreground">Sugerencias cada 15 minutos. También podés escribir otra hora exacta.</p>
-        </div>
+  </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="venue">Lugar *</Label>
+  <div className="md:col-span-2 rounded-lg border border-dashed p-4 space-y-3">
+    <div><Label>Disponibilidad general de venta</Label><p className="text-xs text-muted-foreground">Opcional. Se interpreta en horario de Argentina.</p></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2"><Label htmlFor="salesStartAt">Desde</Label><Input id="salesStartAt" type="datetime-local" value={salesStartAt} onChange={(e) => setSalesStartAt(e.target.value)} /></div>
+      <div className="space-y-2"><Label htmlFor="salesEndAt">Hasta</Label><Input id="salesEndAt" type="datetime-local" value={salesEndAt} onChange={(e) => setSalesEndAt(e.target.value)} /></div>
+    </div>
+  </div>
+  
+  <div className="space-y-2">
+  <Label htmlFor="venue">Lugar *</Label>
           <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />
         </div>
       </div>
@@ -572,10 +592,14 @@ export function EventForm({ userId, event }: EventFormProps) {
                       onChange={(e) => setTierFormData({ ...tierFormData, quantity: e.target.value })}
                     />
                   </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="button" onClick={handleAddTier} size="sm">
+  </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2"><Label htmlFor="tier-sales-start">Venta desde</Label><Input id="tier-sales-start" type="datetime-local" value={tierFormData.sales_start_at} onChange={(e) => setTierFormData({ ...tierFormData, sales_start_at: e.target.value })} /></div>
+    <div className="space-y-2"><Label htmlFor="tier-sales-end">Venta hasta</Label><Input id="tier-sales-end" type="datetime-local" value={tierFormData.sales_end_at} onChange={(e) => setTierFormData({ ...tierFormData, sales_end_at: e.target.value })} /></div>
+  </div>
+  
+  <div className="flex gap-2">
+  <Button type="button" onClick={handleAddTier} size="sm">
                     Agregar
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setShowTierForm(false)} size="sm">

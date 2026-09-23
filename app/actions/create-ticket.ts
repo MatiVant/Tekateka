@@ -28,15 +28,20 @@ export async function createTicket(data: CreateTicketData) {
 
   try {
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
-    const { data: event, error: eventError } = await supabase.from("events").select("price, status, is_pay_what_you_want").eq("id", data.event_id).single()
+    const { data: event, error: eventError } = await supabase.from("events").select("price, status, is_pay_what_you_want, sales_start_at, sales_end_at").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
+    const now = Date.now()
+    if (event.sales_start_at && now < new Date(event.sales_start_at).getTime()) throw new Error(`La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`)
+    if (event.sales_end_at && now >= new Date(event.sales_end_at).getTime()) throw new Error("La venta para este evento ya finalizó")
 
     let serverPrice = Number(event.price || 0)
     const originalPrice = serverPrice
     let appliedPromotion: { id: string; promotion_type: string; discount_value: number; max_uses: number | null; current_uses: number; valid_from: string | null; valid_until: string | null } | null = null
     if (data.tier_id) {
-      const { data: tier, error: tierError } = await supabase.from("ticket_tiers").select("base_price, available_quantity").eq("id", data.tier_id).eq("event_id", data.event_id).single()
+      const { data: tier, error: tierError } = await supabase.from("ticket_tiers").select("base_price, available_quantity, sales_start_at, sales_end_at").eq("id", data.tier_id).eq("event_id", data.event_id).single()
       if (tierError || !tier || tier.available_quantity < 1) throw new Error("Tipo de entrada no disponible")
+      if (tier.sales_start_at && now < new Date(tier.sales_start_at).getTime()) throw new Error("Este tipo de entrada todavía no está disponible")
+      if (tier.sales_end_at && now >= new Date(tier.sales_end_at).getTime()) throw new Error("La venta de este tipo de entrada ya finalizó")
       serverPrice = Number(tier.base_price)
     }
     if (event.is_pay_what_you_want) serverPrice = data.final_price
