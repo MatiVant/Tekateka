@@ -382,13 +382,34 @@ export function EventForm({ userId, event }: EventFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="eventTime">Hora de inicio *</Label>
-<Input id="eventTime" type="time" list="common-event-times" step={60} required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="h-11 cursor-pointer" />
-  <datalist id="common-event-times">
-  {Array.from({ length: 24 }, (_, hour) => [0, 10, 20, 30, 40, 50].map((minute) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)).flat().map((time) => <option key={time} value={time} />)}
-  </datalist>
-  <p className="text-xs text-muted-foreground">Sugerencias cada 10 minutos. También podés escribir otra hora exacta.</p>
-  </div>
+          <Label htmlFor="eventHour">Hora de inicio *</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              id="eventHour"
+              required
+              value={eventTime.split(":")[0] || "00"}
+              onChange={(e) => setEventTime(`${e.target.value}:${eventTime.split(":")[1] || "00"}`)}
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+              aria-label="Hora"
+            >
+              {Array.from({ length: 24 }, (_, hour) => {
+                const value = String(hour).padStart(2, "0")
+                return <option key={value} value={value}>{value} horas</option>
+              })}
+            </select>
+            <select
+              id="eventMinute"
+              required
+              value={eventTime.split(":")[1] || "00"}
+              onChange={(e) => setEventTime(`${eventTime.split(":")[0] || "00"}:${e.target.value}`)}
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+              aria-label="Minutos"
+            >
+              {["00", "10", "20", "30", "40", "50"].map((minute) => <option key={minute} value={minute}>{minute} minutos</option>)}
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">Elegí la hora (00 a 23) y los minutos en intervalos de 10.</p>
+        </div>
 
   <div className="md:col-span-2 rounded-lg border border-dashed p-4 space-y-3">
     <div><Label>Disponibilidad general de venta</Label><p className="text-xs text-muted-foreground">Opcional. Se interpreta en horario de Argentina.</p></div>
