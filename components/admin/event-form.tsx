@@ -79,6 +79,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   const [formError, setFormError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null)
   const [imagePosition, setImagePosition] = useState({ x: event?.image_position_x ?? 50, y: event?.image_position_y ?? 50 })
+  const [isEditingImage, setIsEditingImage] = useState(false)
   const [eventType, setEventType] = useState<"paid" | "free" | "pwyw">(
     event?.price === 0 ? "free" : event?.is_pay_what_you_want ? "pwyw" : "paid",
   )
@@ -209,7 +210,7 @@ export function EventForm({ userId, event }: EventFormProps) {
   }
 
   const handleImagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!imagePreview) return
+    if (!imagePreview || !isEditingImage) return
     const rect = event.currentTarget.getBoundingClientRect()
     const x = Math.round(((event.clientX - rect.left) / rect.width) * 100)
     const y = Math.round(((event.clientY - rect.top) / rect.height) * 100)
@@ -661,19 +662,29 @@ export function EventForm({ userId, event }: EventFormProps) {
           {imagePreview ? (
             <div className="relative">
               <div
-                className="relative h-64 w-full cursor-crosshair touch-none overflow-hidden rounded-lg border-2 border-border"
+                className={`relative h-64 w-full overflow-hidden rounded-lg border-2 border-border ${isEditingImage ? "cursor-crosshair touch-none" : "cursor-default"}`}
                 onPointerDown={handleImagePointerDown}
-                title="Hacé clic o tocá la parte de la imagen que querés mostrar"
+                onDragStart={(event) => event.preventDefault()}
+                title={isEditingImage ? "Hacé clic o tocá la parte de la imagen que querés mostrar" : "Vista previa de la imagen"}
               >
                 <img
                   src={imagePreview || "/placeholder.svg"}
                   alt="Preview del encuadre"
-                  className="h-full w-full object-cover"
+                  draggable={false}
+                  className="pointer-events-none h-full w-full object-cover"
                   style={{ objectPosition: `${imagePosition.x}% ${imagePosition.y}%` }}
                 />
-                <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 to-transparent p-3 text-center text-xs font-medium text-white">
-                  Tocá la imagen para elegir el encuadre
-                </div>
+                {isEditingImage && (
+                  <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 to-transparent p-3 text-center text-xs font-medium text-white">
+                    Tocá la imagen para elegir el encuadre
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button type="button" variant={isEditingImage ? "secondary" : "outline"} onClick={() => setIsEditingImage((editing) => !editing)}>
+                  {isEditingImage ? "Listo" : "Editar encuadre"}
+                </Button>
+                {!isEditingImage && <span className="text-xs text-muted-foreground">La imagen está en modo vista previa.</span>}
               </div>
               <Button
                 type="button"
