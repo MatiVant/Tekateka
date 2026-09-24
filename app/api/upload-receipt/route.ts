@@ -1,0 +1,21 @@
+import { createHash } from "node:crypto"
+import { put } from "@vercel/blob"
+import { NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/admin"
+
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const token = String(formData.get("token") || "")
+  const file = formData.get("file")
+  const notes = String(formData.get("notes") || "").trim()
+  if (!token || !(file instanceof File)) return NextResponse.json({ error: "Falta el comprobante" }, { status: 400 })
+  const supabase = createClient()
+  const hash = createHash("sha256").update(token).digest("hex")
+  const { data: ticket } = await supabase.from("tickets").select("id, payment_resume_expires_at, payment_method").eq("payment_resume_token_hash", hash).maybeSingle()
+  if (!ticket || (ticket.payment_resume_expires_at && new Date(ticket.payment_resume_expires_at) < new Date()) || ticket.payment_method !== "transfer") return NextResponse.json({ error: "Enlace no válido o vencido" }, { status: 403 })
+  if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "El archivo no puede superar 5 MB" }, { status: 400 })
+  const blob = await put(`receipts/${ticket.id}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
+  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_notes: notes || null, payment_status: "submitted" }).eq("id", ticket.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
