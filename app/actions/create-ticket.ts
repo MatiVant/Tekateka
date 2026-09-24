@@ -147,7 +147,7 @@ export async function createTicket(data: CreateTicketData) {
       if (data.sendEmail !== false) {
         const { data: event } = await supabase
           .from("events")
-          .select("title, mercado_pago_link, transfer_alias, transfer_account_holder, organizer_id")
+          .select("id, title, mercado_pago_link, transfer_alias, transfer_account_holder, organizer_id")
           .eq("id", data.event_id)
           .single()
 
@@ -161,6 +161,7 @@ export async function createTicket(data: CreateTicketData) {
           const forwardedProto = requestHeaders.get("x-forwarded-proto") || (forwardedHost?.includes("localhost") ? "http" : "https")
           const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
           const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
+          const adminTicketsUrl = `${siteUrl.replace(/\/$/, "")}/admin/events/${event.id}/tickets`
           await resend.emails.send({
             from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
             to: data.buyer_email,
@@ -172,7 +173,7 @@ export async function createTicket(data: CreateTicketData) {
               from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
               to: organizer.email,
               subject: `Nueva compra pendiente de confirmación: ${event.title}`,
-              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingres�� al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p>`,
+              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p><p><a href="${adminTicketsUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Revisar entrada en el panel</a></p><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
             })
           }
         }

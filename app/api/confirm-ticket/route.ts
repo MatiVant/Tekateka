@@ -58,7 +58,9 @@ export async function POST(request: Request) {
     }
 
     try {
-      const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/ticket/${encodeURIComponent(ticket.qr_code)}`
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
+      const ticketUrl = `${siteUrl}/ticket/${encodeURIComponent(ticket.qr_code)}`
+      const adminTicketsUrl = `${siteUrl}/admin/events/${ticket.event_id}/tickets`
       const qrImageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
 
       const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
                   
                   <div class="footer">
                     <p>Este email fue enviado por <strong>TekaTeka</strong></p>
-                    <p>Si tienes alguna consulta, responde a este email.</p>
+                    <p><a href="${adminTicketsUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir entradas del evento</a></p><p>Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>
                   </div>
                 </div>
               </div>
