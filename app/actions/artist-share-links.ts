@@ -3,17 +3,23 @@
 import crypto from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
+import { getCurrentUser } from "@/lib/auth"
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex")
 }
 
 export async function createArtistShareLink(eventId: string, permissions: { buyers?: boolean } = {}) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("No autorizado")
+  const session = await getCurrentUser()
+  if (!session?.user) throw new Error("No autorizado")
+  const user = session.user
+  const isSuperadmin = session.profile?.role === "superadmin"
+  const supabase = isSuperadmin ? createAdminClient() : await createClient()
 
-  const { data: event } = await supabase.from("events").select("id, organizer_id").eq("id", eventId).eq("organizer_id", user.id).single()
+  let eventQuery = supabase.from("events").select("id, organizer_id").eq("id", eventId)
+  if (!isSuperadmin) eventQuery = eventQuery.eq("organizer_id", user.id)
+  const { data: event } = await eventQuery.single()
   if (!event) throw new Error("No autorizado")
 
   const token = crypto.randomBytes(32).toString("base64url")
