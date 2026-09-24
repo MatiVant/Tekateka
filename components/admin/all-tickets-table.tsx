@@ -548,7 +548,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                         <FileText className="h-4 w-4" />
                       </Button>
                     ) : (
-                      {Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null}
+                      Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null
                     )}
                   </td>
                   <td className="p-4">
