@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -102,6 +102,14 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false)
   const [bulkRejectionReason, setBulkRejectionReason] = useState("")
+
+  const openWhatsApp = (ticket: Ticket) => {
+    if (!ticket.buyer_phone) return
+    const phone = ticket.buyer_phone.replace(/[^\\d+]/g, "").replace(/^00/, "+")
+    const normalizedPhone = phone.startsWith("+") ? phone.slice(1) : phone.startsWith("54") ? phone : `54${phone.replace(/^0/, "")}`
+    const message = `Hola ${ticket.buyer_name}, te escribimos por tu entrada para ${ticket.events.title}.`
+    window.open(`https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer")
+  }
 
   const eventOptions = useMemo<EventOption[]>(() => {
     if (events && events.length > 0) return events
@@ -552,9 +560,15 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                     )}
                   </td>
                   <td className="p-4">
-                    <Button size="sm" variant="ghost" onClick={() => viewTicketDetails(ticket)} title="Ver detalles">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => viewTicketDetails(ticket)} title="Ver detalles">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {ticket.buyer_phone && <Button size="sm" variant="ghost" className="text-green-600 hover:text-green-700" onClick={() => openWhatsApp(ticket)} title={`Escribir por WhatsApp a ${ticket.buyer_name}`}>
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="sr-only">Escribir por WhatsApp</span>
+                      </Button>}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -619,7 +633,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                   <p className="text-sm text-muted-foreground mb-1">Comprador</p>
                   <p className="font-medium">{selectedTicket.buyer_name}</p>
             <p className="text-sm text-muted-foreground">{selectedTicket.buyer_email}</p>
-            {selectedTicket.buyer_phone && <p className="text-sm text-muted-foreground">Tel: {selectedTicket.buyer_phone}</p>}
+            {selectedTicket.buyer_phone && <><p className="text-sm text-muted-foreground">Tel: {selectedTicket.buyer_phone}</p><Button type="button" size="sm" variant="outline" className="mt-2 text-green-600 hover:text-green-700" onClick={() => openWhatsApp(selectedTicket)}><MessageCircle className="mr-2 h-4 w-4" />Escribir por WhatsApp</Button></>}
           </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Evento</p>
