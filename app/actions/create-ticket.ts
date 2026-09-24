@@ -21,6 +21,7 @@ interface CreateTicketData {
   buyer_id?: string | null
   sendEmail?: boolean
   ticketQuantity?: number
+  paymentResumeToken?: string
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -96,7 +97,7 @@ export async function createTicket(data: CreateTicketData) {
     const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
-    const resumeToken = randomBytes(32).toString("hex")
+    const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")
     const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
     const resumeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)

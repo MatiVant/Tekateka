@@ -210,6 +210,7 @@ export function PurchaseFlow({
       }
 
       const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const sharedPaymentResumeToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`
       const createdTicketIds: string[] = []
 
       for (let i = 0; i < quantity; i++) {
@@ -234,6 +235,7 @@ export function PurchaseFlow({
           // Solo se envía un único email consolidado por compra, no uno por entrada.
           sendEmail: i === quantity - 1,
           ticketQuantity: quantity,
+          paymentResumeToken: sharedPaymentResumeToken,
         }
 
         console.log(`[v0] Creando ticket ${i + 1}/${quantity}...`, ticketData)
