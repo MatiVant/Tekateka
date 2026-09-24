@@ -136,9 +136,9 @@ export async function replyToOrganizerMessage(formData: { messageId: string; bod
       await resend.emails.send({
         from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
         to: organizer.email,
-        replyTo: "notificaciones@tktk.buholabs.com.ar",
+        replyTo: "consultas@tekateka.com.ar",
         subject: `Respuesta: ${original.subject}`,
-        html: `<p>Hola ${organizer.full_name || ""},</p><p>${body.replace(/</g, "&lt;")}</p><p>Podés continuar la conversación respondiendo este email.</p>`,
+        html: `<p>Hola ${organizer.full_name || ""},</p><p>${body.replace(/</g, "&lt;")}</p><p>Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
       })
     }
   } catch (err) {

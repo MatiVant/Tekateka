@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
                   
                   <div class="footer">
                     <p>Este email fue enviado por <strong>TekaTeka</strong></p>
-                    <p>Responde a este email si tienes alguna consulta.</p>
+                    <p>Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>
                   </div>
                 </div>
               </div>
