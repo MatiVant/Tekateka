@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/server';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
 import { ArtistShareLinks } from '@/components/admin/artist-share-links';
 import { getArtistShareLinks } from '@/app/actions/artist-share-links';
+import { getEventSettlement } from '@/app/actions/event-settlement';
+import { EventSettlement } from '@/components/admin/event-settlement';
 
 export default async function EventTicketsPage({
   params,
@@ -37,6 +39,7 @@ export default async function EventTicketsPage({
 
   // Obtener tickets del evento
   const shareLinks = await getArtistShareLinks(id);
+  const initialSettlement = await getEventSettlement(id);
 
   const { data: tickets } = await supabase
     .from('tickets')
@@ -82,6 +85,7 @@ export default async function EventTicketsPage({
           <CardContent>
             <ArtistShareLinks eventId={id} initialLinks={shareLinks} />
             <AllTicketsTable tickets={tickets || []} />
+            <EventSettlement eventId={id} tickets={tickets || []} initialSettlement={initialSettlement} />
           </CardContent>
         </Card>
       </main>
