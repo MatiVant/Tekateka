@@ -463,7 +463,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                     <span>Medio: <strong className="text-foreground">{ticket.payment_method === "free" ? "Gratis" : ticket.payment_method || "—"}</strong></span>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    {ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : <AdminReceiptUpload ticketId={ticket.id} />}
+                    {ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null}
                     <Button size="sm" className="flex-1" onClick={() => viewTicketDetails(ticket)}><Eye className="mr-2 h-4 w-4" />Detalles</Button>
                   </div>
                 </div>
@@ -548,7 +548,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                         <FileText className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <AdminReceiptUpload ticketId={ticket.id} />
+                      {Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null}
                     )}
                   </td>
                   <td className="p-4">
