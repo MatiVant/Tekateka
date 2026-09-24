@@ -28,6 +28,7 @@ import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
 import { getPaymentStatusLabel } from "@/lib/payment-status"
+import { AdminReceiptUpload } from "@/components/admin/admin-receipt-upload"
 
 interface TicketPromotion {
   id: string
@@ -462,7 +463,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                     <span>Medio: <strong className="text-foreground">{ticket.payment_method === "free" ? "Gratis" : ticket.payment_method || "—"}</strong></span>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    {ticket.payment_receipt_url && <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button>}
+                    {ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : <AdminReceiptUpload ticketId={ticket.id} />}
                     <Button size="sm" className="flex-1" onClick={() => viewTicketDetails(ticket)}><Eye className="mr-2 h-4 w-4" />Detalles</Button>
                   </div>
                 </div>
@@ -547,7 +548,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                         <FileText className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                      <AdminReceiptUpload ticketId={ticket.id} />
                     )}
                   </td>
                   <td className="p-4">
