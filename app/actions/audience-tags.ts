@@ -16,6 +16,18 @@ export async function createAudienceTag(name: string) {
   revalidatePath("/admin/events/new")
 }
 
+export async function updateAudienceTag(id: string, name: string) {
+  const { authorized } = await requireAuth(["superadmin"])
+  if (!authorized) throw new Error("No autorizado")
+  const cleanName = name.trim().replace(/\s+/g, " ").slice(0, 40)
+  if (!cleanName) throw new Error("La etiqueta no puede estar vacía")
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("audience_tag_options").update({ name: cleanName }).eq("id", id)
+  if (error) throw new Error(error.message)
+  revalidatePath("/superadmin")
+  revalidatePath("/admin/events/new")
+}
+
 export async function toggleAudienceTag(id: string, active: boolean) {
   const { authorized } = await requireAuth(["superadmin"])
   if (!authorized) throw new Error("No autorizado")
