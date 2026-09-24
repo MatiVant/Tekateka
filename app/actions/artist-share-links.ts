@@ -17,16 +17,16 @@ export async function createArtistShareLink(eventId: string, permissions: { buye
   if (!event) throw new Error("No autorizado")
 
   const token = crypto.randomBytes(32).toString("base64url")
-  const { error } = await supabase.from("artist_share_links").insert({
+  const { data: createdLink, error } = await supabase.from("artist_share_links").insert({
     event_id: eventId,
     created_by: user.id,
     token_hash: hashToken(token),
     label: "Acceso artista",
     permissions: { sales: true, buyers: Boolean(permissions.buyers), promotions: true },
-  })
+  }).select("id").single()
   if (error) throw new Error(error.message)
   revalidatePath(`/admin/events/${eventId}/tickets`)
-  return token
+  return { token, linkId: data?.id ?? null }
 }
 
 export async function updateArtistShareLinkPermissions(linkId: string, eventId: string, buyers: boolean) {
