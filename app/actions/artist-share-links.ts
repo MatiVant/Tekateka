@@ -27,6 +27,7 @@ export async function createArtistShareLink(eventId: string, permissions: { buye
     event_id: eventId,
     created_by: user.id,
     token_hash: hashToken(token),
+    token,
     label: "Acceso artista",
     permissions: { sales: true, buyers: Boolean(permissions.buyers), promotions: true },
   }).select("id").single()
@@ -57,9 +58,14 @@ export async function revokeArtistShareLink(linkId: string, eventId: string) {
 }
 
 export async function getArtistShareLinks(eventId: string) {
+  const session = await getCurrentUser()
+  if (!session?.user) return []
+  const user = session.user
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const { data } = await supabase.from("artist_share_links").select("id, label, created_at, expires_at, revoked_at, last_accessed_at, permissions").eq("event_id", eventId).eq("created_by", user.id).is("revoked_at", null).order("created_at", { ascending: false })
+  const isSuperadmin = session.profile?.role === "superadmin"
+  const queryClient = isSuperadmin ? createAdminClient() : supabase
+  let linksQuery = queryClient.from("artist_share_links").select("id, token, label, created_at, expires_at, revoked_at, last_accessed_at, permissions").eq("event_id", eventId).is("revoked_at", null)
+  if (!isSuperadmin) linksQuery = linksQuery.eq("created_by", user.id)
+  const { data } = await linksQuery.order("created_at", { ascending: false })
   return data ?? []
 } 
