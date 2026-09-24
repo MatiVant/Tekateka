@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const supabase = createClient()
   const hash = createHash("sha256").update(token).digest("hex")
   const { data: ticket } = await supabase.from("tickets").select("id, payment_resume_expires_at, payment_method").eq("payment_resume_token_hash", hash).maybeSingle()
-  if (!ticket || (ticket.payment_resume_expires_at && new Date(ticket.payment_resume_expires_at) < new Date()) || ticket.payment_method !== "transfer") return NextResponse.json({ error: "Enlace no válido o vencido" }, { status: 403 })
+  if (!ticket || (ticket.payment_resume_expires_at && new Date(ticket.payment_resume_expires_at) < new Date()) || !["transfer", "transferencia"].includes(String(ticket.payment_method).toLowerCase())) return NextResponse.json({ error: "Enlace no válido o vencido" }, { status: 403 })
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "El archivo no puede superar 5 MB" }, { status: 400 })
   const blob = await put(`receipts/${ticket.id}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
   const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_notes: notes || null, payment_status: "submitted" }).eq("id", ticket.id)
