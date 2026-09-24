@@ -35,6 +35,9 @@ export async function POST(request: Request) {
     }
 
     const wasAlreadyConfirmed = ticket.status === "confirmed"
+    if (wasAlreadyConfirmed) {
+      return NextResponse.json({ success: true, alreadyConfirmed: true, message: "La entrada ya estaba aprobada" })
+    }
     const { error: updateError } = await supabase.from("tickets").update({ status: "confirmed", payment_status: "approved" }).eq("id", ticketId)
 
     if (updateError) throw updateError

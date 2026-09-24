@@ -16,12 +16,13 @@ export async function POST(request: Request) {
   if (!file.type.startsWith("image/") && file.type !== "application/pdf") return NextResponse.json({ error: "Solo se aceptan imágenes o PDF" }, { status: 400 })
 
   const supabase = createAdminClient()
-  const { data: ticket } = await supabase.from("tickets").select("id, event_id, events(organizer_id)").eq("id", ticketId).maybeSingle()
+  const { data: ticket } = await supabase.from("tickets").select("id, event_id, status, payment_status, payment_receipt_url, events(organizer_id)").eq("id", ticketId).maybeSingle()
   const event = Array.isArray(ticket?.events) ? ticket.events[0] : ticket?.events
   if (!ticket || event?.organizer_id !== user.id) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
   const blob = await put(`receipts/${ticketId}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
-  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_status: "submitted" }).eq("id", ticketId)
+  const nextPaymentStatus = ticket.payment_status === "approved" || ticket.status === "confirmed" ? ticket.payment_status : "submitted"
+  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_status: nextPaymentStatus }).eq("id", ticketId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
