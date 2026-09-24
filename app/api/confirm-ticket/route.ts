@@ -7,15 +7,16 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 export async function POST(request: Request) {
   try {
-    const { ticketId } = await request.json()
+    const body = await request.json()
+    const ticketIds = Array.isArray(body.ticketIds) ? body.ticketIds.filter(Boolean) : body.ticketId ? [body.ticketId] : []
 
-    if (!ticketId) {
+    if (ticketIds.length === 0) {
       return NextResponse.json({ error: "Ticket ID requerido" }, { status: 400 })
     }
 
     const supabase = createClient()
 
-    const { data: ticket, error: ticketError } = await supabase
+    const { data: tickets, error: ticketError } = await supabase
       .from("tickets")
       .select(`
         *,
@@ -27,18 +28,23 @@ export async function POST(request: Request) {
           organizer_id
         )
       `)
-      .eq("id", ticketId)
-      .single()
+      .in("id", ticketIds)
 
+    const ticket = tickets?.[0]
     if (ticketError || !ticket) {
       return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 })
     }
 
-    const wasAlreadyConfirmed = ticket.status === "confirmed"
+    const { data: purchaseTickets } = ticket.payment_resume_token_hash
+      ? await supabase.from("tickets").select("*").eq("payment_resume_token_hash", ticket.payment_resume_token_hash).eq("event_id", ticket.event_id)
+      : { data: [ticket] }
+    const groupedTickets = purchaseTickets?.length ? purchaseTickets : [ticket]
+    const pendingTickets = groupedTickets.filter((item) => item.status !== "confirmed")
+    const wasAlreadyConfirmed = pendingTickets.length === 0
     if (wasAlreadyConfirmed) {
       return NextResponse.json({ success: true, alreadyConfirmed: true, message: "La entrada ya estaba aprobada" })
     }
-    const { error: updateError } = await supabase.from("tickets").update({ status: "confirmed", payment_status: "approved" }).eq("id", ticketId)
+    const { error: updateError } = await supabase.from("tickets").update({ status: "confirmed", payment_status: "approved" }).in("id", groupedTickets.map((item) => item.id))
 
     if (updateError) throw updateError
 
@@ -62,9 +68,12 @@ export async function POST(request: Request) {
 
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
-      const ticketUrl = `${siteUrl}/ticket/${encodeURIComponent(ticket.qr_code)}`
       const adminTicketsUrl = `${siteUrl}/admin/events/${ticket.event_id}/tickets`
-      const qrImageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
+      const qrCards = groupedTickets.map((groupTicket) => {
+        const groupTicketUrl = `${siteUrl}/ticket/${encodeURIComponent(groupTicket.qr_code)}`
+        const groupQrImageUrl = `${siteUrl}/api/generate-qr?code=${encodeURIComponent(groupTicketUrl)}`
+        return `<div class="qr-container"><h2 style="color:#6366f1">Entrada</h2><p>Presentá este código al ingresar:</p><img src="${groupQrImageUrl}" alt="Código QR" class="qr-code" width="280" height="280" /><p>Código: <span class="code">${groupTicket.qr_code}</span></p><p><a href="${groupTicketUrl}">Abrir entrada digital</a></p></div>`
+      }).join("")
 
       const { data: organizer } = await supabase.from("profiles").select("email").eq("id", ticket.events.organizer_id).maybeSingle()
       const recipients = [ticket.buyer_email, organizer?.email].filter((email, index, list): email is string => Boolean(email) && list.indexOf(email) === index)
@@ -114,16 +123,8 @@ export async function POST(request: Request) {
                     <p><strong>Lugar:</strong> ${ticket.events.venue}</p>
                   </div>
 
-                  <div class="qr-container">
-                    <h2 style="color: #6366f1;">🎫 Tu Código QR</h2>
-                    <p>Presenta este código al ingresar al evento:</p>
-                    <img src="${qrImageUrl}" alt="Código QR" class="qr-code" width="280" height="280" />
-                    <p>Código: <span class="code">${ticket.qr_code}</span></p>
-                    <p><a href="${ticketUrl}">Abrir mi entrada digital</a></p>
-                    <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
-                      💡 Guarda este email o toma una captura de pantalla del código QR
-                    </p>
-                  </div>
+${qrCards}
+                  <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">Guardá este email o tomá una captura de pantalla de cada código QR.</p>
 
                   <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
                     <p style="margin: 0; color: #92400e;">

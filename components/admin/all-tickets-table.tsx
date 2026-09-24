@@ -163,7 +163,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           fetch("/api/confirm-ticket", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ticketId: id }),
+            body: JSON.stringify({ ticketIds: ids }),
           }),
         ),
       )
