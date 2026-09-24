@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   if (!tickets?.length || tickets.some((ticket) => (ticket.payment_resume_expires_at && new Date(ticket.payment_resume_expires_at) < new Date()) || !["transfer", "transferencia"].includes(String(ticket.payment_method).toLowerCase()))) return NextResponse.json({ error: "Enlace no válido o vencido" }, { status: 403 })
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "El archivo no puede superar 5 MB" }, { status: 400 })
   const blob = await put(`receipts/${tickets[0].id}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
-  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_notes: notes || null, payment_status: "submitted" }).eq("payment_resume_token_hash", hash)
+  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_notes: notes || null, payment_status: "submitted" }).eq("payment_resume_token_hash", hash).in("payment_method", ["transfer", "transferencia"])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
