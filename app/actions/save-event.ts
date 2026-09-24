@@ -7,6 +7,7 @@ import { createUniqueEventSlug } from '@/lib/slugify'
 interface EventData {
   title: string
   description: string | null
+  audience_tags: string[]
   event_date: string
   venue: string
   location_url: string | null

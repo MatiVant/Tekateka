@@ -8,6 +8,7 @@ import { Users, CheckCircle, XCircle, Clock, LayoutList } from "lucide-react"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
 import { MessagesInbox } from "@/components/superadmin/messages-inbox"
 import { MovementsReportButton } from "@/components/admin/movements-report-button"
+import { AudienceInsights } from "@/components/superadmin/audience-insights"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -31,6 +32,17 @@ export default async function SuperAdminPage() {
     supabase.from("tickets").select("final_price").eq("payment_status", "approved"),
   ])
   const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
+  const [{ data: insightEvents }, { data: insightTickets }] = await Promise.all([
+    supabase.from("events").select("id, title, audience_tags").order("event_date", { ascending: false }).limit(100),
+    supabase.from("tickets").select("event_id").in("payment_status", ["approved", "confirmed"]),
+  ])
+  const buyerCounts = new Map<string, number>()
+  for (const ticket of insightTickets || []) buyerCounts.set(ticket.event_id, (buyerCounts.get(ticket.event_id) || 0) + 1)
+  const audienceInsights = (insightEvents || []).map((event) => {
+    const tags = event.audience_tags || []
+    const related = (insightEvents || []).filter((other) => other.id !== event.id && tags.some((tag: string) => (other.audience_tags || []).includes(tag))).slice(0, 3).map((other) => other.title)
+    return { id: event.id, title: event.title, tags, buyers: buyerCounts.get(event.id) || 0, related }
+  }).filter((event) => event.tags.length > 0)
   const { data: movements } = await supabase
     .from("platform_movements")
     .select("id, movement_type, amount, created_at, event_id, organizer_id, ticket_id, metadata, events(title), tickets(buyer_name, buyer_email)")
@@ -145,6 +157,8 @@ export default async function SuperAdminPage() {
         <section className="mb-12 flex justify-end">
           <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
         </section>
+
+        <AudienceInsights events={audienceInsights} />
 
         <section className="mb-12">
           <MessagesInbox messages={messages} />

@@ -27,8 +27,9 @@ interface EventFormProps {
     price: number
     total_tickets: number
     image_url: string | null
-    status: string
-    is_pay_what_you_want: boolean
+  status: string
+  audience_tags?: string[] | null
+  is_pay_what_you_want: boolean
     max_tickets_per_person?: number
     mercado_pago_link?: string | null
     payment_methods?: string[] | null
@@ -44,6 +45,7 @@ interface EventFormProps {
 export function EventForm({ userId, event }: EventFormProps) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
+  const [audienceTags, setAudienceTags] = useState((event?.audience_tags || []).join(", "))
 
   const eventDateTime = event?.event_date ? new Date(event.event_date) : null
   const argentinaDateTime = eventDateTime
@@ -261,6 +263,7 @@ export function EventForm({ userId, event }: EventFormProps) {
       const eventData = {
         title,
         description: description || null,
+        audience_tags: audienceTags.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 8),
         event_date: combinedDateTime,
         venue,
         location_url: locationUrl || null,
@@ -368,6 +371,12 @@ export function EventForm({ userId, event }: EventFormProps) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="audienceTags">Intereses del público <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+        <Input id="audienceTags" value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)} placeholder="rock, indie, música en vivo" />
+        <p className="text-xs text-muted-foreground">Separá con comas. Usamos estas etiquetas para encontrar eventos parecidos.</p>
       </div>
         </CardContent>
       </Card>
