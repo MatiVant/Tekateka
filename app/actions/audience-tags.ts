@@ -28,6 +28,16 @@ export async function updateAudienceTag(id: string, name: string) {
   revalidatePath("/admin/events/new")
 }
 
+export async function deleteAudienceTag(id: string) {
+  const { authorized } = await requireAuth(["superadmin"])
+  if (!authorized) throw new Error("No autorizado")
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("audience_tag_options").delete().eq("id", id)
+  if (error) throw new Error(error.message)
+  revalidatePath("/superadmin")
+  revalidatePath("/admin/events/new")
+}
+
 export async function toggleAudienceTag(id: string, active: boolean) {
   const { authorized } = await requireAuth(["superadmin"])
   if (!authorized) throw new Error("No autorizado")
