@@ -8,7 +8,7 @@ import { BarChart3 } from "lucide-react"
 
 type Movement = Parameters<typeof MovementsTable>[0]["movements"][number]
 
-export function MovementsReportButton({ movements }: { movements: Movement[] }) {
+export function MovementsReportButton({ movements, showOrganizer = false }: { movements: Movement[]; showOrganizer?: boolean }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -23,7 +23,7 @@ export function MovementsReportButton({ movements }: { movements: Movement[] }) 
             <DialogTitle>Movimientos de mis eventos</DialogTitle>
             <DialogDescription>Actividad de tickets y pagos únicamente de tus eventos.</DialogDescription>
           </DialogHeader>
-          <MovementsTable movements={movements} />
+          <MovementsTable movements={movements} showOrganizer={showOrganizer} />
         </DialogContent>
       </Dialog>
     </>

@@ -7,7 +7,7 @@ import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Users, CheckCircle, XCircle, Clock, LayoutList } from "lucide-react"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
 import { MessagesInbox } from "@/components/superadmin/messages-inbox"
-import { MovementsTable } from "@/components/admin/movements-table"
+import { MovementsReportButton } from "@/components/admin/movements-report-button"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -142,12 +142,8 @@ export default async function SuperAdminPage() {
           </div>
         </div>
 
-        <section className="mb-12">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold">Últimos movimientos</h2>
-            <p className="text-sm text-muted-foreground">Actividad global de tickets y pagos</p>
-          </div>
-          <MovementsTable movements={movementsWithOrganizers} showOrganizer />
+        <section className="mb-12 flex justify-end">
+          <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
         </section>
 
         <section className="mb-12">
