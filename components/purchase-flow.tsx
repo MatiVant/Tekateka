@@ -694,6 +694,7 @@ export function PurchaseFlow({
   if (step === "receipt") {
     return (
       <form onSubmit={handleReceiptUpload} className="space-y-4">
+        <Alert className="border-primary/20 bg-primary/5"><CheckCircle2 className="h-4 w-4 text-primary" /><AlertDescription><strong>Reserva guardada.</strong> Podés abrir la app de tu banco sin perder esta compra. Al volver, cargá el comprobante acá o usá el enlace que enviamos a {email}.</AlertDescription></Alert>
         <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Cantidad:</span>
@@ -709,7 +710,8 @@ export function PurchaseFlow({
   {paymentMethod === "transfer" && (transferAlias || transferAccountHolder) && <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
   <div>
   <p className="font-semibold">Datos para hacer la transferencia</p>
-  <p className="text-sm text-muted-foreground">Antes de enviar el comprobante, realizá la transferencia a estos datos.</p>
+  <p className="text-sm text-muted-foreground">Antes de enviar el comprobante, realizá la transferencia a estos datos. Si abrís la app de tu banco, esta reserva queda guardada.</p>
+  <p className="rounded-md bg-background/70 p-2 text-xs text-muted-foreground">También te enviamos un email con un enlace para volver y cargar el comprobante si cerrás esta página.</p>
   </div>
   {transferAlias && <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
   <div className="min-w-0"><p className="text-xs text-muted-foreground">Alias</p><p className="truncate font-semibold tracking-wide">{transferAlias}</p></div>
