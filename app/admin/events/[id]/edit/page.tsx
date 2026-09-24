@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server"
 import { EventForm } from "@/components/admin/event-form"
 import { EventOwnershipTransfer } from "@/components/admin/event-ownership-transfer"
 import { getPendingTransfersForEvent } from "@/app/actions/event-ownership-transfer"
+import { getAudienceTags } from "@/app/actions/audience-tags"
 
 export default async function EditEventPage({
   params,
@@ -24,6 +25,7 @@ export default async function EditEventPage({
 
   const supabase = await createClient()
   const currentTransfer = await getPendingTransfersForEvent(id)
+  const audienceTags = await getAudienceTags()
 
   const { data: event } = await supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single()
 
@@ -65,7 +67,7 @@ export default async function EditEventPage({
             <CardDescription>Actualiza la información del evento</CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} event={event} />
+            <EventForm userId={user.id} event={event} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
           </CardContent>
         </Card>
 

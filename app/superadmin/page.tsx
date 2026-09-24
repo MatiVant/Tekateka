@@ -9,6 +9,8 @@ import { OrganizerManagement } from "@/components/superadmin/organizer-managemen
 import { MessagesInbox } from "@/components/superadmin/messages-inbox"
 import { MovementsReportButton } from "@/components/admin/movements-report-button"
 import { AudienceInsights } from "@/components/superadmin/audience-insights"
+import { AudienceTagManager } from "@/components/superadmin/audience-tag-manager"
+import { getAudienceTags } from "@/app/actions/audience-tags"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -18,6 +20,7 @@ export default async function SuperAdminPage() {
   }
 
   const supabase = createAdminClient()
+  const audienceTagOptions = await getAudienceTags()
 
   // Obtener estadísticas de organizadores
   const { data: organizers } = await supabase.from("profiles").select("*").eq("role", "organizer")
@@ -163,6 +166,7 @@ export default async function SuperAdminPage() {
           <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
         </section>
 
+        <AudienceTagManager initialTags={audienceTagOptions} />
         <AudienceInsights events={audienceInsights} />
 
         <section className="mb-12">

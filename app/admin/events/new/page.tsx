@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { EventForm } from '@/components/admin/event-form';
+import { getAudienceTags } from '@/app/actions/audience-tags';
 
 export default async function NewEventPage() {
   const { authorized, user, profile } = await requireAuth(['organizer', 'superadmin']);
@@ -13,6 +14,8 @@ export default async function NewEventPage() {
   if (!authorized || !user) {
     redirect('/auth/login');
   }
+
+  const audienceTags = await getAudienceTags()
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -33,7 +36,7 @@ export default async function NewEventPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} />
+            <EventForm userId={user.id} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
           </CardContent>
         </Card>
       </main>

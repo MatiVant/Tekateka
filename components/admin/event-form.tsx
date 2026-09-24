@@ -43,10 +43,9 @@ interface EventFormProps {
   }
 }
 
-export function EventForm({ userId, event }: EventFormProps) {
+export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
-  const audienceTagOptions = ["Rock", "Pop", "Indie", "Electrónica", "Jazz", "Folklore", "Cumbia", "Reggae", "Trap", "Música en vivo"]
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
   const [audienceKeywords, setAudienceKeywords] = useState(event?.audience_keywords || "")
 
