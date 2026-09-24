@@ -166,16 +166,12 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     if (ids.length === 0) return
     setIsBulkLoading(true)
     try {
-      const results = await Promise.all(
-        ids.map((id) =>
-          fetch("/api/confirm-ticket", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ticketIds: ids }),
-          }),
-        ),
-      )
-      const failed = results.filter((r) => !r.ok).length
+      const result = await fetch("/api/confirm-ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketIds: ids }),
+      })
+      const failed = result.ok ? 0 : 1
       toast({
         title: failed === 0 ? "Entradas confirmadas" : "Confirmación parcial",
         description:

@@ -37,7 +37,9 @@ export async function POST(request: Request) {
 
     const { data: purchaseTickets } = ticket.payment_resume_token_hash
       ? await supabase.from("tickets").select("*").eq("payment_resume_token_hash", ticket.payment_resume_token_hash).eq("event_id", ticket.event_id)
-      : { data: [ticket] }
+      : ticketIds.length > 1
+        ? await supabase.from("tickets").select("*").in("id", ticketIds).eq("event_id", ticket.event_id).eq("buyer_email", ticket.buyer_email)
+        : { data: [ticket] }
     const groupedTickets = purchaseTickets?.length ? purchaseTickets : [ticket]
     const pendingTickets = groupedTickets.filter((item) => item.status !== "confirmed")
     const wasAlreadyConfirmed = pendingTickets.length === 0
