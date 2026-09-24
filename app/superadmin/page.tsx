@@ -33,14 +33,19 @@ export default async function SuperAdminPage() {
   ])
   const totalSales = (sales || []).reduce((sum, ticket) => sum + Number(ticket.final_price || 0), 0)
   const [{ data: insightEvents }, { data: insightTickets }] = await Promise.all([
-    supabase.from("events").select("id, title, audience_tags").order("event_date", { ascending: false }).limit(100),
+    supabase.from("events").select("id, title, audience_tags, audience_keywords").order("event_date", { ascending: false }).limit(100),
     supabase.from("tickets").select("event_id").in("payment_status", ["approved", "confirmed"]),
   ])
   const buyerCounts = new Map<string, number>()
   for (const ticket of insightTickets || []) buyerCounts.set(ticket.event_id, (buyerCounts.get(ticket.event_id) || 0) + 1)
   const audienceInsights = (insightEvents || []).map((event) => {
     const tags = event.audience_tags || []
-    const related = (insightEvents || []).filter((other) => other.id !== event.id && tags.some((tag: string) => (other.audience_tags || []).includes(tag))).slice(0, 3).map((other) => other.title)
+    const keywords = String(event.audience_keywords || "").toLowerCase().split(",").map((item) => item.trim()).filter(Boolean)
+    const related = (insightEvents || []).filter((other) => {
+      if (other.id === event.id) return false
+      const otherKeywords = String(other.audience_keywords || "").toLowerCase()
+      return tags.some((tag: string) => (other.audience_tags || []).includes(tag)) || keywords.some((keyword) => otherKeywords.includes(keyword))
+    }).slice(0, 3).map((other) => other.title)
     return { id: event.id, title: event.title, tags, buyers: buyerCounts.get(event.id) || 0, related }
   }).filter((event) => event.tags.length > 0)
   const { data: movements } = await supabase

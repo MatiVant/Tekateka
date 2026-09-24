@@ -8,6 +8,7 @@ interface EventData {
   title: string
   description: string | null
   audience_tags: string[]
+  audience_keywords: string
   event_date: string
   venue: string
   location_url: string | null

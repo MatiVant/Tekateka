@@ -29,6 +29,7 @@ interface EventFormProps {
     image_url: string | null
   status: string
   audience_tags?: string[] | null
+  audience_keywords?: string | null
   is_pay_what_you_want: boolean
     max_tickets_per_person?: number
     mercado_pago_link?: string | null
@@ -45,7 +46,9 @@ interface EventFormProps {
 export function EventForm({ userId, event }: EventFormProps) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
-  const [audienceTags, setAudienceTags] = useState((event?.audience_tags || []).join(", "))
+  const audienceTagOptions = ["Rock", "Pop", "Indie", "Electrónica", "Jazz", "Folklore", "Cumbia", "Reggae", "Trap", "Música en vivo"]
+  const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
+  const [audienceKeywords, setAudienceKeywords] = useState(event?.audience_keywords || "")
 
   const eventDateTime = event?.event_date ? new Date(event.event_date) : null
   const argentinaDateTime = eventDateTime
@@ -263,7 +266,8 @@ export function EventForm({ userId, event }: EventFormProps) {
       const eventData = {
         title,
         description: description || null,
-        audience_tags: audienceTags.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 8),
+        audience_tags: audienceTags.slice(0, 3).map((tag) => tag.toLowerCase()),
+        audience_keywords: audienceKeywords.trim(),
         event_date: combinedDateTime,
         venue,
         location_url: locationUrl || null,
@@ -373,10 +377,22 @@ export function EventForm({ userId, event }: EventFormProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="audienceTags">Intereses del público <span className="font-normal text-muted-foreground">(opcional)</span></Label>
-        <Input id="audienceTags" value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)} placeholder="rock, indie, música en vivo" />
-        <p className="text-xs text-muted-foreground">Separá con comas. Usamos estas etiquetas para encontrar eventos parecidos.</p>
+      <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+        <div>
+          <Label>Estilo del evento <span className="font-normal text-muted-foreground">(opcional, hasta 3)</span></Label>
+          <p className="mt-1 text-xs text-muted-foreground">Elegí los estilos que mejor describen el espectáculo.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {audienceTagOptions.map((tag) => {
+            const selected = audienceTags.includes(tag.toLowerCase())
+            return <button key={tag} type="button" onClick={() => setAudienceTags((current) => selected ? current.filter((item) => item !== tag.toLowerCase()) : current.length < 3 ? [...current, tag.toLowerCase()] : current)} className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/60"}`} aria-pressed={selected}>{tag}</button>
+          })}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="audienceKeywords">Palabras clave <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+          <Input id="audienceKeywords" value={audienceKeywords} onChange={(e) => setAudienceKeywords(e.target.value)} placeholder="baile, acústico, festival, familiar" />
+          <p className="text-xs text-muted-foreground">Podés agregar palabras libres separadas por comas.</p>
+        </div>
       </div>
         </CardContent>
       </Card>
