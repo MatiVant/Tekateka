@@ -26,7 +26,7 @@ export async function createArtistShareLink(eventId: string, permissions: { buye
   }).select("id").single()
   if (error) throw new Error(error.message)
   revalidatePath(`/admin/events/${eventId}/tickets`)
-  return { token, linkId: data?.id ?? null }
+  return { token, linkId: createdLink?.id ?? null }
 }
 
 export async function updateArtistShareLinkPermissions(linkId: string, eventId: string, buyers: boolean) {

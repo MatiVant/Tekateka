@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
       to: ticket.buyer_email,
       subject: `Enlace para continuar tu compra: ${event?.title || "tu evento"}`,
-      html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p>`,
+      html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
     })
     if (result.error) return NextResponse.json({ error: "No se pudo enviar el email" }, { status: 502 })
     return NextResponse.json({ sent: true })
