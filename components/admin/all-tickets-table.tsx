@@ -615,12 +615,12 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
         <h1 style={{ margin: 0, fontSize: 24 }}>Lista de entradas</h1>
         <p style={{ margin: "6px 0 18px", color: "#555" }}>{selectedEventId !== "all" ? eventOptions.find((event) => event.id === selectedEventId)?.title ?? "" : "Entradas filtradas"}</p>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-          <thead><tr style={{ background: "#f1f1f1" }}><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>N.º</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Código de entrada</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Tipo</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Estado</th></tr></thead>
+          <thead><tr style={{ background: "#f1f1f1" }}><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>N.º</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Nombre</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Código de entrada</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Tipo</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Estado</th></tr></thead>
           <tbody>{filteredTickets.map((ticket, index) => {
             const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
             const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
             const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin comprobante / sin confirmar"
-            return <tr key={ticket.id}><td style={{ padding: 8, border: "1px solid #ccc" }}>{index + 1}</td><td style={{ padding: 8, border: "1px solid #ccc", fontFamily: "monospace" }}>{ticket.qr_code}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{status}</td></tr>
+            return <tr key={ticket.id}><td style={{ padding: 8, border: "1px solid #ccc" }}>{index + 1}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{ticket.buyer_name}</td><td style={{ padding: 8, border: "1px solid #ccc", fontFamily: "monospace" }}>{ticket.qr_code}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{status}</td></tr>
           })}</tbody>
         </table>
         <p style={{ marginTop: 16, fontSize: 11, color: "#555" }}>Total de entradas: {filteredTickets.length}</p>
