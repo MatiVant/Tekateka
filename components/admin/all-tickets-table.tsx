@@ -114,12 +114,62 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     return `${title}\n\n${lines.join("\n")}\n\nTotal: ${filteredTickets.length} entrada(s)`
   }
 
-  const shareTicketList = (channel: "email" | "whatsapp") => {
-    const message = buildTicketListMessage()
-    const url = channel === "email"
-      ? `mailto:?subject=${encodeURIComponent("Lista de entradas")}&body=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`
-    window.open(url, "_blank", "noopener,noreferrer")
+  const shareTicketImage = async () => {
+    const canvas = document.createElement("canvas")
+    const width = 1200
+    const rowHeight = 58
+    const height = 150 + filteredTickets.length * rowHeight
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext("2d")
+    if (!context) return
+    context.fillStyle = "#ffffff"
+    context.fillRect(0, 0, width, height)
+    context.fillStyle = "#111111"
+    context.font = "bold 32px Arial"
+    context.fillText("Lista de entradas", 48, 52)
+    context.font = "20px Arial"
+    context.fillStyle = "#555555"
+    context.fillText(selectedEventId !== "all" ? eventOptions.find((event) => event.id === selectedEventId)?.title ?? "" : "Entradas filtradas", 48, 86)
+    context.fillStyle = "#f1f1f1"
+    context.fillRect(40, 110, width - 80, 38)
+    context.fillStyle = "#111111"
+    context.font = "bold 17px Arial"
+    context.fillText("N.º", 52, 136)
+    context.fillText("Nombre", 105, 136)
+    context.fillText("Código", 560, 136)
+    context.fillText("Tipo", 820, 136)
+    context.fillText("Estado", 965, 136)
+    filteredTickets.forEach((ticket, index) => {
+      const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
+      const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
+      const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin confirmar"
+      const y = 178 + index * rowHeight
+      context.fillStyle = index % 2 === 0 ? "#ffffff" : "#fafafa"
+      context.fillRect(40, y - 25, width - 80, rowHeight)
+      context.fillStyle = "#222222"
+      context.font = "16px Arial"
+      context.fillText(String(index + 1), 52, y)
+      context.fillText(ticket.buyer_name.slice(0, 42), 105, y)
+      context.font = "15px monospace"
+      context.fillText(ticket.qr_code, 560, y)
+      context.font = "16px Arial"
+      context.fillText(isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga", 820, y)
+      context.fillText(status, 965, y)
+    })
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"))
+    if (!blob) return
+    const file = new File([blob], "lista-de-entradas.png", { type: "image/png" })
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      await navigator.share({ title: "Lista de entradas", text: "Lista de entradas", files: [file] })
+      return
+    }
+    const downloadUrl = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = downloadUrl
+    link.download = file.name
+    link.click()
+    URL.revokeObjectURL(downloadUrl)
   }
 
   const openWhatsApp = (ticket: Ticket) => {
@@ -463,13 +513,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
             <Printer className="mr-2 h-4 w-4" />
             Imprimir lista
           </Button>
-          <Button type="button" variant="outline" onClick={() => shareTicketList("email")} disabled={filteredTickets.length === 0} title="Compartir la lista por email">
-            <Mail className="mr-2 h-4 w-4" />
-            Email
-          </Button>
-          <Button type="button" variant="outline" className="text-green-600 hover:text-green-700" onClick={() => shareTicketList("whatsapp")} disabled={filteredTickets.length === 0} title="Compartir la lista por WhatsApp">
+          <Button type="button" variant="outline" onClick={shareTicketImage} disabled={filteredTickets.length === 0} title="Compartir la lista como imagen por email o WhatsApp">
             <Share2 className="mr-2 h-4 w-4" />
-            WhatsApp
+            Compartir imagen
           </Button>
         </div>
 
