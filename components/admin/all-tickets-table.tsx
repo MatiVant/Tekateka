@@ -613,17 +613,17 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
 
       <section className="ticket-export-print">
         <h1 style={{ margin: 0, fontSize: 24 }}>Lista de entradas</h1>
-        <p style={{ margin: "6px 0 18px", color: "#555" }}>Generado el {new Date().toLocaleString("es-AR")}{selectedEventId !== "all" ? ` · ${eventOptions.find((event) => event.id === selectedEventId)?.title ?? ""}` : ""}</p>
+        <p style={{ margin: "6px 0 18px", color: "#555" }}>{selectedEventId !== "all" ? eventOptions.find((event) => event.id === selectedEventId)?.title ?? "" : "Entradas filtradas"}</p>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-          <thead><tr style={{ background: "#f1f1f1" }}><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Comprador</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Evento</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Código</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Tipo</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Estado</th><th style={{ textAlign: "right", padding: 8, border: "1px solid #ccc" }}>Importe</th></tr></thead>
-          <tbody>{filteredTickets.map((ticket) => {
+          <thead><tr style={{ background: "#f1f1f1" }}><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>N.º</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Código de entrada</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Tipo</th><th style={{ textAlign: "left", padding: 8, border: "1px solid #ccc" }}>Estado</th></tr></thead>
+          <tbody>{filteredTickets.map((ticket, index) => {
             const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
             const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
             const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin comprobante / sin confirmar"
-            return <tr key={ticket.id}><td style={{ padding: 8, border: "1px solid #ccc" }}>{ticket.buyer_name}<br /><span style={{ color: "#666" }}>{ticket.buyer_email}</span></td><td style={{ padding: 8, border: "1px solid #ccc" }}>{ticket.events.title}</td><td style={{ padding: 8, border: "1px solid #ccc", fontFamily: "monospace" }}>{ticket.qr_code}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{status}</td><td style={{ padding: 8, border: "1px solid #ccc", textAlign: "right" }}>{formatCurrency(Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price) || 0)}</td></tr>
+            return <tr key={ticket.id}><td style={{ padding: 8, border: "1px solid #ccc" }}>{index + 1}</td><td style={{ padding: 8, border: "1px solid #ccc", fontFamily: "monospace" }}>{ticket.qr_code}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"}</td><td style={{ padding: 8, border: "1px solid #ccc" }}>{status}</td></tr>
           })}</tbody>
         </table>
-        <p style={{ marginTop: 16, fontSize: 11, color: "#555" }}>Total: {filteredTickets.length} entrada(s) · Confirmadas: {filteredTickets.filter((ticket) => ticket.status === "confirmed" || ticket.payment_status === "approved").length} · Sin confirmar: {filteredTickets.filter((ticket) => ticket.status !== "confirmed" && ticket.payment_status !== "approved").length}</p>
+        <p style={{ marginTop: 16, fontSize: 11, color: "#555" }}>Total de entradas: {filteredTickets.length}</p>
       </section>
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
