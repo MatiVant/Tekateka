@@ -75,6 +75,27 @@
   --sidebar-ring: oklch(0.68 0.28 280);
 }
 
+.ticket-export-print {
+  display: none;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  .admin-ticket-screen {
+    display: none !important;
+  }
+
+  .ticket-export-print {
+    display: block !important;
+    padding: 24px;
+    color: #111;
+    font-family: Arial, sans-serif;
+  }
+}
+
 @theme inline {
   --font-sans: "Geist", "DM Sans", sans-serif;
   --font-serif: "Outfit", "Archivo", sans-serif;
