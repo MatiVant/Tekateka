@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, Printer } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, Printer, Share2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -102,6 +102,25 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false)
   const [bulkRejectionReason, setBulkRejectionReason] = useState("")
+
+  const buildTicketListMessage = () => {
+    const title = selectedEventId !== "all" ? eventOptions.find((event) => event.id === selectedEventId)?.title : "Entradas"
+    const lines = filteredTickets.map((ticket, index) => {
+      const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
+      const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
+      const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin confirmar"
+      return `${index + 1}. ${ticket.buyer_name} — ${ticket.qr_code} — ${isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"} — ${status}`
+    })
+    return `${title}\n\n${lines.join("\n")}\n\nTotal: ${filteredTickets.length} entrada(s)`
+  }
+
+  const shareTicketList = (channel: "email" | "whatsapp") => {
+    const message = buildTicketListMessage()
+    const url = channel === "email"
+      ? `mailto:?subject=${encodeURIComponent("Lista de entradas")}&body=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(url, "_blank", "noopener,noreferrer")
+  }
 
   const openWhatsApp = (ticket: Ticket) => {
     if (!ticket.buyer_phone) return
@@ -443,6 +462,14 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           <Button type="button" variant="outline" onClick={() => window.print()} disabled={filteredTickets.length === 0} title="Imprimir o guardar la lista como PDF">
             <Printer className="mr-2 h-4 w-4" />
             Imprimir lista
+          </Button>
+          <Button type="button" variant="outline" onClick={() => shareTicketList("email")} disabled={filteredTickets.length === 0} title="Compartir la lista por email">
+            <Mail className="mr-2 h-4 w-4" />
+            Email
+          </Button>
+          <Button type="button" variant="outline" className="text-green-600 hover:text-green-700" onClick={() => shareTicketList("whatsapp")} disabled={filteredTickets.length === 0} title="Compartir la lista por WhatsApp">
+            <Share2 className="mr-2 h-4 w-4" />
+            WhatsApp
           </Button>
         </div>
 
