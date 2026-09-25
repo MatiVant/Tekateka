@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -227,7 +227,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   }
 
   if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
-    return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos aún</div>
+    return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos a��n</div>
   }
 
   const handleVerifyPayment = async (ticketId: string) => {
@@ -258,6 +258,22 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     } finally {
       setLoadingId(null)
     }
+  }
+
+  const handleBulkResendTickets = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    const selected = tickets.filter((ticket) => selectedIds.has(ticket.id))
+    const sameBuyer = selected.every((ticket) => ticket.buyer_email === selected[0]?.buyer_email && ticket.events?.id === selected[0]?.events?.id)
+    if (!sameBuyer) { toast({ title: "No se pueden agrupar", description: "Seleccioná entradas del mismo comprador y evento.", variant: "destructive" }); return }
+    setIsBulkLoading(true)
+    try {
+      const response = await fetch("/api/resend-ticket", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketIds: ids }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "No se pudo reenviar")
+      toast({ title: "Entradas reenviadas", description: `Se envió un solo email con ${ids.length} entradas.` })
+      setSelectedIds(new Set())
+    } catch (error) { toast({ title: "No se pudo reenviar", description: error instanceof Error ? error.message : "Intentá nuevamente.", variant: "destructive" }) } finally { setIsBulkLoading(false) }
   }
 
   const handleResendTicket = async (ticketId: string) => {
@@ -429,10 +445,14 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-3">
             <span className="text-sm font-medium">{selectedIds.size} entrada(s) seleccionada(s)</span>
-            <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Aprobar seleccionadas
-            </Button>
+  <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
+  <CheckCircle className="mr-2 h-4 w-4" />
+  Aprobar seleccionadas
+  </Button>
+  <Button size="sm" variant="outline" onClick={handleBulkResendTickets} disabled={isBulkLoading}>
+  <Send className="mr-2 h-4 w-4" />
+  Reenviar juntas
+  </Button>
             <Button
               size="sm"
               variant="destructive"
