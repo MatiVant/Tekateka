@@ -125,8 +125,8 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     const csv = [
       ["N.º", "Nombre", "Email", "Teléfono", "Código", "Tipo", "Estado"],
       ...rows,
-    ].map((row) => row.map(escapeCell).join(";" )).join("\\r\\n")
-    const blob = new Blob(["\\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
+    ].map((row) => row.map(escapeCell).join(";")).join("\r\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
