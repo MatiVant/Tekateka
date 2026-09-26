@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, Printer, Share2 } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, Printer, Share2, FileSpreadsheet } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
@@ -537,6 +537,10 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           <Button type="button" variant="outline" onClick={shareTicketImage} disabled={filteredTickets.length === 0} title="Compartir la lista como imagen por email o WhatsApp">
             <Share2 className="mr-2 h-4 w-4" />
             Compartir imagen
+          </Button>
+          <Button type="button" variant="outline" onClick={exportGuestList} disabled={filteredTickets.length === 0} title="Descargar lista de invitados para Excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
           </Button>
         </div>
 
