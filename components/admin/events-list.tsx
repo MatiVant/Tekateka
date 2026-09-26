@@ -20,11 +20,14 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
 
   if (showArchived) {
     query.eq("status", "finished")
-  } else {
-    query.in("status", ["active", "inactive", "sold_out"])
   }
 
-  const { data: events } = await query
+  const { data: queriedEvents } = await query
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const events = showArchived
+    ? (queriedEvents || []).filter((event) => new Date(event.event_date) < yesterday)
+    : (queriedEvents || []).filter((event) => event.status !== "finished" || new Date(event.event_date) >= yesterday)
   const { data: eventTickets } = await supabase.from("tickets").select("event_id, status, payment_status")
   const salesByEvent = (eventTickets || []).reduce<Record<string, { confirmed: number; pending: number }>>((counts, ticket) => {
     const current = counts[ticket.event_id] || { confirmed: 0, pending: 0 }
