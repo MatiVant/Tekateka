@@ -114,6 +114,27 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     return `${title}\n\n${lines.join("\n")}\n\nTotal: ${filteredTickets.length} entrada(s)`
   }
 
+  const exportGuestList = () => {
+    const escapeCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
+    const rows = filteredTickets.map((ticket, index) => {
+      const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
+      const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
+      const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin confirmar"
+      return [index + 1, ticket.buyer_name, ticket.buyer_email, ticket.buyer_phone || "", ticket.qr_code, isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga", status]
+    })
+    const csv = [
+      ["N.º", "Nombre", "Email", "Teléfono", "Código", "Tipo", "Estado"],
+      ...rows,
+    ].map((row) => row.map(escapeCell).join(";" )).join("\\r\\n")
+    const blob = new Blob(["\\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "lista-de-invitados.csv"
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const shareTicketImage = async () => {
     const canvas = document.createElement("canvas")
     const width = 1200
