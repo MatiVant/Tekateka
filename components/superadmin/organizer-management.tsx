@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, XCircle, Edit, ExternalLink } from "lucide-react"
+import { CheckCircle, XCircle, Edit, ExternalLink, KeyRound } from "lucide-react"
 import Link from "next/link"
 import { slugify } from "@/lib/slugify"
 import { useRouter } from "next/navigation"
@@ -121,6 +121,36 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
           description: "Error al rechazar el organizador",
         })
       }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePasswordReset = async (organizer: Organizer) => {
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/superadmin/manage-organizer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizerId: organizer.id, action: "password-reset" }),
+      }).catch((error) => {
+        handleNetworkError(error)
+        throw error
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.error || "No se pudo enviar el enlace de recuperación")
+
+      toast({
+        title: "Enlace enviado",
+        description: `Se envió un correo para restablecer la contraseña de ${organizer.email}.`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "No se pudo enviar el enlace",
+        description: error instanceof Error ? error.message : "Intentá nuevamente.",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -279,6 +309,18 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </>
+                      )}
+                      {organizer.email && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handlePasswordReset(organizer)}
+                          disabled={isLoading}
+                          aria-label={`Enviar enlace para restablecer la contraseña de ${organizer.email}`}
+                        >
+                          <KeyRound className="mr-1 h-4 w-4" />
+                          Enviar reset
+                        </Button>
                       )}
                       {organizer.organizer_status === "approved" && (
                         <Button

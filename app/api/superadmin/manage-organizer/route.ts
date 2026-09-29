@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
@@ -24,6 +25,39 @@ export async function POST(request: NextRequest) {
 
     const { organizerId, action, rejectionReason, subscriptionStatus, expirationDate } = await request.json();
     const adminSupabase = createClient();
+
+    if (action === 'password-reset') {
+      if (typeof organizerId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizerId)) {
+        return NextResponse.json({ error: 'Organizador inválido' }, { status: 400 });
+      }
+
+      const { data: organizer, error: organizerError } = await adminSupabase
+        .from('profiles')
+        .select('id')
+        .eq('id', organizerId)
+        .eq('role', 'organizer')
+        .maybeSingle();
+
+      if (organizerError) throw organizerError;
+      if (!organizer) return NextResponse.json({ error: 'No se encontró el organizador' }, { status: 404 });
+
+      const { data: { user: targetUser }, error: targetUserError } = await adminSupabase.auth.admin.getUserById(organizerId);
+      if (targetUserError) throw targetUserError;
+      if (!targetUser?.email) return NextResponse.json({ error: 'El organizador no tiene un email asociado' }, { status: 404 });
+
+      const emailClient = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      );
+      const { error: resetError } = await emailClient.auth.resetPasswordForEmail(targetUser.email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tktk.buholabs.com.ar'}/auth/reset-password`,
+      });
+
+      if (resetError) throw resetError;
+      return NextResponse.json({ success: true });
+    }
+
     const { data: organizerProfile } = await adminSupabase.from('profiles').select('email').eq('id', organizerId).single();
     const organizerEmail = organizerProfile?.email;
 
