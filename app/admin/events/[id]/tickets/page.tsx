@@ -11,6 +11,7 @@ import { ArtistShareLinks } from '@/components/admin/artist-share-links';
 import { getArtistShareLinks } from '@/app/actions/artist-share-links';
 import { getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
+import { CheckerLinkButton } from '@/components/admin/checker-link-button';
 
 export default async function EventTicketsPage({
   params,
@@ -67,12 +68,15 @@ export default async function EventTicketsPage({
               Volver al Panel
             </Link>
           </Button>
-          <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold shadow-lg shadow-primary/20 sm:w-auto">
-            <Link href={`/verify?event=${encodeURIComponent(id)}`}>
-              <ScanLine className="h-5 w-5" />
-              Escanear QR de entradas
-            </Link>
-          </Button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-start">
+            <CheckerLinkButton eventId={id} />
+            <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold shadow-lg shadow-primary/20 sm:w-auto">
+              <Link href={`/verify?event=${encodeURIComponent(id)}`}>
+                <ScanLine className="h-5 w-5" />
+                Escanear QR de entradas
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Card>

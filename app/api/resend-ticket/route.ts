@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import { requireAuth } from "@/lib/auth"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -8,12 +9,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const ticketIds = Array.isArray(body.ticketIds) ? [...new Set(body.ticketIds.filter(Boolean))] : body.ticketId ? [body.ticketId] : []
-    if (ticketIds.length === 0) return NextResponse.json({ error: "Seleccioná al menos una entrada" }, { status: 400 })
+    if (ticketIds.length === 0 || ticketIds.some((id: unknown) => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id))) return NextResponse.json({ error: "Seleccioná entradas válidas" }, { status: 400 })
+    const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
+    if (!authorized || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     if (!resend) return NextResponse.json({ error: "El servicio de email no está configurado" }, { status: 503 })
 
     const supabase = createClient()
-    const { data: tickets, error } = await supabase.from("tickets").select("*, events(id, title, event_date, venue)").in("id", ticketIds)
-    if (error || !tickets?.length) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
+    const { data: tickets, error } = await supabase.from("tickets").select("*, events(id, organizer_id, title, event_date, venue)").in("id", ticketIds)
+    if (error || !tickets?.length || tickets.length !== ticketIds.length) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
+    if (profile?.role !== "superadmin" && tickets.some((item: any) => item.events?.organizer_id !== user.id)) return NextResponse.json({ error: "No tenés permiso para reenviar estas entradas" }, { status: 403 })
     const firstTicket = tickets[0]
     const sameBuyer = tickets.every((item) => item.buyer_email === firstTicket.buyer_email && item.events?.id === firstTicket.events?.id)
     if (!sameBuyer) return NextResponse.json({ error: "Las entradas deben pertenecer al mismo comprador y evento" }, { status: 400 })

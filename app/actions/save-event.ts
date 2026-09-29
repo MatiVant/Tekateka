@@ -67,11 +67,24 @@ export async function saveEvent(
     const slug = await createUniqueEventSlug(supabase, eventData.title, eventId)
 
     if (eventId) {
-      // Actualizar evento existente
+      const { data: existingEvent, error: existingEventError } = await supabase
+        .from('events')
+        .select('id, organizer_id, total_tickets, available_tickets')
+        .eq('id', eventId)
+        .eq('organizer_id', user.id)
+        .single()
+      if (existingEventError || !existingEvent) throw new Error('No tenés permiso para editar este evento')
+
       const { error: updateError } = await supabase
         .from('events')
-        .update({ ...eventData, slug })
+        .update({
+          ...eventData,
+          total_tickets: existingEvent.total_tickets,
+          available_tickets: existingEvent.available_tickets,
+          slug,
+        })
         .eq('id', eventId)
+        .eq('organizer_id', user.id)
 
       if (updateError) throw updateError
 

@@ -1,18 +1,21 @@
 import { createClient } from "@/lib/supabase/admin"
+import { requireAuth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
-import QRCode from "qrcode"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const ticketIds = Array.isArray(body.ticketIds) ? body.ticketIds.filter(Boolean) : body.ticketId ? [body.ticketId] : []
-
-    if (ticketIds.length === 0) {
-      return NextResponse.json({ error: "Ticket ID requerido" }, { status: 400 })
+    const rawTicketIds = Array.isArray(body.ticketIds) ? body.ticketIds : body.ticketId ? [body.ticketId] : []
+    const ticketIds = [...new Set(rawTicketIds.filter((id: unknown): id is string => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id)))]
+    if (ticketIds.length === 0 || ticketIds.length !== rawTicketIds.length) {
+      return NextResponse.json({ error: "Ticket ID inválido" }, { status: 400 })
     }
+
+    const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
+    if (!authorized || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     const supabase = createClient()
 
@@ -21,19 +24,25 @@ export async function POST(request: Request) {
       .select(`
         *,
         events (
+          id,
+          organizer_id,
           title,
           event_date,
           venue,
-          description,
-          organizer_id
+          description
         )
       `)
       .in("id", ticketIds)
 
     const ticket = tickets?.[0]
-    if (ticketError || !ticket) {
+    if (ticketError || !ticket || tickets.length !== ticketIds.length) {
       return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 })
     }
+    const unauthorizedTicket = tickets.some((item: any) => {
+      const event = Array.isArray(item.events) ? item.events[0] : item.events
+      return !event || (profile?.role !== "superadmin" && event.organizer_id !== user.id)
+    })
+    if (unauthorizedTicket) return NextResponse.json({ error: "No tenés permiso para confirmar estas entradas" }, { status: 403 })
 
     const { data: purchaseTickets } = ticket.payment_resume_token_hash
       ? await supabase.from("tickets").select("*").eq("payment_resume_token_hash", ticket.payment_resume_token_hash).eq("event_id", ticket.event_id)
@@ -41,14 +50,23 @@ export async function POST(request: Request) {
         ? await supabase.from("tickets").select("*").in("id", ticketIds).eq("event_id", ticket.event_id).eq("buyer_email", ticket.buyer_email)
         : { data: [ticket] }
     const groupedTickets = purchaseTickets?.length ? purchaseTickets : [ticket]
-    const pendingTickets = groupedTickets.filter((item) => item.status !== "confirmed")
-    const wasAlreadyConfirmed = pendingTickets.length === 0
+    const pendingTickets = groupedTickets.filter((item) => item.status === "pending")
+    const wasAlreadyConfirmed = pendingTickets.length === 0 && groupedTickets.every((item) => item.status === "confirmed")
     if (wasAlreadyConfirmed) {
       return NextResponse.json({ success: true, alreadyConfirmed: true, message: "La entrada ya estaba aprobada" })
     }
-    const { error: updateError } = await supabase.from("tickets").update({ status: "confirmed", payment_status: "approved" }).in("id", groupedTickets.map((item) => item.id))
+    if (pendingTickets.length === 0) return NextResponse.json({ error: "Solo se pueden confirmar entradas pendientes" }, { status: 409 })
+    const { data: updatedTickets, error: updateError } = await supabase
+      .from("tickets")
+      .update({ status: "confirmed", payment_status: "approved" })
+      .in("id", pendingTickets.map((item) => item.id))
+      .eq("status", "pending")
+      .select("id")
 
     if (updateError) throw updateError
+    if (updatedTickets?.length !== pendingTickets.length) {
+      return NextResponse.json({ error: "El estado de las entradas cambió. Actualizá la página e intentá nuevamente." }, { status: 409 })
+    }
 
     if (!wasAlreadyConfirmed) {
       const { data: event } = await supabase.from("events").select("total_tickets").eq("id", ticket.event_id).single()

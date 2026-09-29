@@ -11,10 +11,11 @@ import { TicketDetails } from './ticket-details';
 
 interface QRScannerProps {
   userId?: string;
+  eventId?: string;
   checkerToken?: string;
 }
 
-export function QRScanner({ userId, checkerToken }: QRScannerProps) {
+export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const [scanMode, setScanMode] = useState<'camera' | 'manual'>('manual');
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -44,7 +45,7 @@ export function QRScanner({ userId, checkerToken }: QRScannerProps) {
       const supabase = createClient();
 
       // Buscar el ticket por QR code
-      const { data: ticket, error: ticketError } = await supabase
+      let ticketQuery = supabase
         .from('tickets')
         .select(`
           *,
@@ -57,7 +58,9 @@ export function QRScanner({ userId, checkerToken }: QRScannerProps) {
           )
         `)
         .eq('qr_code', qrCode.trim())
-        .single();
+      if (eventId) ticketQuery = ticketQuery.eq('event_id', eventId)
+      const { data: ticket, error: ticketError } = await ticketQuery.single()
+
 
       if (ticketError || !ticket) {
         setResult({
@@ -96,16 +99,23 @@ export function QRScanner({ userId, checkerToken }: QRScannerProps) {
       }
 
       // Ticket válido - marcarlo como usado
-      const { error: updateError } = await supabase
+      const { data: updatedTicket, error: updateError } = await supabase
         .from('tickets')
         .update({
           status: 'used',
           verified_at: new Date().toISOString(),
           verified_by: userId,
         })
-        .eq('id', ticket.id);
+        .eq('id', ticket.id)
+        .eq('status', 'confirmed')
+        .select('id')
+        .maybeSingle()
 
-      if (updateError) throw updateError;
+      if (updateError) throw updateError
+      if (!updatedTicket) {
+        setResult({ type: 'warning', message: 'Este ticket ya fue utilizado anteriormente.', ticket: { ...ticket, status: 'used' } })
+        return
+      }
 
       setResult({
         type: 'success',
@@ -116,7 +126,7 @@ export function QRScanner({ userId, checkerToken }: QRScannerProps) {
       console.error('[v0] Error al verificar ticket:', error);
       setResult({
         type: 'error',
-        message: 'Error al verificar el ticket. Intente nuevamente.',
+        message: error instanceof Error ? error.message : 'Error al verificar el ticket. Intente nuevamente.',
       });
     } finally {
       setIsScanning(false);

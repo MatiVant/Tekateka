@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
 import { PendingOwnershipTransfers } from "@/components/admin/pending-ownership-transfers"
-import { CheckerLinkButton } from "@/components/admin/checker-link-button"
 import { getPendingTransfers } from "@/app/actions/event-ownership-transfer"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
@@ -140,7 +139,6 @@ export default async function AdminPage() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <PendingOwnershipTransfers transfers={pendingTransfers} />
-        <div className="mb-8"><CheckerLinkButton /></div>
         {/* Header */}
         <div className="mb-12">
           <div className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">

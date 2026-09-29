@@ -3,18 +3,23 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
+import { requireAuth } from "@/lib/auth"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
     const { ticketId } = await request.json()
-    if (!ticketId) return NextResponse.json({ error: "Ticket ID requerido" }, { status: 400 })
+    if (typeof ticketId !== "string" || !/^[0-9a-f-]{36}$/i.test(ticketId)) return NextResponse.json({ error: "Ticket ID inválido" }, { status: 400 })
+    const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
+    if (!authorized || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     if (!resend) return NextResponse.json({ error: "Servicio de email no configurado" }, { status: 500 })
 
     const supabase = createClient()
-    const { data: ticket, error } = await supabase.from("tickets").select("id, buyer_name, buyer_email, status, payment_status, payment_resume_expires_at, events(title)").eq("id", ticketId).single()
+    const { data: ticket, error } = await supabase.from("tickets").select("id, buyer_name, buyer_email, status, payment_status, payment_resume_expires_at, events(organizer_id, title)").eq("id", ticketId).single()
     if (error || !ticket) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
+    const linkedEvent = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
+    if (profile?.role !== "superadmin" && linkedEvent?.organizer_id !== user.id) return NextResponse.json({ error: "No tenés permiso para reenviar este enlace" }, { status: 403 })
     if (ticket.status === "confirmed" || ticket.payment_status === "approved") return NextResponse.json({ error: "Esta entrada ya está confirmada" }, { status: 409 })
 
     const token = randomBytes(32).toString("hex")

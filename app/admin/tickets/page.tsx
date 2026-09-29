@@ -17,7 +17,7 @@ export default async function AllTicketsPage() {
 
   const supabase = await createClient();
 
-  const { data: tickets } = await supabase
+  let ticketsQuery = supabase
     .from('tickets')
     .select(`
       *,
@@ -28,14 +28,12 @@ export default async function AllTicketsPage() {
         organizer_id
       )
     `)
-    .eq('events.organizer_id', user.id)
-    .order('purchased_at', { ascending: false });
+  if (profile?.role !== 'superadmin') ticketsQuery = ticketsQuery.eq('events.organizer_id', user.id)
+  const { data: tickets } = await ticketsQuery.order('purchased_at', { ascending: false })
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('id, title')
-    .eq('organizer_id', user.id)
-    .order('title', { ascending: true });
+  let eventsQuery = supabase.from('events').select('id, title')
+  if (profile?.role !== 'superadmin') eventsQuery = eventsQuery.eq('organizer_id', user.id)
+  const { data: events } = await eventsQuery.order('title', { ascending: true })
 
   return (
     <div className="min-h-screen bg-muted/30">

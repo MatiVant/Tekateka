@@ -30,7 +30,7 @@ export default async function SuperAdminEventsPage() {
 
   const allEvents = events || []
 
-  const { data: ticketsData } = await supabase.from("tickets").select("event_id, status, final_price")
+  const { data: ticketsData } = await supabase.from("tickets").select("event_id, status, payment_status, charged_amount, final_price")
 
   const ticketsByEvent = ticketsData?.reduce(
     (acc, ticket) => {
@@ -43,9 +43,9 @@ export default async function SuperAdminEventsPage() {
         }
       }
       acc[ticket.event_id].total++
-      if (ticket.status === "confirmed") {
+      if (ticket.payment_status === "approved" || ticket.status === "confirmed") {
         acc[ticket.event_id].confirmed++
-        acc[ticket.event_id].revenue += ticket.final_price || 0
+        acc[ticket.event_id].revenue += Number(ticket.charged_amount ?? ticket.final_price ?? 0)
       }
       if (ticket.status === "pending") {
         acc[ticket.event_id].pending++

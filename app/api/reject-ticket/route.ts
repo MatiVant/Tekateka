@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 
@@ -8,10 +9,12 @@ export async function POST(request: NextRequest) {
   try {
     const { ticketId, reason } = await request.json()
 
-    if (!ticketId || !reason) {
+    if (typeof ticketId !== "string" || !/^[0-9a-f-]{36}$/i.test(ticketId) || typeof reason !== "string" || !reason.trim() || reason.length > 1000) {
       return NextResponse.json({ error: "Ticket ID y motivo son requeridos" }, { status: 400 })
     }
 
+    const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
+    if (!authorized || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     const supabase = createClient()
 
     // Obtener información del ticket y comprador
@@ -20,6 +23,8 @@ export async function POST(request: NextRequest) {
       .select(`
         *,
         events (
+          id,
+          organizer_id,
           title,
           price,
           event_date,
@@ -32,6 +37,10 @@ export async function POST(request: NextRequest) {
     if (fetchError || !ticket) {
       console.error("[v0] Error al obtener ticket:", fetchError)
       return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 })
+    }
+    const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
+    if (!event || (profile?.role !== "superadmin" && event.organizer_id !== user.id)) {
+      return NextResponse.json({ error: "No tenés permiso para rechazar esta entrada" }, { status: 403 })
     }
 
     if (ticket.status === "cancelled") {

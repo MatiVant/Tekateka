@@ -5,8 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { QRScanner } from '@/components/verify/qr-scanner';
 import { Scan } from 'lucide-react';
 
-export default async function VerifyPage() {
-  const { authorized, user, profile } = await requireAuth(['ticketero', 'organizer']);
+export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ event?: string | string[] }> }) {
+  const [{ event }, { authorized, user, profile }] = await Promise.all([
+    searchParams,
+    requireAuth(['organizer', 'superadmin']),
+  ])
+  const eventId = Array.isArray(event) ? event[0] : event
 
   if (!authorized || !user) {
     redirect('/auth/login');
@@ -38,7 +42,7 @@ export default async function VerifyPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <QRScanner userId={user.id} />
+              <QRScanner userId={user.id} eventId={eventId} />
             </CardContent>
           </Card>
         </div>
