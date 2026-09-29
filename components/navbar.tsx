@@ -94,6 +94,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Eventos</Link></Button>
             <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>
             {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
             {user && <ThemeToggle />}
@@ -126,6 +127,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </div>
         </div>
         {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Eventos disponibles</Link></Button>
           {user ? <>
             {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin</Link></Button>}
             {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}

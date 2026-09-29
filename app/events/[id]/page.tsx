@@ -52,7 +52,8 @@ export default async function EventDetailPage({
   const now = Date.now()
   const beforeSalesStart = event.sales_start_at && now < new Date(event.sales_start_at).getTime()
   const afterSalesEnd = event.sales_end_at && now >= new Date(event.sales_end_at).getTime()
-  const isAvailable = event.status === "active" && realAvailableTickets > 0 && !beforeSalesStart && !afterSalesEnd
+  const eventHasStarted = now >= eventDate.getTime()
+  const isAvailable = event.status === "active" && realAvailableTickets > 0 && !beforeSalesStart && !afterSalesEnd && !eventHasStarted
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
