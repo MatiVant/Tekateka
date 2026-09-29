@@ -29,12 +29,12 @@ export async function POST(request: NextRequest) {
     }
     isSuperadmin = true;
 
-    const { organizerId, action, rejectionReason, subscriptionStatus, expirationDate } = await request.json();
+    const { organizerId, action, rejectionReason, subscriptionStatus, expirationDate, newPassword } = await request.json();
     requestedAction = typeof action === 'string' ? action : 'unknown';
     stage = 'initialize-admin-client';
     const adminSupabase = createClient();
 
-    if (action === 'password-reset') {
+    if (action === 'password-reset' || action === 'password-set') {
       stage = 'validate-organizer-id';
       if (typeof organizerId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizerId)) {
         return NextResponse.json({ error: 'Organizador inválido' }, { status: 400 });
@@ -50,6 +50,21 @@ export async function POST(request: NextRequest) {
 
       if (organizerError) throw organizerError;
       if (!organizer) return NextResponse.json({ error: 'No se encontró el organizador' }, { status: 404 });
+
+      if (action === 'password-set') {
+        stage = 'validate-new-password';
+        if (typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 128) {
+          return NextResponse.json({ error: 'La contraseña debe tener entre 12 y 128 caracteres.' }, { status: 400 });
+        }
+
+        stage = 'set-organizer-password';
+        const { error: passwordError } = await adminSupabase.auth.admin.updateUserById(organizerId, {
+          password: newPassword,
+        });
+        if (passwordError) throw passwordError;
+
+        return NextResponse.json({ success: true });
+      }
 
       stage = 'lookup-auth-user';
       const { data: { user: targetUser }, error: targetUserError } = await adminSupabase.auth.admin.getUserById(organizerId);
@@ -149,7 +164,7 @@ export async function POST(request: NextRequest) {
       stage,
       error,
     });
-    if (isSuperadmin && requestedAction === 'password-reset' && error instanceof Error) {
+    if (isSuperadmin && ['password-reset', 'password-set'].includes(requestedAction) && error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json(

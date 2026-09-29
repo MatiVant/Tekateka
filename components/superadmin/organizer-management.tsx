@@ -40,8 +40,10 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
   const router = useRouter()
   const { toast } = useToast()
   const [selectedOrganizer, setSelectedOrganizer] = useState<Organizer | null>(null)
-  const [action, setAction] = useState<"approve" | "reject" | "subscription" | null>(null)
+  const [action, setAction] = useState<"approve" | "reject" | "subscription" | "password" | null>(null)
   const [rejectionReason, setRejectionReason] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [subscriptionStatus, setSubscriptionStatus] = useState<"free" | "active" | "inactive">("free")
   const [expirationDate, setExpirationDate] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -149,6 +151,45 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
       toast({
         variant: "destructive",
         title: "No se pudo enviar el enlace",
+        description: error instanceof Error ? error.message : "Intentá nuevamente.",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSetPassword = async () => {
+    if (!selectedOrganizer || newPassword.length < 12 || newPassword.length > 128 || newPassword !== confirmPassword) return
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/superadmin/manage-organizer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizerId: selectedOrganizer.id,
+          action: "password-set",
+          newPassword,
+        }),
+      }).catch((error) => {
+        handleNetworkError(error)
+        throw error
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.error || "No se pudo cambiar la contraseña")
+
+      toast({
+        title: "Contraseña actualizada",
+        description: `La contraseña de ${selectedOrganizer.email} se cambió. Compartila por un canal seguro.`,
+      })
+      setNewPassword("")
+      setConfirmPassword("")
+      setAction(null)
+      setSelectedOrganizer(null)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "No se pudo cambiar la contraseña",
         description: error instanceof Error ? error.message : "Intentá nuevamente.",
       })
     } finally {
@@ -311,16 +352,32 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                         </>
                       )}
                       {organizer.email && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void handlePasswordReset(organizer)}
-                          disabled={isLoading}
-                          aria-label={`Enviar enlace para restablecer la contraseña de ${organizer.email}`}
-                        >
-                          <KeyRound className="mr-1 h-4 w-4" />
-                          Enviar reset
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handlePasswordReset(organizer)}
+                            disabled={isLoading}
+                            aria-label={`Enviar enlace para restablecer la contraseña de ${organizer.email}`}
+                          >
+                            <KeyRound className="mr-1 h-4 w-4" />
+                            Enviar reset
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedOrganizer(organizer)
+                              setNewPassword("")
+                              setConfirmPassword("")
+                              setAction("password")
+                            }}
+                            disabled={isLoading}
+                            aria-label={`Definir manualmente la contraseña de ${organizer.email}`}
+                          >
+                            Definir contraseña
+                          </Button>
+                        </>
                       )}
                       {organizer.organizer_status === "approved" && (
                         <Button
@@ -344,6 +401,77 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={action === "password"}
+        onOpenChange={(open) => {
+          if (!open && !isLoading) {
+            setAction(null)
+            setNewPassword("")
+            setConfirmPassword("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir contraseña manualmente</DialogTitle>
+            <DialogDescription>
+              Establecé una contraseña para {selectedOrganizer?.email}. No se enviará ningún correo. Compartila con el organizador por un canal seguro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="organizer-new-password">Nueva contraseña</Label>
+              <Input
+                id="organizer-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                minLength={12}
+                maxLength={128}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Usá al menos 12 caracteres.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="organizer-confirm-password">Confirmar contraseña</Label>
+              <Input
+                id="organizer-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                minLength={12}
+                maxLength={128}
+                required
+              />
+            </div>
+            {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+              <p className="text-sm text-destructive" role="alert">Las contraseñas no coinciden.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAction(null)
+                setNewPassword("")
+                setConfirmPassword("")
+              }}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSetPassword}
+              disabled={isLoading || newPassword.length < 12 || newPassword.length > 128 || newPassword !== confirmPassword}
+            >
+              {isLoading ? "Actualizando..." : "Cambiar contraseña"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de aprobación */}
       <Dialog open={action === "approve"} onOpenChange={() => setAction(null)}>
