@@ -13,7 +13,7 @@ export default async function CheckerPage({ params }: { params: Promise<{ token:
           <p className="mt-2 text-muted-foreground">Escaneá el QR de cada entrada para validar el acceso.</p>
         </div>
         <Card>
-          <CardHeader><CardTitle>Verificar entrada</CardTitle><CardDescription>Este acceso es temporal y solo permite controlar entradas del organizador.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Verificar entrada</CardTitle><CardDescription>Este acceso temporal solo permite validar entradas del evento asociado.</CardDescription></CardHeader>
           <CardContent><QRScanner checkerToken={token} /></CardContent>
         </Card>
       </div>

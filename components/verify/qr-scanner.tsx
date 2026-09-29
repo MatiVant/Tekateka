@@ -37,7 +37,10 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       if (checkerToken) {
         const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, qrCode: qrCode.trim() }) })
         const payload = await response.json()
-        if (!response.ok) throw new Error(payload.error || 'No se pudo verificar')
+        if (!response.ok) {
+          setResult({ type: 'error', message: payload.error || 'No se pudo verificar' })
+          return
+        }
         setResult({ type: payload.type, message: payload.message, ticket: payload.ticket })
         return
       }
