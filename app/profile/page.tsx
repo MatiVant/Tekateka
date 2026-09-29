@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Ticket, ChevronRight } from "lucide-react"
 import { ProfileForm } from "@/components/profile/profile-form"
+import { ChangePasswordForm } from "@/components/profile/change-password-form"
 
 export default async function ProfilePage() {
   const userData = await getCurrentUser()
@@ -37,6 +38,18 @@ export default async function ProfilePage() {
               initialPhone={profile?.phone || ""}
               initialOrganizationCoverImageUrl={profile?.organization_cover_image_url || ""}
             />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Cambiar contraseña</CardTitle>
+            <CardDescription>
+              Elegí una contraseña nueva para tu propia cuenta. No necesitás solicitar ni abrir un enlace por correo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
           </CardContent>
         </Card>
 
