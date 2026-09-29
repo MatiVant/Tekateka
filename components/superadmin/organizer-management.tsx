@@ -16,7 +16,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, XCircle, Edit } from "lucide-react"
+import { CheckCircle, XCircle, Edit, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { slugify } from "@/lib/slugify"
 import { useRouter } from "next/navigation"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
@@ -239,7 +241,15 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                   <TableCell>{organizer.events_created_count}</TableCell>
                   <TableCell>{new Date(organizer.created_at).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {organizer.full_name && (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/${slugify(organizer.full_name)}`} target="_blank" rel="noreferrer">
+                            <ExternalLink className="mr-1 h-4 w-4" />
+                            Ver sitio
+                          </Link>
+                        </Button>
+                      )}
                       {organizer.organizer_status === "pending" && (
                         <>
                           <Button
