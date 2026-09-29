@@ -56,7 +56,7 @@ export function ProfileForm({ email, role, initialFullName, initialOrganizationN
     try {
       const formData = new FormData()
       formData.append("file", file)
-      const response = await fetch("/api/upload", { method: "POST", body: formData, credentials: "same-origin" })
+      const response = await fetch("/api/upload/organization-cover", { method: "POST", body: formData, credentials: "same-origin" })
       const result = await response.json()
       if (!response.ok || typeof result.url !== "string" || !result.url.startsWith("https://")) {
         throw new Error(result.error || "No se pudo subir la portada.")
@@ -161,7 +161,7 @@ export function ProfileForm({ email, role, initialFullName, initialOrganizationN
             onChange={handleCoverUpload}
             className="h-11 cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm"
           />
-          <p className="text-xs text-muted-foreground">JPG, PNG o WebP, hasta 5 MB. Se muestra en la página pública del espacio.</p>
+          <p className="text-xs text-muted-foreground">JPG, PNG o WebP, hasta 5 MB. Se muestra en la página pública del espacio al guardar los cambios.</p>
           {coverImageUrl && (
             <Button type="button" variant="ghost" size="sm" onClick={() => setCoverImageUrl("")}>
               Quitar portada
