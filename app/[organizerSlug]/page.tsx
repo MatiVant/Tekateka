@@ -61,6 +61,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
   const { data: events, error } = await supabase
     .from("events")
     .select("*")
+    .eq("is_public", true)
     .in("organizer_id", organizer.organizerIds)
     .order("event_date", { ascending: true })
 

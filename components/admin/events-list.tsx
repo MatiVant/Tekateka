@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
 import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
 import { ShareEventButton } from "@/components/admin/share-event-button"
+import { EventVisibilityToggle } from "@/components/admin/event-visibility-toggle"
 
 interface EventsListProps {
   userId: string
@@ -87,6 +88,10 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
             <div className="flex-1 min-w-0">
               <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
                 <h3 className="min-w-0 flex-1 font-semibold text-lg text-pretty line-clamp-2">{event.title}</h3>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <Badge variant={event.is_public === false ? "outline" : "secondary"}>
+                  {event.is_public === false ? "Oculto" : "Público"}
+                </Badge>
                 <Badge
                   variant={
                     event.status === "active"
@@ -106,6 +111,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                         ? "Finalizado"
                         : "Inactivo"}
                 </Badge>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
@@ -153,6 +159,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                   </Link>
                 </Button>
                 <ShareEventButton eventId={event.id} eventTitle={event.title} eventSlug={event.slug} />
+                <EventVisibilityToggle eventId={event.id} isPublic={event.is_public !== false} />
                 {event.status !== "finished" && (
                   <Button variant="outline" size="sm" className="min-w-0" asChild>
                     <Link href={`/admin/events/${event.id}/edit`} className="min-w-0">

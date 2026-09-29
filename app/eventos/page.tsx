@@ -18,6 +18,7 @@ export default async function EventsPage() {
   const { data: events } = await supabase
     .from("events")
     .select("*")
+    .eq("is_public", true)
     .eq("status", "active")
     .gte("event_date", now.toISOString())
     .order("event_date", { ascending: true })

@@ -15,6 +15,7 @@ export default async function HomePage() {
   const { data: events } = await supabase
     .from("events")
     .select("*")
+    .eq("is_public", true)
     .in("status", ["active", "inactive", "sold_out"])
     .order("event_date", { ascending: true })
 
