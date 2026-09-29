@@ -16,6 +16,7 @@ export default async function HomePage() {
     .from("events")
     .select("*")
     .eq("is_public", true)
+    .gte("event_date", new Date().toISOString())
     .in("status", ["active", "inactive", "sold_out"])
     .order("event_date", { ascending: true })
 

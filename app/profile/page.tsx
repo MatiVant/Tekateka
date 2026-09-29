@@ -35,6 +35,7 @@ export default async function ProfilePage() {
               initialFullName={profile?.full_name || ""}
               initialOrganizationName={profile?.organization_name || ""}
               initialPhone={profile?.phone || ""}
+              initialOrganizationCoverImageUrl={profile?.organization_cover_image_url || ""}
             />
           </CardContent>
         </Card>

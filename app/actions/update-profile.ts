@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slugify"
 export async function updateProfile(formData: {
   full_name: string
   organization_name?: string
+  organization_cover_image_url?: string | null
   phone: string
 }) {
   const supabase = await createClient()
@@ -31,6 +32,11 @@ export async function updateProfile(formData: {
     return { error: "El nombre del espacio es obligatorio para organizadores" }
   }
 
+  const coverImageUrl = formData.organization_cover_image_url?.trim() || null
+  if (coverImageUrl && (!coverImageUrl.startsWith("https://") || coverImageUrl.length > 2048)) {
+    return { error: "La URL de la portada no es válida" }
+  }
+
   const phone = formData.phone.trim()
   if (isOrganizer && !phone) {
     return { error: "El teléfono de contacto es obligatorio para organizadores" }
@@ -40,7 +46,9 @@ export async function updateProfile(formData: {
     .from("profiles")
     .update({
       full_name: fullName,
-      ...(isOrganizer ? { organization_name: organizationName } : {}),
+      ...(isOrganizer
+        ? { organization_name: organizationName, organization_cover_image_url: coverImageUrl }
+        : {}),
       phone: phone || null,
     })
     .eq("id", user.id)

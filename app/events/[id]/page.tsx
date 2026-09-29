@@ -11,14 +11,26 @@ import { formatCurrency } from "@/lib/format"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
+async function canViewPastEvent(organizerId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+  return profile?.role === "superadmin" || (profile?.role === "organizer" && user.id === organizerId)
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
   const eventQuery = /^[0-9a-f-]{36}$/i.test(id)
-    ? supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date").eq("id", id).maybeSingle()
-    : supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date").eq("slug", id).maybeSingle()
+    ? supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date, organizer_id").eq("id", id).maybeSingle()
+    : supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date, organizer_id").eq("slug", id).maybeSingle()
   const { data: event } = await eventQuery
   if (!event) return { title: "Evento | TekaTeka" }
+  if (new Date(event.event_date).getTime() < Date.now() && !(await canViewPastEvent(event.organizer_id))) {
+    return { title: "Evento no disponible | TekaTeka" }
+  }
   const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
   return { title: `${event.title} | TekaTeka`, description: event.description || `${event.title} - ${date} en ${event.venue}`, openGraph: { title: event.title, description: event.description || `${date} en ${event.venue}`, images: event.image_url ? [event.image_url] : undefined } }
 }
@@ -38,6 +50,9 @@ export default async function EventDetailPage({
 
   if (error || !event) {
     console.error("[v0] Error fetching event:", error)
+    notFound()
+  }
+  if (new Date(event.event_date).getTime() < Date.now() && !(await canViewPastEvent(event.organizer_id))) {
     notFound()
   }
 

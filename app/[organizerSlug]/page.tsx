@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
+import Image from "next/image"
 import { EventCard } from "@/components/event-card"
 import { slugify } from "@/lib/slugify"
 import { CalendarDays, Ticket } from "lucide-react"
@@ -16,7 +17,7 @@ async function findOrganizerBySlug(organizerSlug: string) {
   const supabase = createAdminClient()
   const { data: organizers, error } = await supabase
     .from("profiles")
-    .select("id, full_name, organization_name")
+    .select("id, full_name, organization_name, organization_cover_image_url")
     .not("full_name", "is", null)
 
   if (error) throw error
@@ -34,7 +35,7 @@ async function findOrganizerBySlug(organizerSlug: string) {
 
   return {
     organizationName,
-    organizerNames: [...new Set(organizationProfiles.map((organizer) => organizer.full_name?.trim()).filter(Boolean))],
+    organizationCoverImageUrl: matchedOrganizer.organization_cover_image_url,
     organizerIds: organizationProfiles.map((organizer) => organizer.id),
   }
 }
@@ -62,6 +63,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
     .from("events")
     .select("*")
     .eq("is_public", true)
+    .gte("event_date", new Date().toISOString())
     .in("organizer_id", organizer.organizerIds)
     .order("event_date", { ascending: true })
 
@@ -84,25 +86,30 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
 
   return (
     <main className="min-h-screen">
-      <section className="border-b border-[#e7dcc8] bg-[#f4eddf]">
-        <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <section className="relative isolate overflow-hidden border-b border-border bg-[#f4eddf]">
+        {organizer.organizationCoverImageUrl && (
+          <>
+            <Image
+              src={organizer.organizationCoverImageUrl}
+              alt=""
+              fill
+              priority
+              unoptimized
+              sizes="100vw"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/50 to-black/20" aria-hidden="true" />
+          </>
+        )}
+        <div className="container relative mx-auto px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/70 px-4 py-2 text-sm font-semibold text-primary">
-              <CalendarDays className="h-4 w-4" />
-              Espacio de eventos
-            </div>
-            <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-[-0.05em] text-balance sm:text-5xl md:text-6xl">
+            <h1 className={`max-w-3xl text-4xl font-black leading-tight tracking-[-0.05em] text-balance sm:text-5xl md:text-6xl ${organizer.organizationCoverImageUrl ? "text-white" : "text-foreground"}`}>
               {organizer.organizationName}
             </h1>
-            {organizer.organizerNames.length > 0 && (
-              <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Organizado por {organizer.organizerNames.join(", ")}
-              </p>
-            )}
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Eventos pasados y próximos de este espacio.
+            <p className={`mt-3 max-w-2xl text-sm leading-relaxed sm:text-base ${organizer.organizationCoverImageUrl ? "text-white/85" : "text-muted-foreground"}`}>
+              Próximos eventos de este espacio.
             </p>
-            <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-foreground/75">
+            <div className={`mt-6 inline-flex items-center gap-2 text-sm font-medium ${organizer.organizationCoverImageUrl ? "text-white/90" : "text-foreground/75"}`}>
               <Ticket className="h-4 w-4 text-primary" />
               {organizerEvents.length} {organizerEvents.length === 1 ? "evento" : "eventos"}
             </div>
