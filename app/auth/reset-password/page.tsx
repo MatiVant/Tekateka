@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
@@ -17,40 +17,48 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingLink, setIsCheckingLink] = useState(true)
   const [hasValidRecoverySession, setHasValidRecoverySession] = useState(false)
+  const recoveryVerificationRef = useRef<Promise<{ valid: boolean }> | null>(null)
 
   useEffect(() => {
     let isMounted = true
 
-    async function verifyRecoveryLink() {
-      try {
-        const supabase = createClient()
-        const code = new URLSearchParams(window.location.search).get("code")
+    if (!recoveryVerificationRef.current) {
+      const supabase = createClient()
+      const url = new URL(window.location.href)
+      const code = url.searchParams.get("code")
+      const authError = url.searchParams.get("error_description") || url.searchParams.get("error")
+
+      recoveryVerificationRef.current = (async () => {
+        if (authError) return { valid: false }
 
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-          window.history.replaceState({}, document.title, window.location.pathname)
-          if (isMounted) {
-            setHasValidRecoverySession(!exchangeError)
-            if (exchangeError) setError("Este enlace venció o ya fue utilizado. Solicitá uno nuevo.")
-          }
-        } else {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (isMounted) {
-            setHasValidRecoverySession(Boolean(session))
-            if (!session) setError("El enlace de recuperación no es válido o venció. Solicitá uno nuevo.")
-          }
+          return { valid: !exchangeError }
         }
-      } catch {
-        if (isMounted) {
-          setHasValidRecoverySession(false)
-          setError("No pudimos verificar el enlace. Solicitá uno nuevo e intentá otra vez.")
-        }
-      } finally {
-        if (isMounted) setIsCheckingLink(false)
-      }
+
+        const { data: { session } } = await supabase.auth.getSession()
+        return { valid: Boolean(session) }
+      })()
     }
 
-    void verifyRecoveryLink()
+    void recoveryVerificationRef.current
+      .then(({ valid }) => {
+        if (!isMounted) return
+        if (window.location.search) {
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+        setHasValidRecoverySession(valid)
+        if (!valid) setError("Este enlace venció, ya fue utilizado o no es válido. Solicitá uno nuevo.")
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setHasValidRecoverySession(false)
+        setError("No pudimos verificar el enlace. Solicitá uno nuevo e intentá otra vez.")
+      })
+      .finally(() => {
+        if (isMounted) setIsCheckingLink(false)
+      })
+
     return () => {
       isMounted = false
     }
