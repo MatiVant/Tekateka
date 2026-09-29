@@ -73,7 +73,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
         return (
           <div
             key={event.id}
-            className="flex min-w-0 flex-col items-stretch gap-4 overflow-hidden rounded-xl border p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:p-4"
+            className="relative flex min-w-0 flex-col items-stretch gap-4 overflow-hidden rounded-xl border p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:p-4"
           >
             <div className="h-44 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-24">
               <img
@@ -85,13 +85,14 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
               />
             </div>
 
+            <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
+              <EventVisibilityToggle eventId={event.id} isPublic={event.is_public !== false} />
+            </div>
+
             <div className="flex-1 min-w-0">
               <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
                 <h3 className="min-w-0 flex-1 font-semibold text-lg text-pretty line-clamp-2">{event.title}</h3>
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <Badge variant={event.is_public === false ? "outline" : "secondary"}>
-                  {event.is_public === false ? "Oculto" : "Público"}
-                </Badge>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pr-10 sm:pr-12">
                 <Badge
                   variant={
                     event.status === "active"
@@ -155,23 +156,22 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
                 <Button variant="outline" size="sm" className="min-w-0" asChild>
                   <Link href={`/events/${event.slug || event.id}`}>
                     <Eye className="mr-1 h-3 w-3" />
-                    Ver
+                    Ir al evento
                   </Link>
                 </Button>
                 <ShareEventButton eventId={event.id} eventTitle={event.title} eventSlug={event.slug} />
-                <EventVisibilityToggle eventId={event.id} isPublic={event.is_public !== false} />
                 {event.status !== "finished" && (
                   <Button variant="outline" size="sm" className="min-w-0" asChild>
                     <Link href={`/admin/events/${event.id}/edit`} className="min-w-0">
                       <Edit className="mr-1 h-3 w-3" />
-                      Editar
+                      Ver/Editar
                     </Link>
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="min-w-0" asChild>
                   <Link href={`/admin/events/${event.id}/tickets`} className="min-w-0">
                     <Ticket className="mr-1 h-3 w-3" />
-                    Ventas
+                    Entradas
                   </Link>
                 </Button>
                 <ArchiveEventButton eventId={event.id} isArchived={event.status === "finished"} />
