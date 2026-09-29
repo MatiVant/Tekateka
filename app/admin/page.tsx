@@ -103,8 +103,12 @@ export default async function AdminPage() {
     .order("created_at", { ascending: false })
     .limit(20)
 
-  const { data: allOrganizerEvents } = await adminSupabase.from("events").select("id").eq("organizer_id", user.id)
+  const { data: allOrganizerEvents } = await adminSupabase
+    .from("events")
+    .select("id, title, status")
+    .eq("organizer_id", user.id)
   const organizerEventIds = (allOrganizerEvents || []).map((event) => event.id)
+
   const { data: movements } = organizerEventIds.length
     ? await adminSupabase
         .from("platform_movements")
@@ -122,7 +126,7 @@ export default async function AdminPage() {
     tickets
       ?.filter((t) => t.payment_status === "approved" || t.status === "confirmed")
       .reduce((sum, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? ticket.events.price ?? 0), 0) || 0
-  const eventReports = (events || []).map((event: any) => {
+  const eventReports = (allOrganizerEvents || []).map((event: any) => {
     const eventTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && (ticket.payment_status === "approved" || ticket.status === "confirmed"))
     const eventPendingTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && ticket.payment_status !== "approved" && ticket.status === "pending")
     return {
