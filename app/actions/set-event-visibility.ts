@@ -41,14 +41,14 @@ export async function setEventVisibility(eventId: string, isPublic: boolean) {
 
   if (updateError) return { success: false, error: "No se pudo cambiar la visibilidad del evento" }
 
-  let publicName = profile?.organization_name || profile?.full_name
+  let publicName = profile?.organization_name || profile?.full_name || ""
   if (event.organizer_id !== user.id) {
     const { data: organizerProfile } = await dataClient
       .from("profiles")
       .select("organization_name, full_name")
       .eq("id", event.organizer_id)
       .maybeSingle()
-    publicName = organizerProfile?.organization_name || organizerProfile?.full_name
+    publicName = organizerProfile?.organization_name || organizerProfile?.full_name || ""
   }
   revalidatePath("/")
   revalidatePath("/eventos")
