@@ -16,11 +16,27 @@ async function findOrganizerBySlug(organizerSlug: string) {
   const supabase = createAdminClient()
   const { data: organizers, error } = await supabase
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, organization_name")
     .not("full_name", "is", null)
 
   if (error) throw error
-  return (organizers ?? []).find((organizer) => slugify(organizer.full_name || "") === organizerSlug) ?? null
+
+  const matchedOrganizer = (organizers ?? []).find((organizer) =>
+    slugify(organizer.organization_name?.trim() || organizer.full_name?.trim() || "") === organizerSlug,
+  )
+  if (!matchedOrganizer) return null
+
+  const organizationName = matchedOrganizer.organization_name?.trim() || matchedOrganizer.full_name?.trim() || ""
+  const organizationProfiles = (organizers ?? []).filter((organizer) =>
+    (organizer.organization_name?.trim() || organizer.full_name?.trim() || "").toLocaleLowerCase() === organizationName.toLocaleLowerCase(),
+  )
+
+  return {
+    id: matchedOrganizer.id,
+    organizationName,
+    organizerNames: [...new Set(organizationProfiles.map((organizer) => organizer.full_name?.trim()).filter(Boolean))],
+    organizerIds: organizationProfiles.map((organizer) => organizer.id),
+  }
 }
 
 export async function generateMetadata({ params }: OrganizerPageProps): Promise<Metadata> {
@@ -29,8 +45,8 @@ export async function generateMetadata({ params }: OrganizerPageProps): Promise<
 
   return organizer
     ? {
-        title: `${organizer.full_name} | TekaTeka`,
-        description: `Todos los eventos de ${organizer.full_name} en TekaTeka.`,
+        title: `${organizer.organizationName} | TekaTeka`,
+        description: `Todos los eventos de ${organizer.organizationName} en TekaTeka.`,
       }
     : { title: "Organizador no encontrado | TekaTeka" }
 }
@@ -45,7 +61,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
   const { data: events, error } = await supabase
     .from("events")
     .select("*")
-    .eq("organizer_id", organizer.id)
+    .in("organizer_id", organizer.organizerIds)
     .order("event_date", { ascending: true })
 
   if (error) throw error
