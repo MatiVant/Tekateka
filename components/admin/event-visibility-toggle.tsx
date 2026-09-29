@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,14 +13,16 @@ interface EventVisibilityToggleProps {
 }
 
 export function EventVisibilityToggle({ eventId, isPublic }: EventVisibilityToggleProps) {
+  const [isVisible, setIsVisible] = useState(isPublic)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  useEffect(() => setIsVisible(isPublic), [isPublic])
   const { toast } = useToast()
 
   const handleToggle = async () => {
     setIsLoading(true)
     try {
-      const result = await setEventVisibility(eventId, !isPublic)
+      const result = await setEventVisibility(eventId, !isVisible)
       if (!result.success) {
         toast({
           title: "No se pudo cambiar la visibilidad",
@@ -30,11 +32,13 @@ export function EventVisibilityToggle({ eventId, isPublic }: EventVisibilityTogg
         return
       }
 
+      const nextVisible = !isVisible
+      setIsVisible(nextVisible)
       toast({
-        title: isPublic ? "Evento oculto" : "Evento publicado",
-        description: isPublic
-          ? "Ya no aparecerá en el inicio ni en la página pública del espacio."
-          : "Ahora aparece en las páginas públicas del espacio y en el inicio.",
+        title: nextVisible ? "Evento publicado" : "Evento oculto",
+        description: nextVisible
+          ? "Ahora aparece en las páginas públicas del espacio y en el inicio."
+          : "Ya no aparecerá en el inicio ni en la página pública del espacio.",
       })
       router.refresh()
     } catch {
@@ -48,18 +52,21 @@ export function EventVisibilityToggle({ eventId, isPublic }: EventVisibilityTogg
     }
   }
 
+  const actionLabel = isVisible ? "Ocultar evento de las páginas públicas" : "Mostrar evento en las páginas públicas"
+
   return (
     <Button
       type="button"
-      variant="outline"
-      size="sm"
+      variant="ghost"
+      size="icon"
       onClick={handleToggle}
       disabled={isLoading}
-      aria-label={isPublic ? "Ocultar evento de las páginas públicas" : "Mostrar evento en las páginas públicas"}
+      title={actionLabel}
+      aria-label={actionLabel}
+      aria-pressed={isVisible}
       aria-busy={isLoading}
     >
-      {isLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : isPublic ? <EyeOff className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
-      {isPublic ? "Ocultar" : "Mostrar"}
+      {isLoading ? <Loader2 className="size-4 animate-spin" /> : isVisible ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
     </Button>
   )
 }

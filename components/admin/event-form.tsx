@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 import { saveEvent } from "@/app/actions/save-event"
+import { EventCreatedShareCard } from "@/components/admin/event-created-share-card"
 
 interface EventFormProps {
   userId: string
@@ -79,6 +80,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   const [totalTickets, setTotalTickets] = useState(event?.total_tickets.toString() || "")
   const [imageUrl, setImageUrl] = useState(event?.image_url || "")
   const [isLoading, setIsLoading] = useState(false)
+  const [createdEventId, setCreatedEventId] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null)
@@ -299,17 +301,18 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
         tier_order: index,
       }))
 
-      await saveEvent(eventData, tiersToSave, event?.id)
+      const result = await saveEvent(eventData, tiersToSave, event?.id)
 
-      toast({
-        title: "Éxito",
-        description: event ? "Evento actualizado correctamente" : "Evento creado correctamente",
-      })
+      if (!event && result.eventId) {
+        setCreatedEventId(result.eventId)
+        setIsLoading(false)
+        toast({ title: "Evento creado", description: "Ya podés compartirlo." })
+        return
+      }
 
+      toast({ title: "Éxito", description: "Evento actualizado correctamente" })
       router.push("/admin")
       router.refresh()
-      // No reactivamos el botón: dejamos el estado de carga hasta que la navegación complete
-      // para evitar que el evento se cree dos veces.
     } catch (error: unknown) {
       console.error("[v0] Error al guardar evento:", error)
       const message = error instanceof Error ? error.message : "Error al guardar el evento"
@@ -336,6 +339,16 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
 
   const handleRemoveTier = (index: number) => {
     setTicketTiers(ticketTiers.filter((_, i) => i !== index))
+  }
+
+  if (createdEventId) {
+    return (
+      <EventCreatedShareCard
+        eventId={createdEventId}
+        eventTitle={title}
+        onBackToPanel={() => router.push("/admin")}
+      />
+    )
   }
 
   return (
