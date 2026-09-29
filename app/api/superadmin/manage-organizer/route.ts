@@ -4,6 +4,10 @@ import { createClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
+  let stage = 'authenticate';
+  let requestedAction = 'unknown';
+  let isSuperadmin = false;
+
   try {
     // Verificar que el usuario actual es superadmin
     const serverSupabase = await createServerClient();
@@ -13,6 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
+    stage = 'authorize-superadmin';
     const { data: profile } = await serverSupabase
       .from('profiles')
       .select('role')
@@ -22,15 +27,20 @@ export async function POST(request: NextRequest) {
     if (profile?.role !== 'superadmin') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
+    isSuperadmin = true;
 
     const { organizerId, action, rejectionReason, subscriptionStatus, expirationDate } = await request.json();
+    requestedAction = typeof action === 'string' ? action : 'unknown';
+    stage = 'initialize-admin-client';
     const adminSupabase = createClient();
 
     if (action === 'password-reset') {
+      stage = 'validate-organizer-id';
       if (typeof organizerId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizerId)) {
         return NextResponse.json({ error: 'Organizador inválido' }, { status: 400 });
       }
 
+      stage = 'lookup-organizer-profile';
       const { data: organizer, error: organizerError } = await adminSupabase
         .from('profiles')
         .select('id')
@@ -41,10 +51,12 @@ export async function POST(request: NextRequest) {
       if (organizerError) throw organizerError;
       if (!organizer) return NextResponse.json({ error: 'No se encontró el organizador' }, { status: 404 });
 
+      stage = 'lookup-auth-user';
       const { data: { user: targetUser }, error: targetUserError } = await adminSupabase.auth.admin.getUserById(organizerId);
       if (targetUserError) throw targetUserError;
       if (!targetUser?.email) return NextResponse.json({ error: 'El organizador no tiene un email asociado' }, { status: 404 });
 
+      stage = 'send-recovery-email';
       const emailClient = createSupabaseClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -54,7 +66,14 @@ export async function POST(request: NextRequest) {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tktk.buholabs.com.ar'}/auth/reset-password`,
       });
 
-      if (resetError) throw resetError;
+      if (resetError) {
+        console.error('[v0] Supabase rechazó el correo de recuperación:', {
+          message: resetError.message,
+          code: resetError.code,
+          status: resetError.status,
+        });
+        return NextResponse.json({ error: resetError.message }, { status: 502 });
+      }
       return NextResponse.json({ success: true });
     }
 
@@ -125,7 +144,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 });
   } catch (error) {
-    console.error('[v0] Error en manage-organizer:', error);
+    console.error('[v0] Error en manage-organizer:', {
+      action: requestedAction,
+      stage,
+      error,
+    });
+    if (isSuperadmin && requestedAction === 'password-reset' && error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json(
       { error: 'Error al procesar la solicitud' },
       { status: 500 }
