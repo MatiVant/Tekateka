@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { LogOut, Menu, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -21,35 +21,63 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   const [profile, setProfile] = useState(initialProfile)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const latestUserIdRef = useRef<string | null>(null)
+  const authEventReceivedRef = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
     let mounted = true
+    let authEventVersion = 0
 
-    const syncSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!mounted) return
-      setUser(session?.user ? { email: session.user.email } : null)
-      if (!session?.user) {
-        setProfile(null)
-        return
-      }
-      const { data: nextProfile } = await supabase.from("profiles").select("role, full_name, organization_name").eq("id", session.user.id).maybeSingle()
-      if (mounted) setProfile(nextProfile)
+    const loadProfile = async (userId: string) => {
+      const { data: nextProfile } = await supabase
+        .from("profiles")
+        .select("role, full_name, organization_name")
+        .eq("id", userId)
+        .maybeSingle()
+      if (mounted && latestUserIdRef.current === userId) setProfile(nextProfile)
     }
 
-    void syncSession()
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
-      setUser(session?.user ? { email: session.user.email } : null)
-      if (!session?.user) {
+      authEventVersion += 1
+      authEventReceivedRef.current = true
+
+      const nextUser = session?.user
+      const nextUserId = nextUser?.id ?? null
+      const previousUserId = latestUserIdRef.current
+      latestUserIdRef.current = nextUserId
+      setUser(nextUser ? { email: nextUser.email } : null)
+
+      if (!nextUser) {
         setProfile(null)
-      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-        void syncSession()
+      } else {
+        const authenticatedUserId = nextUser.id
+        if (previousUserId !== authenticatedUserId) setProfile(null)
+        window.setTimeout(() => {
+          if (mounted && latestUserIdRef.current === authenticatedUserId) void loadProfile(authenticatedUserId)
+        }, 0)
       }
+
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
         router.refresh()
       }
+    })
+
+    const initialAuthEventVersion = authEventVersion
+    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted || authEventVersion !== initialAuthEventVersion) return
+
+      const nextUser = session?.user
+      const nextUserId = nextUser?.id ?? null
+      latestUserIdRef.current = nextUserId
+      setUser(nextUser ? { email: nextUser.email } : null)
+      if (!nextUser) {
+        setProfile(null)
+        return
+      }
+
+      await loadProfile(nextUser.id)
     })
 
     return () => {
@@ -59,6 +87,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   }, [router])
 
   useEffect(() => {
+    if (authEventReceivedRef.current) return
     setUser(initialUser)
     setProfile(initialProfile)
   }, [initialUser, initialProfile])
