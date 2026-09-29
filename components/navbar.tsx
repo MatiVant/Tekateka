@@ -2,12 +2,20 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu, X } from "lucide-react"
+import { ChevronDown, CircleHelp, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
-import { ThemeToggle } from "@/components/theme-toggle"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useTheme } from "next-themes"
 import { slugify } from "@/lib/slugify"
 
 interface NavbarProps {
@@ -21,6 +29,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
   const [profile, setProfile] = useState(initialProfile)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
   const latestUserIdRef = useRef<string | null>(null)
   const authEventReceivedRef = useRef(false)
 
@@ -124,10 +133,8 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
-            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>
             <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Eventos</Link></Button>
-            {user && <span className="hidden max-w-32 truncate text-xs text-muted-foreground lg:block">{profile?.full_name || user.email}</span>}
-            {user && <ThemeToggle />}
+            {!user && <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>}
             {user ? (
               <>
                 <div className="hidden items-center gap-1 sm:flex">
@@ -135,7 +142,29 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
                   {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`}>Mi página</Link></Button>}
                   {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
                   {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
-                  <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="max-w-52 gap-2 rounded-full px-3" aria-label="Abrir menú de usuario">
+                        <UserRound className="size-4 shrink-0" />
+                        <span className="max-w-36 truncate">{profile?.full_name || user.email || "Mi cuenta"}</span>
+                        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-60">
+                      <DropdownMenuLabel className="truncate">{profile?.full_name || user.email || "Mi cuenta"}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile"><UserRound />Mi perfil</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/ayuda"><CircleHelp />Ayuda</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+                        {resolvedTheme === "dark" ? <Sun /> : <Moon />}
+                        {resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut} aria-busy={isLoggingOut}>
                     <LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}
                   </Button>
@@ -159,7 +188,12 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
         </div>
         {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
           <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Eventos disponibles</Link></Button>
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/ayuda" onClick={() => setIsMenuOpen(false)}><CircleHelp className="mr-2 size-4" />Ayuda</Link></Button>
           {user ? <>
+            <Button variant="ghost" className="justify-start rounded-xl" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+              {resolvedTheme === "dark" ? <Sun className="mr-2 size-4" /> : <Moon className="mr-2 size-4" />}
+              {resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}
+            </Button>
             {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin</Link></Button>}
             {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`} onClick={() => setIsMenuOpen(false)}>Mi página pública</Link></Button>}
             {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}
