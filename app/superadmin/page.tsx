@@ -8,6 +8,8 @@ import { MovementsReportButton } from "@/components/admin/movements-report-butto
 import { AudienceInsights } from "@/components/superadmin/audience-insights"
 import { AudienceTagManager } from "@/components/superadmin/audience-tag-manager"
 import { getAudienceTags } from "@/app/actions/audience-tags"
+import { SuperAdminModuleCard } from "@/components/superadmin/superadmin-module-card"
+import { CalendarDays, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -118,30 +120,51 @@ export default async function SuperAdminPage() {
         />
 
 
-        <section id="movements" aria-label="Movimientos de la plataforma" className="mt-10 flex justify-end scroll-mt-24">
-          <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
-        </section>
+        <section aria-label="Herramientas de administración" className="mt-10 grid gap-4">
+          <SuperAdminModuleCard
+            id="movements"
+            title="Movimientos"
+            description="Reporte financiero y actividad de la plataforma"
+            icon={Wallet}
+          >
+            <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
+          </SuperAdminModuleCard>
 
-        <section id="categories" className="mt-10 scroll-mt-24">
-          <AudienceTagManager initialTags={audienceTagOptions} />
-        </section>
+          <SuperAdminModuleCard
+            id="categories"
+            title="Categorías"
+            description="Administrar etiquetas disponibles"
+            icon={Tags}
+          >
+            <AudienceTagManager initialTags={audienceTagOptions} />
+          </SuperAdminModuleCard>
 
-        <section id="audiences" className="mt-10 scroll-mt-24">
-          <AudienceInsights events={audienceInsights} />
-        </section>
+          <SuperAdminModuleCard
+            id="audiences"
+            title="Audiencias"
+            description="Intereses y recomendaciones"
+            icon={CalendarDays}
+          >
+            <AudienceInsights events={audienceInsights} />
+          </SuperAdminModuleCard>
 
-        <section id="messages" className="mt-10 scroll-mt-24">
-          <MessagesInbox messages={messages} />
-        </section>
+          <SuperAdminModuleCard
+            id="messages"
+            title="Mensajes"
+            description="Bandeja de consultas"
+            icon={MessageSquareText}
+          >
+            <MessagesInbox messages={messages} />
+          </SuperAdminModuleCard>
 
-        <section id="organizers" aria-labelledby="organizers-title" className="mt-10 scroll-mt-24">
-          <div className="mb-6">
-            <h2 id="organizers-title" className="text-xl font-bold">Gestión de Organizadores</h2>
-            <p className="text-sm text-muted-foreground">Aprueba, rechaza o gestiona las suscripciones</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-6">
+          <SuperAdminModuleCard
+            id="organizers"
+            title="Usuarios y organizadores"
+            description="Solicitudes, cuentas y suscripciones"
+            icon={Users}
+          >
             <OrganizerManagement organizers={organizersWithEventCounts} />
-          </div>
+          </SuperAdminModuleCard>
         </section>
       </main>
     </div>
