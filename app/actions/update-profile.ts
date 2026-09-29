@@ -2,9 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { slugify } from "@/lib/slugify"
 
 export async function updateProfile(formData: {
   full_name: string
+  organization_name?: string
   phone: string
 }) {
   const supabase = await createClient()
@@ -24,6 +26,11 @@ export async function updateProfile(formData: {
   const { data: currentProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
   const isOrganizer = currentProfile?.role === "organizer" || currentProfile?.role === "superadmin"
 
+  const organizationName = formData.organization_name?.trim() || ""
+  if (isOrganizer && !organizationName) {
+    return { error: "El nombre del espacio es obligatorio para organizadores" }
+  }
+
   const phone = formData.phone.trim()
   if (isOrganizer && !phone) {
     return { error: "El teléfono de contacto es obligatorio para organizadores" }
@@ -33,6 +40,7 @@ export async function updateProfile(formData: {
     .from("profiles")
     .update({
       full_name: fullName,
+      ...(isOrganizer ? { organization_name: organizationName } : {}),
       phone: phone || null,
     })
     .eq("id", user.id)
@@ -43,5 +51,7 @@ export async function updateProfile(formData: {
   }
 
   revalidatePath("/profile")
+  revalidatePath("/superadmin")
+  if (organizationName) revalidatePath(`/${slugify(organizationName)}`)
   return { success: true }
 }

@@ -12,7 +12,7 @@ import { slugify } from "@/lib/slugify"
 
 interface NavbarProps {
   user?: { email?: string } | null
-  profile?: { role: string; full_name: string | null } | null
+  profile?: { role: string; full_name: string | null; organization_name?: string | null } | null
 }
 
 export function Navbar({ user: initialUser, profile: initialProfile }: NavbarProps) {
@@ -34,7 +34,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
         setProfile(null)
         return
       }
-      const { data: nextProfile } = await supabase.from("profiles").select("role, full_name").eq("id", session.user.id).maybeSingle()
+      const { data: nextProfile } = await supabase.from("profiles").select("role, full_name, organization_name").eq("id", session.user.id).maybeSingle()
       if (mounted) setProfile(nextProfile)
     }
 
@@ -103,7 +103,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
               <>
                 <div className="hidden items-center gap-1 sm:flex">
                   {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
-                  {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && profile.full_name && <Button variant="ghost" asChild><Link href={`/${slugify(profile.full_name)}`}>Mi página</Link></Button>}
+                  {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`}>Mi página</Link></Button>}
                   {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
                   {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
                   <Button variant="ghost" asChild><Link href="/profile">Mi Perfil</Link></Button>
@@ -132,7 +132,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Eventos disponibles</Link></Button>
           {user ? <>
             {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin</Link></Button>}
-            {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && profile.full_name && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.full_name)}`} onClick={() => setIsMenuOpen(false)}>Mi página pública</Link></Button>}
+            {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`} onClick={() => setIsMenuOpen(false)}>Mi página pública</Link></Button>}
             {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}
             {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets</Link></Button>}
             <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil</Link></Button>

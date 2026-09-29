@@ -33,6 +33,7 @@ export default async function ProfilePage() {
               email={user.email || ""}
               role={profile?.role || "user"}
               initialFullName={profile?.full_name || ""}
+              initialOrganizationName={profile?.organization_name || ""}
               initialPhone={profile?.phone || ""}
             />
           </CardContent>

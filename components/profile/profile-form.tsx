@@ -13,6 +13,7 @@ interface ProfileFormProps {
   email: string
   role: string
   initialFullName: string
+  initialOrganizationName: string
   initialPhone: string
 }
 
@@ -23,9 +24,10 @@ const ROLE_LABELS: Record<string, string> = {
   user: "Asistente",
 }
 
-export function ProfileForm({ email, role, initialFullName, initialPhone }: ProfileFormProps) {
+export function ProfileForm({ email, role, initialFullName, initialOrganizationName, initialPhone }: ProfileFormProps) {
   const { toast } = useToast()
   const [fullName, setFullName] = useState(initialFullName)
+  const [organizationName, setOrganizationName] = useState(initialOrganizationName)
   const [phone, setPhone] = useState(initialPhone)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -34,7 +36,7 @@ export function ProfileForm({ email, role, initialFullName, initialPhone }: Prof
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
-    const result = await updateProfile({ full_name: fullName, phone })
+    const result = await updateProfile({ full_name: fullName, organization_name: organizationName, phone })
     setIsSaving(false)
 
     if (result.error) {
@@ -60,20 +62,36 @@ export function ProfileForm({ email, role, initialFullName, initialPhone }: Prof
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="fullName">Nombre para mostrar *</Label>
+        <Label htmlFor="fullName">{isOrganizer ? "Nombre y apellido del organizador *" : "Nombre completo *"}</Label>
         <Input
           id="fullName"
           type="text"
           required
-          placeholder="Tu nombre o el de tu productora"
+          placeholder="Ej.: Patricio Benetti"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           className="h-11"
         />
         {isOrganizer && (
-          <p className="text-xs text-muted-foreground">Este nombre aparece como organizador de tus eventos.</p>
+          <p className="text-xs text-muted-foreground">Este es tu nombre personal como responsable del espacio.</p>
         )}
       </div>
+
+      {isOrganizer && (
+        <div className="space-y-2">
+          <Label htmlFor="organizationName">Nombre del espacio *</Label>
+          <Input
+            id="organizationName"
+            type="text"
+            required
+            placeholder="Ej.: La lengua del Juglar"
+            value={organizationName}
+            onChange={(e) => setOrganizationName(e.target.value)}
+            className="h-11"
+          />
+          <p className="text-xs text-muted-foreground">Este nombre se muestra en tu sitio público y define su enlace.</p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="phone">Teléfono de contacto {isOrganizer ? "*" : ""}</Label>

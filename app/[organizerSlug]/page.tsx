@@ -21,8 +21,9 @@ async function findOrganizerBySlug(organizerSlug: string) {
 
   if (error) throw error
 
+  const normalizedSlug = slugify(organizerSlug)
   const matchedOrganizer = (organizers ?? []).find((organizer) =>
-    slugify(organizer.organization_name?.trim() || organizer.full_name?.trim() || "") === organizerSlug,
+    slugify(organizer.organization_name?.trim() || organizer.full_name?.trim() || "") === normalizedSlug,
   )
   if (!matchedOrganizer) return null
 
@@ -32,7 +33,6 @@ async function findOrganizerBySlug(organizerSlug: string) {
   )
 
   return {
-    id: matchedOrganizer.id,
     organizationName,
     organizerNames: [...new Set(organizationProfiles.map((organizer) => organizer.full_name?.trim()).filter(Boolean))],
     organizerIds: organizationProfiles.map((organizer) => organizer.id),
@@ -88,13 +88,18 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
           <div className="mx-auto max-w-6xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/70 px-4 py-2 text-sm font-semibold text-primary">
               <CalendarDays className="h-4 w-4" />
-              Organizador
+              Espacio de eventos
             </div>
             <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-[-0.05em] text-balance sm:text-5xl md:text-6xl">
-              {organizer.full_name}
+              {organizer.organizationName}
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Todos sus eventos, pasados y próximos.
+            {organizer.organizerNames.length > 0 && (
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                Organizado por {organizer.organizerNames.join(", ")}
+              </p>
+            )}
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Eventos pasados y próximos de este espacio.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-foreground/75">
               <Ticket className="h-4 w-4 text-primary" />

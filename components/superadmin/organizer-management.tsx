@@ -27,6 +27,7 @@ type Organizer = {
   id: string
   email: string
   full_name: string
+  organization_name: string | null
   organizer_status: string
   subscription_status: string
   events_created_count: number
@@ -187,7 +188,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
+              <TableHead>Espacio y organizador</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Suscripción</TableHead>
@@ -206,7 +207,12 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
             ) : (
               filteredOrganizers.map((organizer) => (
                 <TableRow key={organizer.id}>
-                  <TableCell className="font-medium">{organizer.full_name}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{organizer.organization_name || organizer.full_name}</div>
+                    {organizer.organization_name && organizer.organization_name.trim().toLocaleLowerCase() !== organizer.full_name.trim().toLocaleLowerCase() && (
+                      <div className="mt-1 text-xs text-muted-foreground">Organizador: {organizer.full_name.trim()}</div>
+                    )}
+                  </TableCell>
                   <TableCell>{organizer.email}</TableCell>
                   <TableCell>
                     <Badge
@@ -242,9 +248,9 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                   <TableCell>{new Date(organizer.created_at).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
-                      {organizer.full_name && (
+                      {(organizer.organization_name || organizer.full_name) && (
                         <Button size="sm" variant="outline" asChild>
-                          <Link href={`/${slugify(organizer.full_name)}`} target="_blank" rel="noreferrer">
+                          <Link href={`/${slugify(organizer.organization_name || organizer.full_name)}`} target="_blank" rel="noreferrer">
                             <ExternalLink className="mr-1 h-4 w-4" />
                             Ver sitio
                           </Link>

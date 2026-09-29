@@ -24,6 +24,21 @@ export default async function SuperAdminPage() {
 
   // Obtener estadísticas de organizadores
   const { data: organizers } = await supabase.from("profiles").select("*").eq("role", "organizer")
+  const { data: organizerEventOwners } = await supabase.from("events").select("organizer_id")
+  const organizerGroupById = new Map<string, string>()
+  for (const organizer of organizers || []) {
+    const groupKey = organizer.organization_name?.trim().toLocaleLowerCase() || `profile:${organizer.id}`
+    organizerGroupById.set(organizer.id, groupKey)
+  }
+  const eventCountsByGroup = new Map<string, number>()
+  for (const event of organizerEventOwners || []) {
+    const groupKey = organizerGroupById.get(event.organizer_id)
+    if (groupKey) eventCountsByGroup.set(groupKey, (eventCountsByGroup.get(groupKey) || 0) + 1)
+  }
+  const organizersWithEventCounts = (organizers || []).map((organizer) => ({
+    ...organizer,
+    events_created_count: eventCountsByGroup.get(organizerGroupById.get(organizer.id) || `profile:${organizer.id}`) || 0,
+  }))
 
   const pendingCount = organizers?.filter((o) => o.organizer_status === "pending").length || 0
   const approvedCount = organizers?.filter((o) => o.organizer_status === "approved").length || 0
@@ -180,7 +195,7 @@ export default async function SuperAdminPage() {
             <p className="text-sm text-muted-foreground">Aprueba, rechaza o gestiona las suscripciones</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-6">
-            <OrganizerManagement organizers={organizers || []} />
+            <OrganizerManagement organizers={organizersWithEventCounts} />
           </div>
         </div>
       </main>
