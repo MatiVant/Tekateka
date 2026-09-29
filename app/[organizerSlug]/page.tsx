@@ -1,36 +1,59 @@
 import type { Metadata } from "next"
-import { createClient } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { EventCard } from "@/components/event-card"
+import { slugify } from "@/lib/slugify"
 import { CalendarDays, Ticket } from "lucide-react"
+
+type OrganizerPageProps = {
+  params: Promise<{ organizerSlug: string }>
+}
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-export const metadata: Metadata = {
-  title: "La lengua del juglar | TekaTeka",
-  description: "Todos los eventos de La lengua del juglar.",
-}
-
-export default async function LaLenguaDelJuglarPage() {
-  const supabase = await createClient()
-  const { data: organizer } = await supabase
+async function findOrganizerBySlug(organizerSlug: string) {
+  const supabase = createAdminClient()
+  const { data: organizers, error } = await supabase
     .from("profiles")
     .select("id, full_name")
-    .ilike("full_name", "La lengua del juglar")
-    .maybeSingle()
+    .not("full_name", "is", null)
 
-  const { data: events } = organizer
-    ? await supabase
-        .from("events")
-        .select("*")
-        .eq("organizer_id", organizer.id)
-        .order("event_date", { ascending: true })
-    : { data: [] }
+  if (error) throw error
+  return (organizers ?? []).find((organizer) => slugify(organizer.full_name || "") === organizerSlug) ?? null
+}
+
+export async function generateMetadata({ params }: OrganizerPageProps): Promise<Metadata> {
+  const { organizerSlug } = await params
+  const organizer = await findOrganizerBySlug(organizerSlug)
+
+  return organizer
+    ? {
+        title: `${organizer.full_name} | TekaTeka`,
+        description: `Todos los eventos de ${organizer.full_name} en TekaTeka.`,
+      }
+    : { title: "Organizador no encontrado | TekaTeka" }
+}
+
+export default async function OrganizerPublicPage({ params }: OrganizerPageProps) {
+  const { organizerSlug } = await params
+  const organizer = await findOrganizerBySlug(organizerSlug)
+
+  if (!organizer) notFound()
+
+  const supabase = createAdminClient()
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("organizer_id", organizer.id)
+    .order("event_date", { ascending: true })
+
+  if (error) throw error
 
   const eventIds = (events ?? []).map((event) => event.id)
-  const { data: confirmedTickets } = eventIds.length > 0
+  const { data: confirmedTickets } = eventIds.length
     ? await supabase.from("tickets").select("event_id").in("event_id", eventIds).eq("status", "confirmed")
-    : { data: [] }
+    : { data: [] as { event_id: string }[] }
 
   const confirmedByEvent = (confirmedTickets ?? []).reduce<Record<string, number>>((counts, ticket) => {
     counts[ticket.event_id] = (counts[ticket.event_id] ?? 0) + 1
@@ -52,7 +75,7 @@ export default async function LaLenguaDelJuglarPage() {
               Organizador
             </div>
             <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-[-0.05em] text-balance sm:text-5xl md:text-6xl">
-              {organizer?.full_name ?? "La lengua del juglar"}
+              {organizer.full_name}
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Todos sus eventos, pasados y próximos.
