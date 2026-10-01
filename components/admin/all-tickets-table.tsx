@@ -83,6 +83,7 @@ interface TicketPurchaseGroup {
   key: string
   tickets: Ticket[]
   unitTotal: number
+  perTicketPrice: number | null
   purchaseTotal: number
 }
 
@@ -101,29 +102,15 @@ function groupTicketsByPurchase(tickets: Ticket[]): TicketPurchaseGroup[] {
   }
 
   return Array.from(groups, ([key, purchaseTickets]) => {
-    const unitTotal = purchaseTickets.reduce(
-      (sum, ticket) => sum + Number(ticket.final_price ?? ticket.events.price ?? 0),
+    const ticketPrices = purchaseTickets.map((ticket) => Number(ticket.final_price ?? ticket.events.price ?? 0))
+    const unitTotal = ticketPrices.reduce((sum, price) => sum + price, 0)
+    const perTicketPrice = ticketPrices.every((price) => price === ticketPrices[0]) ? ticketPrices[0] : null
+    const purchaseTotal = purchaseTickets.reduce(
+      (sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price ?? 0),
       0,
     )
-    const hasOrderReference = purchaseTickets.some(
-      (ticket) => ticket.payment_id || ticket.mercado_pago_reference,
-    )
-    const chargedAmounts = purchaseTickets
-      .map((ticket) => Number(ticket.charged_amount))
-      .filter((amount) => Number.isFinite(amount) && amount > 0)
-    const repeatedOrderCharge =
-      purchaseTickets.length > 1 &&
-      hasOrderReference &&
-      chargedAmounts.length === purchaseTickets.length &&
-      chargedAmounts.every((amount) => amount === chargedAmounts[0])
-    const purchaseTotal = repeatedOrderCharge
-      ? chargedAmounts[0]
-      : purchaseTickets.reduce(
-          (sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price ?? 0),
-          0,
-        )
 
-    return { key, tickets: purchaseTickets, unitTotal, purchaseTotal }
+    return { key, tickets: purchaseTickets, unitTotal, perTicketPrice, purchaseTotal }
   })
 }
 
@@ -650,6 +637,8 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           {visiblePurchaseGroups.map((group) => {
             const isExpanded = expandedPurchaseGroups.has(group.key)
             const isGroupSelected = group.tickets.every((ticket) => selectedIds.has(ticket.id))
+            const groupReceiptUrl = group.tickets.find((ticket) => ticket.payment_receipt_url)?.payment_receipt_url
+            const hasPaidTicket = group.tickets.some((ticket) => Number(ticket.final_price) > 0 && ticket.payment_method !== "free")
             return (
               <div key={group.key} className="space-y-2">
                 {group.tickets.length > 1 && (
@@ -663,14 +652,18 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                         </div>
                         <p className="mt-1 truncate text-xs text-muted-foreground">{group.tickets[0].buyer_email}</p>
                         <p className="mt-2 text-sm font-medium">{group.tickets[0].events.title}</p>
-                        <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
-                          <span className="text-muted-foreground">Entradas: {formatCurrency(group.unitTotal)}</span>
-                          <span className="font-semibold">Total de compra: {formatCurrency(group.purchaseTotal)}</span>
+                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                          <div><p className="text-xs text-muted-foreground">Precio por entrada</p><p className="font-medium">{group.perTicketPrice === null ? "Variable" : formatCurrency(group.perTicketPrice)}</p></div>
+                          <div><p className="text-xs text-muted-foreground">Subtotal entradas</p><p className="font-medium">{formatCurrency(group.unitTotal)}</p></div>
+                          <div className="col-span-2"><p className="text-xs text-muted-foreground">Total de compra</p><p className="font-semibold">{formatCurrency(group.purchaseTotal)}</p></div>
                         </div>
-                        <Button type="button" variant="ghost" size="sm" className="mt-2 px-0" aria-expanded={isExpanded} onClick={() => togglePurchaseExpanded(group.key)}>
-                          {isExpanded ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
-                          {isExpanded ? "Ocultar entradas" : "Ver entradas"}
-                        </Button>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {groupReceiptUrl ? <Button type="button" variant="outline" size="sm" onClick={() => viewReceipt(groupReceiptUrl)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : hasPaidTicket ? <AdminReceiptUpload ticketId={group.tickets[0].id} /> : null}
+                          <Button type="button" variant="ghost" size="sm" className="px-0" aria-expanded={isExpanded} onClick={() => togglePurchaseExpanded(group.key)}>
+                            {isExpanded ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
+                            {isExpanded ? "Ocultar entradas" : "Ver entradas"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -693,7 +686,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                           <span>Medio: <strong className="text-foreground">{ticket.payment_method === "free" ? "Gratis" : ticket.payment_method || "—"}</strong></span>
                         </div>
                         <div className="mt-4 flex gap-2">
-                          {ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null}
+                          {group.tickets.length === 1 && (ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null)}
                           <Button size="sm" className="flex-1" onClick={() => viewTicketDetails(ticket)}><Eye className="mr-2 h-4 w-4" />Detalles</Button>
                         </div>
                       </div>
@@ -732,6 +725,8 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
               {visiblePurchaseGroups.map((group) => {
                 const isExpanded = expandedPurchaseGroups.has(group.key)
                 const isGroupSelected = group.tickets.every((ticket) => selectedIds.has(ticket.id))
+                const groupReceiptUrl = group.tickets.find((ticket) => ticket.payment_receipt_url)?.payment_receipt_url
+                const hasPaidTicket = group.tickets.some((ticket) => Number(ticket.final_price) > 0 && ticket.payment_method !== "free")
                 return (
                   <Fragment key={group.key}>
                     {group.tickets.length > 1 && (
@@ -749,9 +744,11 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                                 <p className="mt-1 text-xs text-muted-foreground">{group.tickets[0].events.title}</p>
                               </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 sm:justify-end">
-                              <div className="text-sm"><span className="text-muted-foreground">Entradas: </span><span className="font-medium">{formatCurrency(group.unitTotal)}</span></div>
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:justify-end">
+                              <div className="text-sm"><span className="text-muted-foreground">Precio por entrada: </span><span className="font-medium">{group.perTicketPrice === null ? "Variable" : formatCurrency(group.perTicketPrice)}</span></div>
+                              <div className="text-sm"><span className="text-muted-foreground">Subtotal entradas: </span><span className="font-medium">{formatCurrency(group.unitTotal)}</span></div>
                               <div className="text-sm"><span className="text-muted-foreground">Total de compra: </span><span className="font-semibold">{formatCurrency(group.purchaseTotal)}</span></div>
+                              {groupReceiptUrl ? <Button type="button" variant="outline" size="sm" onClick={() => viewReceipt(groupReceiptUrl)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : hasPaidTicket ? <AdminReceiptUpload ticketId={group.tickets[0].id} /> : null}
                               <Button type="button" variant="ghost" size="sm" aria-expanded={isExpanded} onClick={() => togglePurchaseExpanded(group.key)}>
                                 {isExpanded ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
                                 {isExpanded ? "Ocultar entradas" : "Ver entradas"}
@@ -803,7 +800,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   <td className="p-4">{getStatusBadge(ticket.status)}</td>
                   <td className="p-4">{getPaymentBadge(ticket.payment_status)}</td>
                   <td className="p-4">
-                    {ticket.payment_receipt_url ? (
+                    {group.tickets.length === 1 && (ticket.payment_receipt_url ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -814,7 +811,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                       </Button>
                     ) : (
                       Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null
-                    )}
+                    ))}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1">

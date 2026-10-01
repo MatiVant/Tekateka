@@ -16,13 +16,44 @@ export async function POST(request: Request) {
   if (!file.type.startsWith("image/") && file.type !== "application/pdf") return NextResponse.json({ error: "Solo se aceptan imágenes o PDF" }, { status: 400 })
 
   const supabase = createAdminClient()
-  const { data: ticket } = await supabase.from("tickets").select("id, event_id, status, payment_status, payment_receipt_url, events(organizer_id)").eq("id", ticketId).maybeSingle()
+  const { data: ticket } = await supabase
+    .from("tickets")
+    .select("id, event_id, purchase_group_id, payment_id, events(organizer_id)")
+    .eq("id", ticketId)
+    .maybeSingle()
   const event = Array.isArray(ticket?.events) ? ticket.events[0] : ticket?.events
   if (!ticket || event?.organizer_id !== user.id) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
+  let relatedTicketsQuery = supabase.from("tickets").select("id, status, payment_status").eq("event_id", ticket.event_id)
+  if (ticket.purchase_group_id) {
+    relatedTicketsQuery = relatedTicketsQuery.eq("purchase_group_id", ticket.purchase_group_id)
+  } else if (ticket.payment_id) {
+    relatedTicketsQuery = relatedTicketsQuery.eq("payment_id", ticket.payment_id)
+  } else {
+    relatedTicketsQuery = relatedTicketsQuery.eq("id", ticket.id)
+  }
+  const { data: relatedTickets, error: relatedTicketsError } = await relatedTicketsQuery
+  if (relatedTicketsError || !relatedTickets?.length) {
+    return NextResponse.json({ error: "No se pudieron identificar las entradas de la compra" }, { status: 500 })
+  }
+
   const blob = await put(`receipts/${ticketId}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
-  const nextPaymentStatus = ticket.payment_status === "approved" || ticket.status === "confirmed" ? ticket.payment_status : "submitted"
-  const { error } = await supabase.from("tickets").update({ payment_receipt_url: blob.url, payment_status: nextPaymentStatus }).eq("id", ticketId)
+  const { error } = await supabase
+    .from("tickets")
+    .update({ payment_receipt_url: blob.url })
+    .in("id", relatedTickets.map((relatedTicket) => relatedTicket.id))
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const submittedTicketIds = relatedTickets
+    .filter((relatedTicket) => relatedTicket.payment_status !== "approved" && relatedTicket.status !== "confirmed")
+    .map((relatedTicket) => relatedTicket.id)
+  if (submittedTicketIds.length) {
+    const { error: statusError } = await supabase
+      .from("tickets")
+      .update({ payment_status: "submitted" })
+      .in("id", submittedTicketIds)
+    if (statusError) return NextResponse.json({ error: statusError.message }, { status: 500 })
+  }
+
   return NextResponse.json({ ok: true })
 }
