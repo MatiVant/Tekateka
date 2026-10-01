@@ -668,13 +668,20 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                     </div>
                   </article>
                 )}
-                {(group.tickets.length === 1 || isExpanded) && group.tickets.map((ticket) => (
-                  <article key={ticket.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+                {(group.tickets.length === 1 || isExpanded) && (
+                  <div className={group.tickets.length > 1 ? "ml-4 space-y-2 border-l-2 border-primary/30 pl-3" : "space-y-2"}>
+                    {group.tickets.map((ticket, ticketIndex) => (
+                  <article key={ticket.id} className={`rounded-2xl border p-4 shadow-sm ${group.tickets.length > 1 ? "border-primary/15 bg-primary/[0.035]" : "bg-card"}`}>
                     <div className="flex items-start gap-3">
                       <Checkbox checked={selectedIds.has(ticket.id)} onCheckedChange={(checked) => toggleSelected(ticket.id, Boolean(checked))} aria-label={`Seleccionar entrada de ${ticket.buyer_name}`} className="mt-1" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="min-w-0 flex-1 truncate font-semibold">{ticket.buyer_name}</h3>
+                          <div className="min-w-0">
+                            <h3 className="truncate font-semibold">{ticket.buyer_name}</h3>
+                            <Badge variant={group.tickets.length > 1 ? "outline" : "secondary"} className="mt-1 text-[10px] font-medium">
+                              {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
+                            </Badge>
+                          </div>
                           {getStatusBadge(ticket.status)}
                         </div>
                         <p className="mt-1 truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>
@@ -692,7 +699,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                       </div>
                     </div>
                   </article>
-                ))}
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -758,9 +767,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                         </td>
                       </tr>
                     )}
-                    {(group.tickets.length === 1 || isExpanded) && group.tickets.map((ticket) => (
-                <tr key={ticket.id} className="border-t hover:bg-muted/30 text-sm">
-                  <td className="p-4">
+                    {(group.tickets.length === 1 || isExpanded) && group.tickets.map((ticket, ticketIndex) => (
+                <tr key={ticket.id} className={`border-t text-sm hover:bg-muted/30 ${group.tickets.length > 1 ? "bg-primary/[0.035]" : ""}`}>
+                  <td className={`p-4 ${group.tickets.length > 1 ? "border-l-4 border-l-primary/40 pl-5" : ""}`}>
                     <Checkbox
                       checked={selectedIds.has(ticket.id)}
                       onCheckedChange={(checked) => toggleSelected(ticket.id, Boolean(checked))}
@@ -771,6 +780,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                   <td className="p-4">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{ticket.buyer_name}</span>
+                      <Badge variant={group.tickets.length > 1 ? "outline" : "secondary"} className="w-fit text-[10px] font-medium">
+                        {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
+                      </Badge>
                       <span className="text-xs text-muted-foreground">{ticket.buyer_email}</span>
                       {ticket.buyer_phone && <span className="text-xs text-muted-foreground">Tel: {ticket.buyer_phone}</span>}
                     </div>
