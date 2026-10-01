@@ -22,6 +22,7 @@ interface CreateTicketData {
   sendEmail?: boolean
   ticketQuantity?: number
   paymentResumeToken?: string
+  purchaseGroupId?: string
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -94,7 +95,7 @@ export async function createTicket(data: CreateTicketData) {
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
-    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price }).eq("id", createdTicket.id)
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: data.purchaseGroupId ?? null }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
     const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")
