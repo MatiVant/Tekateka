@@ -5,6 +5,8 @@ import Image from "next/image"
 import { EventCard } from "@/components/event-card"
 import { slugify } from "@/lib/slugify"
 import { CalendarDays, Ticket } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import { OrganizerCoverAdminEditor } from "@/components/organizer-cover-admin-editor"
 
 type OrganizerPageProps = {
   params: Promise<{ organizerSlug: string }>
@@ -35,6 +37,7 @@ async function findOrganizerBySlug(organizerSlug: string) {
 
   return {
     organizationName,
+    organizerProfileId: matchedOrganizer.id,
     organizationCoverImageUrl: matchedOrganizer.organization_cover_image_url,
     organizerIds: organizationProfiles.map((organizer) => organizer.id),
   }
@@ -57,6 +60,15 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
   const organizer = await findOrganizerBySlug(organizerSlug)
 
   if (!organizer) notFound()
+
+  const sessionSupabase = await createClient()
+  const { data: { user } } = await sessionSupabase.auth.getUser()
+  const { data: currentProfile } = user
+    ? await sessionSupabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null }
+  const canEditCover =
+    currentProfile?.role === "superadmin" ||
+    (currentProfile?.role === "organizer" && user?.id === organizer.organizerProfileId)
 
   const supabase = createAdminClient()
   const { data: events, error } = await supabase
@@ -100,6 +112,14 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/50 to-black/20" aria-hidden="true" />
           </>
+        )}
+        {canEditCover && (
+          <div className="absolute right-4 top-4 z-20 w-[calc(100%-2rem)] sm:right-8 sm:top-8 sm:w-auto">
+            <OrganizerCoverAdminEditor
+              organizerProfileId={organizer.organizerProfileId}
+              currentCoverUrl={organizer.organizationCoverImageUrl}
+            />
+          </div>
         )}
         <div className="container relative mx-auto px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-6xl">
