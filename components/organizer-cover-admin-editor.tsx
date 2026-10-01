@@ -94,7 +94,7 @@ export function OrganizerCoverAdminEditor({ organizerProfileId, currentCoverUrl 
         onChange={(event) => void handleChange(event.currentTarget.files?.[0])}
       />
       <p className="mt-2 text-xs leading-relaxed text-white/85">
-        Recomendado: 1920 × 720 px. JPG, PNG o WebP, hasta 5 MB. Dejá lo importante centrado para que se vea bien en celular.
+        Recomendado: 1920 × 720 px (proporción 8:3). En escritorio se respeta esa proporción; en celular la portada se recorta para adaptarse, así que dejá lo importante centrado. JPG, PNG o WebP, hasta 5 MB.
       </p>
       {error && <p role="alert" className="mt-2 text-xs font-medium text-red-200">{error}</p>}
     </div>

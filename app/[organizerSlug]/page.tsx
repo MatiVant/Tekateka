@@ -98,7 +98,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
 
   return (
     <main className="min-h-screen">
-      <section className="relative isolate overflow-hidden border-b border-border bg-[#f4eddf]">
+      <section className="relative isolate min-h-[420px] overflow-hidden border-b border-border bg-[#f4eddf] sm:min-h-[480px] lg:aspect-[8/3] lg:min-h-0">
         {organizer.organizationCoverImageUrl && (
           <>
             <Image
