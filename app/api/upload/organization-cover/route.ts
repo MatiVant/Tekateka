@@ -44,14 +44,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData()
-    const scope = formData.get("scope")
-    if (scope !== null && scope !== "homepage") {
-      return NextResponse.json({ error: "Tipo de carga no válido." }, { status: 400 })
-    }
-    if (scope === "homepage" && profile.role !== "superadmin") {
-      return NextResponse.json({ error: "Solo un administrador puede cambiar la portada del sitio." }, { status: 403 })
-    }
-
     const file = formData.get("file")
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Elegí una imagen para la portada." }, { status: 400 })
@@ -66,8 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const extensionByType = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const
-    const uploadFolder = scope === "homepage" ? "homepage-covers" : `organization-covers/${user.id}`
-    const pathname = `${uploadFolder}/${crypto.randomUUID()}.${extensionByType[file.type as keyof typeof extensionByType]}`
+    const pathname = `organization-covers/${user.id}/${crypto.randomUUID()}.${extensionByType[file.type as keyof typeof extensionByType]}`
     const blob = await put(pathname, file, {
       access: "public",
       addRandomSuffix: false,

@@ -5,24 +5,12 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { createClient as createAdminClient } from "@/lib/supabase/admin"
-import { HomepageCoverEditor } from "@/components/homepage-cover-editor"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const adminSupabase = createAdminClient()
-  const [{ data: { user } }, { data: siteSettings }] = await Promise.all([
-    supabase.auth.getUser(),
-    adminSupabase.from("site_settings").select("homepage_cover_image_url").eq("id", 1).maybeSingle(),
-  ])
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
-    : { data: null }
-  const isSuperadmin = profile?.role === "superadmin"
-  const homepageCoverImageUrl = siteSettings?.homepage_cover_image_url
 
   const { data: events } = await supabase
     .from("events")
@@ -49,20 +37,8 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <section
-        className="relative flex min-h-[600px] items-center overflow-hidden"
-        style={{
-          backgroundImage: `url("${homepageCoverImageUrl || "/tekateka-home.png"}")`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
+      <section className="relative overflow-hidden min-h-[600px] flex items-center" style={{ backgroundImage: 'url(/tekateka-home.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
-        {isSuperadmin && (
-          <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-8">
-            <HomepageCoverEditor />
-          </div>
-        )}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl teka-editorial">
             <Image src="/tekateka-mark.png" alt="Isotipo TekaTeka" width={72} height={72} className="mb-5 h-16 w-16 object-contain rounded-xl" priority />
