@@ -195,15 +195,15 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     }).format(new Date())
 
     const drawPageHeader = (pageNumber: number) => {
-      doc.setFillColor(24, 32, 45)
+      doc.setFillColor(244, 237, 223)
       doc.rect(0, 0, pageWidth, 31, "F")
-      doc.setTextColor(255, 255, 255)
+      doc.setTextColor(74, 68, 57)
       doc.setFont("helvetica", "bold")
       doc.setFontSize(17)
       doc.text("INFORME DE ENTRADAS VENDIDAS", margin, 13)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(9)
-      doc.setTextColor(214, 221, 231)
+      doc.setTextColor(117, 105, 88)
       doc.text(reportTitle, margin, 20)
       doc.text(`Generado: ${generatedAt}`, pageWidth - margin, 20, { align: "right" })
       if (pageNumber === 1) {
@@ -217,9 +217,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
         const cardWidth = (pageWidth - margin * 2 - gap * (cards.length - 1)) / cards.length
         cards.forEach((card, index) => {
           const x = margin + index * (cardWidth + gap)
-          doc.setFillColor(245, 246, 248)
+          doc.setFillColor(250, 247, 240)
           doc.roundedRect(x, 35, cardWidth, 19, 2, 2, "F")
-          doc.setTextColor(93, 103, 117)
+          doc.setTextColor(117, 105, 88)
           doc.setFont("helvetica", "bold")
           doc.setFontSize(7)
           doc.text(card.label, x + 4, 42)
@@ -227,7 +227,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
           doc.setFontSize(13)
           doc.text(card.value, x + 4, 50)
         })
-        doc.setTextColor(38, 112, 99)
+        doc.setTextColor(83, 119, 101)
         doc.setFont("helvetica", "bold")
         doc.setFontSize(9)
         doc.text(`COBRADO EN ENTRADAS CONFIRMADAS: ${formatCurrency(confirmedRevenue)}`, margin, 61)
@@ -283,19 +283,19 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
         font: "helvetica",
         fontSize: 7.5,
         cellPadding: 2.4,
-        textColor: [40, 48, 60],
-        lineColor: [226, 230, 235],
+        textColor: [74, 68, 57],
+        lineColor: [231, 220, 200],
         lineWidth: 0.15,
         overflow: "linebreak",
         valign: "middle",
       },
       headStyles: {
-        fillColor: [38, 112, 99],
+        fillColor: [105, 137, 117],
         textColor: [255, 255, 255],
         fontStyle: "bold",
         minCellHeight: 8,
       },
-      alternateRowStyles: { fillColor: [247, 248, 250] },
+      alternateRowStyles: { fillColor: [250, 247, 240] },
       columnStyles: {
         0: { cellWidth: 9, halign: "center" },
         1: { cellWidth: 19 },
@@ -309,9 +309,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
       },
       didDrawPage: (data) => {
         if (data.pageNumber > 1) drawPageHeader(data.pageNumber)
-        doc.setDrawColor(226, 230, 235)
+        doc.setDrawColor(231, 220, 200)
         doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10)
-        doc.setTextColor(112, 120, 132)
+        doc.setTextColor(117, 105, 88)
         doc.setFont("helvetica", "normal")
         doc.setFontSize(7)
         doc.text("Informe generado desde la administración de eventos", margin, pageHeight - 5)
