@@ -77,6 +77,12 @@ export default async function SuperAdminPage() {
   const movementOrganizerMap = new Map((movementOrganizers || []).map((p) => [p.id, p]))
   const movementsWithOrganizers = (movements || []).map((movement) => ({ ...movement, organizer: movementOrganizerMap.get(movement.organizer_id as string) || null }))
 
+  const { data: movementTickets } = await supabase
+    .from("tickets")
+    .select("id, event_id, buyer_name, buyer_email, buyer_phone, status, payment_status, payment_provider, payment_method, payment_id, mercado_pago_reference, final_price, charged_amount, payment_fee_amount, net_amount, payment_receipt_url, payment_notes, purchased_at, paid_at, events(title)")
+    .order("purchased_at", { ascending: false })
+    .limit(1000)
+
   const { data: rawMessages } = await supabase
     .from("organizer_messages")
     .select("id, subject, body, priority, status, created_at, organizer_id")
@@ -127,7 +133,7 @@ export default async function SuperAdminPage() {
             description="Reporte financiero y actividad de la plataforma"
             icon={Wallet}
           >
-            <MovementsReportButton movements={movementsWithOrganizers} showOrganizer />
+            <MovementsReportButton movements={movementsWithOrganizers} tickets={movementTickets || []} showOrganizer />
           </SuperAdminModuleCard>
 
           <SuperAdminModuleCard

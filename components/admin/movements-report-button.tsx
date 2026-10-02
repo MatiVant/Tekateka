@@ -7,8 +7,9 @@ import { MovementsTable } from "@/components/admin/movements-table"
 import { BarChart3 } from "lucide-react"
 
 type Movement = Parameters<typeof MovementsTable>[0]["movements"][number]
+type TicketPayment = NonNullable<Parameters<typeof MovementsTable>[0]["tickets"]>[number]
 
-export function MovementsReportButton({ movements, showOrganizer = false }: { movements: Movement[]; showOrganizer?: boolean }) {
+export function MovementsReportButton({ movements, tickets = [], showOrganizer = false }: { movements: Movement[]; tickets?: TicketPayment[]; showOrganizer?: boolean }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -23,11 +24,11 @@ export function MovementsReportButton({ movements, showOrganizer = false }: { mo
             <DialogTitle>{showOrganizer ? "Movimientos de la plataforma" : "Movimientos de mis eventos"}</DialogTitle>
             <DialogDescription>
               {showOrganizer
-                ? "Actividad financiera de eventos, organizadores y pagos de la plataforma."
+                ? "Movimientos del registro financiero y detalle de entradas con método, estado, importes y comprobantes, incluidas las transferencias."
                 : "Actividad de tickets y pagos únicamente de tus eventos."}
             </DialogDescription>
           </DialogHeader>
-          <MovementsTable movements={movements} showOrganizer={showOrganizer} />
+          <MovementsTable movements={movements} tickets={tickets} showOrganizer={showOrganizer} />
         </DialogContent>
       </Dialog>
     </>
