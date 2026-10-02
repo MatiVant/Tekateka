@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, Printer, Share2, FileSpreadsheet, ChevronDown, ChevronRight } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, FileDown, Share2, FileSpreadsheet, ChevronDown, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { Fragment, useState, useMemo } from "react"
@@ -27,7 +27,7 @@ import {
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
-import { getPaymentStatusLabel } from "@/lib/payment-status"
+import { getPaymentStatusLabel, getTicketStatusLabel } from "@/lib/payment-status"
 import { AdminReceiptUpload } from "@/components/admin/admin-receipt-upload"
 
 interface TicketPromotion {
@@ -172,6 +172,171 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     link.download = "lista-de-invitados.csv"
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  const exportSalesReport = async () => {
+    if (filteredTickets.length === 0) return
+
+    const [{ jsPDF }, { autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ])
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 12
+    const reportTitle = selectedEventId === "all"
+      ? "Todos los eventos"
+      : eventOptions.find((event) => event.id === selectedEventId)?.title ?? "Evento"
+    const isConfirmedTicket = (ticket: Ticket) =>
+      ticket.status !== "cancelled" &&
+      (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved")
+    const confirmedTickets = filteredTickets.filter(isConfirmedTicket)
+    const pendingTickets = filteredTickets.filter(
+      (ticket) => ticket.status === "pending" && ticket.payment_status !== "approved",
+    )
+    const cancelledTickets = filteredTickets.filter((ticket) => ticket.status === "cancelled")
+    const confirmedRevenue = confirmedTickets.reduce((total, ticket) => {
+      if (ticket.payment_method === "free" || Number(ticket.final_price ?? ticket.events.price) === 0) return total
+      return total + Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price ?? 0)
+    }, 0)
+    const generatedAt = new Intl.DateTimeFormat("es-AR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date())
+
+    const drawPageHeader = (pageNumber: number) => {
+      doc.setFillColor(24, 32, 45)
+      doc.rect(0, 0, pageWidth, 31, "F")
+      doc.setTextColor(255, 255, 255)
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(17)
+      doc.text("INFORME DE ENTRADAS VENDIDAS", margin, 13)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(214, 221, 231)
+      doc.text(reportTitle, margin, 20)
+      doc.text(`Generado: ${generatedAt}`, pageWidth - margin, 20, { align: "right" })
+      if (pageNumber === 1) {
+        const cards = [
+          { label: "ENTRADAS", value: String(filteredTickets.length) },
+          { label: "CONFIRMADAS / USADAS", value: String(confirmedTickets.length) },
+          { label: "PENDIENTES", value: String(pendingTickets.length) },
+          { label: "CANCELADAS", value: String(cancelledTickets.length) },
+        ]
+        const gap = 4
+        const cardWidth = (pageWidth - margin * 2 - gap * (cards.length - 1)) / cards.length
+        cards.forEach((card, index) => {
+          const x = margin + index * (cardWidth + gap)
+          doc.setFillColor(245, 246, 248)
+          doc.roundedRect(x, 35, cardWidth, 19, 2, 2, "F")
+          doc.setTextColor(93, 103, 117)
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(7)
+          doc.text(card.label, x + 4, 42)
+          doc.setTextColor(24, 32, 45)
+          doc.setFontSize(13)
+          doc.text(card.value, x + 4, 50)
+        })
+        doc.setTextColor(38, 112, 99)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(9)
+        doc.text(`COBRADO EN ENTRADAS CONFIRMADAS: ${formatCurrency(confirmedRevenue)}`, margin, 61)
+      }
+    }
+
+    const rows = filteredTickets.map((ticket, index) => {
+      const isFree = ticket.payment_method === "free" || Number(ticket.final_price ?? ticket.events.price) === 0
+      const isTwoForOne = ticket.ticket_promotions?.some(
+        (promotion) => promotion.promotion_codes.promotion_type === "two_for_one",
+      )
+      const status = isConfirmedTicket(ticket)
+        ? ticket.status === "used" ? "Usada" : "Confirmada"
+        : getTicketStatusLabel(ticket.status)
+      const paymentStatus = ticket.payment_status && ticket.payment_status !== "approved"
+        ? ` · ${getPaymentStatusLabel(ticket.payment_status)}`
+        : ""
+      const purchaseDate = new Date(ticket.purchased_at)
+      const formattedDate = Number.isNaN(purchaseDate.getTime())
+        ? "—"
+        : new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(purchaseDate)
+      const contact = [ticket.buyer_email, ticket.buyer_phone].filter(Boolean).join("\n")
+      const ticketType = ticket.ticket_tiers?.name || (isTwoForOne ? "2x1" : isFree ? "Gratis" : "General")
+      const amount = isFree
+        ? "Gratis"
+        : formatCurrency(
+            isConfirmedTicket(ticket)
+              ? ticket.charged_amount ?? ticket.final_price ?? ticket.events.price
+              : ticket.final_price ?? ticket.events.price,
+          )
+
+      return [
+        String(index + 1),
+        formattedDate,
+        ticket.events.title,
+        ticket.buyer_name,
+        contact || "—",
+        ticket.qr_code,
+        ticketType,
+        amount,
+        `${status}${paymentStatus}`,
+      ]
+    })
+
+    drawPageHeader(1)
+    autoTable(doc, {
+      head: [["N.º", "Fecha", "Evento", "Comprador", "Contacto", "Código", "Categoría", "Importe", "Estado"]],
+      body: rows,
+      startY: 66,
+      margin: { top: 66, right: margin, bottom: 14, left: margin },
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 7.5,
+        cellPadding: 2.4,
+        textColor: [40, 48, 60],
+        lineColor: [226, 230, 235],
+        lineWidth: 0.15,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [38, 112, 99],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        minCellHeight: 8,
+      },
+      alternateRowStyles: { fillColor: [247, 248, 250] },
+      columnStyles: {
+        0: { cellWidth: 9, halign: "center" },
+        1: { cellWidth: 19 },
+        2: { cellWidth: 36 },
+        3: { cellWidth: 34 },
+        4: { cellWidth: 49 },
+        5: { cellWidth: 27 },
+        6: { cellWidth: 25 },
+        7: { cellWidth: 25, halign: "right" },
+        8: { cellWidth: 27 },
+      },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) drawPageHeader(data.pageNumber)
+        doc.setDrawColor(226, 230, 235)
+        doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10)
+        doc.setTextColor(112, 120, 132)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(7)
+        doc.text("Informe generado desde la administración de eventos", margin, pageHeight - 5)
+        doc.text(`Página ${data.pageNumber}`, pageWidth - margin, pageHeight - 5, { align: "right" })
+      },
+    })
+
+    const fileName = reportTitle
+      .normalize("NFD")
+      .replace(/[\\u0300-\\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase() || "eventos"
+    doc.save(`informe-entradas-${fileName}.pdf`)
   }
 
   const shareTicketImage = async () => {
@@ -593,9 +758,9 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
               </SelectContent>
             </Select>
           </div>
-          <Button type="button" variant="outline" onClick={() => window.print()} disabled={filteredTickets.length === 0} title="Imprimir o guardar la lista como PDF">
-            <Printer className="mr-2 h-4 w-4" />
-            Imprimir lista
+          <Button type="button" variant="outline" onClick={exportSalesReport} disabled={filteredTickets.length === 0} title="Descargar un informe PDF independiente de la lista">
+            <FileDown className="mr-2 h-4 w-4" />
+            Informe PDF
           </Button>
           <Button type="button" variant="outline" onClick={shareTicketImage} disabled={filteredTickets.length === 0} title="Compartir la lista como imagen por email o WhatsApp">
             <Share2 className="mr-2 h-4 w-4" />
