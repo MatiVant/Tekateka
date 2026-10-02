@@ -142,17 +142,6 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false)
   const [bulkRejectionReason, setBulkRejectionReason] = useState("")
 
-  const buildTicketListMessage = () => {
-    const title = selectedEventId !== "all" ? eventOptions.find((event) => event.id === selectedEventId)?.title : "Entradas"
-    const lines = filteredTickets.map((ticket, index) => {
-      const isTwoForOne = ticket.ticket_promotions?.some((promotion) => promotion.promotion_codes.promotion_type === "two_for_one")
-      const isFree = ticket.payment_method === "free" || Number(ticket.final_price) === 0
-      const status = ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Sin confirmar"
-      return `${index + 1}. ${ticket.buyer_name} — ${ticket.qr_code} — ${isFree ? "Gratis" : isTwoForOne ? "2x1" : "Paga"} — ${status}`
-    })
-    return `${title}\n\n${lines.join("\n")}\n\nTotal: ${filteredTickets.length} entrada(s)`
-  }
-
   const exportGuestList = () => {
     const escapeCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
     const rows = filteredTickets.map((ticket, index) => {
@@ -405,14 +394,14 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     window.open(`https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer")
   }
 
-  const eventOptions = useMemo<EventOption[]>(() => {
+  const eventOptions: EventOption[] = (() => {
     if (events && events.length > 0) return events
     const map = new Map<string, EventOption>()
     ;(tickets ?? []).forEach((ticket) => {
       if (ticket.events?.id) map.set(ticket.events.id, { id: ticket.events.id, title: ticket.events.title })
     })
     return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title))
-  }, [events, tickets])
+  })()
 
   const allPurchaseGroups = useMemo(
     () => groupTicketsByPurchase(Array.isArray(tickets) ? tickets : []),
@@ -435,10 +424,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     )
   }, [allPurchaseGroups, searchTerm, selectedEventId])
 
-  const filteredTickets = useMemo(
-    () => visiblePurchaseGroups.flatMap((group) => group.tickets),
-    [visiblePurchaseGroups],
-  )
+  const filteredTickets = visiblePurchaseGroups.flatMap((group) => group.tickets)
 
   const toggleSelected = (ticketId: string, checked: boolean) => {
     setSelectedIds((prev) => {
