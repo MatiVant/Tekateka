@@ -57,7 +57,7 @@ export function ArtistShareLinks({ eventId, initialLinks }: { eventId: string; i
   }
 
   return <Card className="mb-6">
-    <CardHeader><CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" />Acceso para músicos</CardTitle><CardDescription>Compartí un informe de solo lectura sin crearles un usuario.</CardDescription></CardHeader>
+    <CardHeader><CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" />Accesos para músicos y colaboradores</CardTitle><CardDescription>Generá enlaces privados de solo lectura para quienes necesiten consultar información de este evento.</CardDescription></CardHeader>
     <CardContent className="space-y-4">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={allowBuyers} onChange={(event) => setAllowBuyers(event.target.checked)} /> Permitir ver quién compró (nombre y email)</label><Button onClick={createLink} disabled={busy}><Link2 className="mr-2 h-4 w-4" />Generar enlace privado</Button>
       {createdUrl && <div className="flex flex-col gap-2 rounded-lg border p-3"><span className="text-sm font-medium">Enlace generado</span><div className="flex flex-col gap-2 sm:flex-row"><input readOnly value={createdUrl} onFocus={(event) => event.currentTarget.select()} className="min-w-0 flex-1 rounded border bg-background px-3 py-2 text-sm" /><Button type="button" variant="outline" onClick={() => copyLink(createdUrl)}><Copy className="mr-2 h-4 w-4" />{copied ? "Copiado" : "Copiar enlace"}</Button></div><p className="text-xs text-muted-foreground">Si el botón no copia automáticamente, también podés seleccionar el enlace y copiarlo manualmente.</p></div>}

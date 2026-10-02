@@ -3,12 +3,10 @@ import { requireAuth } from '@/lib/auth';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ScanLine } from 'lucide-react';
+import { ArrowLeft, Link2, ScanLine } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
-import { ArtistShareLinks } from '@/components/admin/artist-share-links';
-import { getArtistShareLinks } from '@/app/actions/artist-share-links';
 import { getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
 import { CheckerLinkButton } from '@/components/admin/checker-link-button';
@@ -39,7 +37,6 @@ export default async function EventTicketsPage({
   }
 
   // Obtener tickets del evento
-  const shareLinks = await getArtistShareLinks(id);
   const initialSettlement = await getEventSettlement(id);
 
   const { data: tickets } = await supabase
@@ -70,6 +67,12 @@ export default async function EventTicketsPage({
           </Button>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-start">
             <CheckerLinkButton eventId={id} />
+            <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
+              <Link href={`/admin/events/${id}/tickets/links`}>
+                <Link2 className="h-4 w-4" />
+                Accesos para colaboradores
+              </Link>
+            </Button>
             <Button asChild size="lg" className="w-full gap-2 rounded-full font-bold shadow-lg shadow-primary/20 sm:w-auto">
               <Link href={`/verify?event=${encodeURIComponent(id)}`}>
                 <ScanLine className="h-5 w-5" />
@@ -87,8 +90,11 @@ export default async function EventTicketsPage({
             </CardDescription></div></div>
           </CardHeader>
           <CardContent>
-            <ArtistShareLinks eventId={id} initialLinks={shareLinks} />
-            <AllTicketsTable tickets={tickets || []} />
+            <section aria-labelledby="sold-tickets-title" className="mb-8">
+              <h2 id="sold-tickets-title" className="mb-1 text-lg font-semibold">Entradas vendidas</h2>
+              <p className="mb-4 text-sm text-muted-foreground">Revisá las compras y el estado de cada entrada.</p>
+              <AllTicketsTable tickets={tickets || []} />
+            </section>
             <EventSettlement eventId={id} tickets={tickets || []} initialSettlement={initialSettlement} />
           </CardContent>
         </Card>
