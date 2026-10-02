@@ -2,7 +2,21 @@ import { NextResponse } from "next/server"
 import crypto from "node:crypto"
 import { createClient } from "@/lib/supabase/admin"
 
-const ticketDetails = (ticket: any, event: any, status = ticket.status) => ({
+type TicketDetailsRecord = {
+  buyer_name: string
+  buyer_email: string
+  qr_code: string
+  status: string
+  purchased_at: string
+}
+
+type EventDetailsRecord = {
+  title: string
+  event_date: string
+  venue: string
+}
+
+const ticketDetails = (ticket: TicketDetailsRecord, event: EventDetailsRecord, status = ticket.status) => ({
   buyer_name: ticket.buyer_name,
   buyer_email: ticket.buyer_email,
   qr_code: ticket.qr_code,
@@ -17,8 +31,9 @@ const ticketDetails = (ticket: any, event: any, status = ticket.status) => ({
 
 export async function POST(request: Request) {
   try {
-    const { token, qrCode } = await request.json()
-    if (typeof token !== "string" || typeof qrCode !== "string" || !token || !qrCode.trim() || qrCode.length > 500) {
+    const body = await request.json()
+    const { token, qrCode, action, email, ticketId } = body
+    if (typeof token !== "string" || token.length < 40 || token.length > 200) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
     }
 
@@ -33,24 +48,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Link vencido o inválido" }, { status: 401 })
     }
 
-    const { data: ticket } = await supabase
+    if (action === "search_by_email") {
+      if (typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return NextResponse.json({ error: "Ingresá un email válido" }, { status: 400 })
+      }
+      const normalizedEmail = email.trim().toLowerCase()
+      const literalEmailPattern = normalizedEmail.replace(/[\\%_]/g, "\\$&")
+      const { data: tickets, error } = await supabase
+        .from("tickets")
+        .select("id, buyer_name, status, purchased_at, events!inner(organizer_id)")
+        .eq("event_id", link.event_id)
+        .ilike("buyer_email", literalEmailPattern)
+        .eq("events.organizer_id", link.organizer_id)
+        .order("purchased_at", { ascending: false })
+        .limit(20)
+      if (error) throw error
+      return NextResponse.json({ tickets: (tickets ?? []).map(({ id, buyer_name, status, purchased_at }) => ({ id, buyer_name, status, purchased_at })) })
+    }
+
+    let ticketQuery = supabase
       .from("tickets")
       .select("id, event_id, buyer_name, buyer_email, qr_code, status, purchased_at, events(id, title, event_date, venue, organizer_id)")
       .eq("event_id", link.event_id)
-      .eq("qr_code", qrCode.trim())
-      .maybeSingle()
+    if (action === "manual_check_in") {
+      if (typeof ticketId !== "string" || !/^[0-9a-f-]{36}$/i.test(ticketId)) {
+        return NextResponse.json({ error: "Entrada inválida" }, { status: 400 })
+      }
+      ticketQuery = ticketQuery.eq("id", ticketId)
+    } else {
+      if (typeof qrCode !== "string" || !qrCode.trim() || qrCode.length > 500) {
+        return NextResponse.json({ error: "Ingresá el código de la entrada" }, { status: 400 })
+      }
+      ticketQuery = ticketQuery.eq("qr_code", qrCode.trim())
+    }
+
+    const { data: ticket } = await ticketQuery.maybeSingle()
     const event = ticket && (Array.isArray(ticket.events) ? ticket.events[0] : ticket.events)
     if (!ticket || !event || event.organizer_id !== link.organizer_id) {
-      return NextResponse.json({ error: "Código QR no válido para este evento" }, { status: 404 })
+      return NextResponse.json({ error: action === "manual_check_in" ? "No encontramos esa entrada para este evento" : "Código QR no válido para este evento" }, { status: 404 })
     }
     if (ticket.status === "used") {
-      return NextResponse.json({ type: "warning", message: "Este ticket ya fue utilizado anteriormente.", ticket: ticketDetails(ticket, event) })
+      return NextResponse.json({ type: "warning", message: "Esta entrada ya fue utilizada anteriormente.", ticket: ticketDetails(ticket, event) })
     }
     if (ticket.status === "cancelled") {
-      return NextResponse.json({ type: "error", message: "Este ticket fue cancelado.", ticket: ticketDetails(ticket, event) })
+      return NextResponse.json({ type: "error", message: "Esta entrada fue cancelada.", ticket: ticketDetails(ticket, event) })
     }
     if (ticket.status !== "confirmed") {
-      return NextResponse.json({ type: "warning", message: "Ticket pendiente de confirmación.", ticket: ticketDetails(ticket, event) })
+      return NextResponse.json({ type: "warning", message: "La entrada está pendiente de confirmación.", ticket: ticketDetails(ticket, event) })
     }
 
     const { data: updatedTicket, error } = await supabase
@@ -70,12 +114,12 @@ export async function POST(request: Request) {
         .eq("event_id", link.event_id)
         .maybeSingle()
       if (latestTicket?.status === "used") {
-        return NextResponse.json({ type: "warning", message: "Este ticket ya fue utilizado anteriormente.", ticket: ticketDetails(ticket, event, "used") })
+        return NextResponse.json({ type: "warning", message: "Esta entrada ya fue utilizada anteriormente.", ticket: ticketDetails(ticket, event, "used") })
       }
-      return NextResponse.json({ error: "El estado del ticket cambió. Volvé a verificarlo." }, { status: 409 })
+      return NextResponse.json({ error: "El estado de la entrada cambió. Volvé a verificarla." }, { status: 409 })
     }
-    return NextResponse.json({ type: "success", message: "Ticket válido. Entrada verificada correctamente.", ticket: ticketDetails(ticket, event, "used") })
+    return NextResponse.json({ type: "success", message: action === "manual_check_in" ? "Ingreso manual registrado correctamente." : "Entrada verificada correctamente.", ticket: ticketDetails(ticket, event, "used") })
   } catch {
-    return NextResponse.json({ error: "No se pudo verificar el ticket" }, { status: 500 })
+    return NextResponse.json({ error: "No se pudo verificar la entrada" }, { status: 500 })
   }
 }
