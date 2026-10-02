@@ -8,7 +8,6 @@ export type SettlementInput = {
   door_paid_count: number
   door_paid_unit_price: number
   door_free_count: number
-  door_two_for_one_count: number
   artist_percentage: number
   percentage_basis: 'gross' | 'net'
   expenses: Array<{ name: string; amount: number }>
@@ -30,7 +29,6 @@ export async function saveEventSettlement(eventId: string, input: SettlementInpu
     door_paid_count: Math.max(0, Math.floor(input.door_paid_count)),
     door_paid_unit_price: Math.max(0, input.door_paid_unit_price),
     door_free_count: Math.max(0, Math.floor(input.door_free_count)),
-    door_two_for_one_count: Math.max(0, Math.floor(input.door_two_for_one_count)),
     artist_percentage: Math.min(100, Math.max(0, input.artist_percentage)),
     percentage_basis: input.percentage_basis,
     expenses: cleanExpenses,

@@ -542,7 +542,14 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   }
 
   if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
-    return <div className="text-center py-12 text-muted-foreground">No hay tickets vendidos a��n</div>
+    return (
+      <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center">
+        <p className="text-xl font-medium tracking-tight text-foreground" style={{ fontFamily: "var(--font-outfit)" }}>
+          Todavía no hay entradas vendidas
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Cuando se realice una compra, vas a verla aparecer acá.</p>
+      </div>
+    )
   }
 
   const handleVerifyPayment = async (ticketId: string) => {
