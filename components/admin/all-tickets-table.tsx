@@ -29,6 +29,16 @@ import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
 import { getPaymentStatusLabel, getTicketStatusLabel } from "@/lib/payment-status"
 import { AdminReceiptUpload } from "@/components/admin/admin-receipt-upload"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface TicketPromotion {
   id: string
@@ -132,6 +142,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEventId, setSelectedEventId] = useState("all")
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const [ticketToMarkUsed, setTicketToMarkUsed] = useState<Ticket | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
@@ -594,6 +605,51 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   }
   }
 
+  const handleManualCheckIn = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    if (!ticketToMarkUsed || loadingId) return
+
+    const ticket = ticketToMarkUsed
+    setLoadingId(ticket.id)
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error("No se pudo verificar la sesión")
+
+      const { data: updatedTicket, error } = await supabase
+        .from("tickets")
+        .update({
+          status: "used",
+          verified_at: new Date().toISOString(),
+          verified_by: user.id,
+        })
+        .eq("id", ticket.id)
+        .eq("status", "confirmed")
+        .select("id")
+        .maybeSingle()
+
+      if (error) throw error
+      if (!updatedTicket) {
+        throw new Error("El estado de la entrada cambió. Actualizá la página e intentá nuevamente.")
+      }
+
+      setTicketToMarkUsed(null)
+      toast({
+        title: "Ingreso registrado",
+        description: `La entrada de ${ticket.buyer_name} quedó marcada como usada.`,
+      })
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "No se pudo registrar el ingreso",
+        description: error instanceof Error ? error.message : "Intentá nuevamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     setLoadingId(ticketId)
     try {
@@ -978,6 +1034,19 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1">
+                      {ticket.status === "confirmed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setTicketToMarkUsed(ticket)}
+                          disabled={loadingId === ticket.id}
+                          aria-label={`Marcar usada manualmente la entrada de ${ticket.buyer_name}`}
+                          title="Registrar ingreso manualmente"
+                        >
+                          <CheckCircle className="mr-1 h-4 w-4" />
+                          Marcar usada
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => viewTicketDetails(ticket)} title="Ver detalles">
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -1024,6 +1093,35 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
         </div>
         <p style={{ marginTop: 12, fontSize: 11, color: "#555" }}>{filteredTickets.length} entrada(s)</p>
       </section>
+
+      <AlertDialog
+        open={Boolean(ticketToMarkUsed)}
+        onOpenChange={(open) => {
+          if (!open && loadingId !== ticketToMarkUsed?.id) setTicketToMarkUsed(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Registrar el ingreso manualmente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ticketToMarkUsed
+                ? `La entrada de ${ticketToMarkUsed.buyer_name} para ${ticketToMarkUsed.events.title} se marcará como usada y no podrá validarse otra vez.`
+                : "La entrada se marcará como usada y no podrá validarse otra vez."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(ticketToMarkUsed && loadingId === ticketToMarkUsed.id)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleManualCheckIn}
+              disabled={Boolean(ticketToMarkUsed && loadingId === ticketToMarkUsed.id)}
+            >
+              {ticketToMarkUsed && loadingId === ticketToMarkUsed.id ? "Registrando..." : "Sí, marcar usada"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
         <DialogContent className="max-w-3xl">
