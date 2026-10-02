@@ -146,6 +146,7 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [ticketToMarkUsed, setTicketToMarkUsed] = useState<Ticket | null>(null)
   const [ticketToRestoreUsed, setTicketToRestoreUsed] = useState<Ticket | null>(null)
+  const [ticketToRestoreRejected, setTicketToRestoreRejected] = useState<Ticket | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
@@ -484,21 +485,29 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
     if (ids.length === 0) return
     setIsBulkLoading(true)
     try {
-      const result = await fetch("/api/confirm-ticket", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketIds: ids }),
-      })
-      const failed = result.ok ? 0 : 1
+      const results: Array<{ ticketId: string; error?: string }> = []
+      for (const ticketId of ids) {
+        const response = await fetch("/api/confirm-ticket", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticketId }),
+        })
+        if (!response.ok) {
+          const result = await response.json().catch(() => null)
+          results.push({ ticketId, error: result?.error || "No se pudo confirmar" })
+        }
+      }
+
+      const failed = results.length
       toast({
         title: failed === 0 ? "Entradas confirmadas" : "Confirmación parcial",
         description:
           failed === 0
             ? `${ids.length} entrada(s) confirmada(s) correctamente.`
-            : `${ids.length - failed} confirmada(s), ${failed} con error.`,
+            : `${ids.length - failed} confirmada(s), ${failed} con error. ${results[0]?.error ?? ""}`,
         variant: failed === 0 ? "default" : "destructive",
       })
-      setSelectedIds(new Set())
+      setSelectedIds(new Set(results.map((result) => result.ticketId)))
       router.refresh()
     } catch (error) {
       handleNetworkError(error, "Error al confirmar las entradas seleccionadas")
@@ -679,6 +688,39 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
     } catch (error) {
       toast({
         title: "No se pudo revertir el uso",
+        description: error instanceof Error ? error.message : "Intentá nuevamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const handleRestoreRejectedTicket = async () => {
+    if (!ticketToRestoreRejected || loadingId) return
+
+    const ticket = ticketToRestoreRejected
+    setLoadingId(ticket.id)
+    try {
+      const response = await fetch("/api/restore-rejected-ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.error || "No se pudo recuperar la entrada")
+
+      setTicketToRestoreRejected(null)
+      toast({
+        title: "Rechazo revertido",
+        description: result.status === "confirmed"
+          ? `La entrada de ${ticket.buyer_name} volvió a estar confirmada. No se envió ningún email.`
+          : `La entrada de ${ticket.buyer_name} volvió a estar pendiente. No se envió ningún email.`,
+      })
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "No se pudo revertir el rechazo",
         description: error instanceof Error ? error.message : "Intentá nuevamente.",
         variant: "destructive",
       })
@@ -938,6 +980,7 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
                         </div>
                         <div className="mt-4 flex gap-2">
                           {group.tickets.length === 1 && (ticket.payment_receipt_url ? <Button variant="outline" size="sm" className="flex-1" onClick={() => viewReceipt(ticket.payment_receipt_url!)}><FileText className="mr-2 h-4 w-4" />Comprobante</Button> : Number(ticket.final_price) > 0 && ticket.payment_method !== "free" ? <AdminReceiptUpload ticketId={ticket.id} /> : null)}
+                          {ticket.status === "cancelled" && ticket.rejection_reason && <Button size="sm" variant="outline" className="flex-1" onClick={() => setTicketToRestoreRejected(ticket)} disabled={loadingId === ticket.id}><RotateCcw className="mr-2 h-4 w-4" />Deshacer rechazo</Button>}
                           <Button size="sm" className="flex-1" onClick={() => viewTicketDetails(ticket)}><Eye className="mr-2 h-4 w-4" />Detalles</Button>
                         </div>
                       </div>
@@ -1084,6 +1127,19 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
                           Marcar usada
                         </Button>
                       )}
+                      {ticket.status === "cancelled" && ticket.rejection_reason && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setTicketToRestoreRejected(ticket)}
+                          disabled={loadingId === ticket.id}
+                          aria-label={`Deshacer rechazo de la entrada de ${ticket.buyer_name}`}
+                          title="Recuperar la entrada sin enviar email"
+                        >
+                          <RotateCcw className="mr-1 h-4 w-4" />
+                          Deshacer rechazo
+                        </Button>
+                      )}
                       {canRestoreUsedTickets && ticket.status === "used" && (
                         <Button
                           size="sm"
@@ -1197,6 +1253,35 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
               disabled={Boolean(ticketToRestoreUsed && loadingId === ticketToRestoreUsed.id)}
             >
               {ticketToRestoreUsed && loadingId === ticketToRestoreUsed.id ? "Revirtiendo..." : "Sí, revertir uso"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(ticketToRestoreRejected)}
+        onOpenChange={(open) => {
+          if (!open && loadingId !== ticketToRestoreRejected?.id) setTicketToRestoreRejected(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Deshacer el rechazo de esta entrada?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ticketToRestoreRejected
+                ? `La entrada de ${ticketToRestoreRejected.buyer_name} para ${ticketToRestoreRejected.events.title} volverá a quedar ${ticketToRestoreRejected.payment_status === "approved" ? "confirmada" : "pendiente"}. No se enviará ningún email al comprador.`
+                : "La entrada volverá a su estado anterior. No se enviará ningún email al comprador."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(ticketToRestoreRejected && loadingId === ticketToRestoreRejected.id)}>
+              Seguir rechazada
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRestoreRejectedTicket}
+              disabled={Boolean(ticketToRestoreRejected && loadingId === ticketToRestoreRejected.id)}
+            >
+              {ticketToRestoreRejected && loadingId === ticketToRestoreRejected.id ? "Recuperando..." : "Deshacer rechazo"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

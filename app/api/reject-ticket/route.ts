@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No tenés permiso para rechazar esta entrada" }, { status: 403 })
     }
 
-    if (ticket.status === "cancelled") {
-      return NextResponse.json({ error: "La entrada ya estaba cancelada" }, { status: 409 })
+    if (ticket.status !== "pending" && ticket.status !== "confirmed") {
+      return NextResponse.json({ error: "Solo se pueden rechazar entradas pendientes o confirmadas" }, { status: 409 })
     }
 
     const { data: ticketPromotion } = await supabase
@@ -54,17 +54,20 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     // Actualizar el ticket con estado rechazado y motivo
-    const { error: updateError } = await supabase
+    const { data: rejectedTicket, error: updateError } = await supabase
       .from("tickets")
       .update({
         status: "cancelled",
-        rejection_reason: reason,
+        rejection_reason: reason.trim(),
       })
       .eq("id", ticketId)
+      .in("status", ["pending", "confirmed"])
+      .select("id")
+      .maybeSingle()
 
-    if (updateError) {
+    if (updateError || !rejectedTicket) {
       console.error("[v0] Error al rechazar ticket:", updateError)
-      return NextResponse.json({ error: "Error al rechazar el ticket" }, { status: 500 })
+      return NextResponse.json({ error: "La entrada cambió de estado. Actualizá la página e intentá nuevamente." }, { status: updateError ? 500 : 409 })
     }
 
     if (ticketPromotion?.promotion_code_id) {
@@ -88,12 +91,6 @@ export async function POST(request: NextRequest) {
         const { data: tier } = await supabase.from("ticket_tiers").select("available_quantity").eq("id", ticket.tier_id).single()
         if (tier) await supabase.from("ticket_tiers").update({ available_quantity: Number(tier.available_quantity || 0) + 1 }).eq("id", ticket.tier_id)
       }
-    }
-
-    const { error: deleteError } = await supabase.from("tickets").delete().eq("id", ticketId)
-    if (deleteError) {
-      console.error("[v0] Error al eliminar ticket cancelado:", deleteError)
-      return NextResponse.json({ error: "La entrada no pudo eliminarse" }, { status: 500 })
     }
 
     if (!resend) {
