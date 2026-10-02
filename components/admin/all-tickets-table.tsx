@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, FileDown, Share2, FileSpreadsheet, ChevronDown, ChevronRight } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, FileDown, Share2, FileSpreadsheet, ChevronDown, ChevronRight, RotateCcw } from "lucide-react"
+import { restoreUsedTicket } from "@/app/actions/restore-used-ticket"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { Fragment, useState, useMemo } from "react"
@@ -132,9 +133,10 @@ interface EventOption {
 interface AllTicketsTableProps {
   tickets: Ticket[] | undefined
   events?: EventOption[]
+  canRestoreUsedTickets?: boolean
 }
 
-export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
+export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false }: AllTicketsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -143,6 +145,7 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
   const [selectedEventId, setSelectedEventId] = useState("all")
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [ticketToMarkUsed, setTicketToMarkUsed] = useState<Ticket | null>(null)
+  const [ticketToRestoreUsed, setTicketToRestoreUsed] = useState<Ticket | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
@@ -657,6 +660,33 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
     }
   }
 
+  const handleRestoreUsedTicket = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    if (!ticketToRestoreUsed || loadingId) return
+
+    const ticket = ticketToRestoreUsed
+    setLoadingId(ticket.id)
+    try {
+      const result = await restoreUsedTicket(ticket.id)
+      if (!result.success) throw new Error(result.error)
+
+      setTicketToRestoreUsed(null)
+      toast({
+        title: "Uso revertido",
+        description: `La entrada de ${ticket.buyer_name} volvió a quedar confirmada y puede validarse nuevamente.`,
+      })
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "No se pudo revertir el uso",
+        description: error instanceof Error ? error.message : "Intentá nuevamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     setLoadingId(ticketId)
     try {
@@ -1054,6 +1084,19 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
                           Marcar usada
                         </Button>
                       )}
+                      {canRestoreUsedTickets && ticket.status === "used" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setTicketToRestoreUsed(ticket)}
+                          disabled={loadingId === ticket.id}
+                          aria-label={`Revertir uso de la entrada de ${ticket.buyer_name}`}
+                          title="Volver a dejar la entrada como confirmada"
+                        >
+                          <RotateCcw className="mr-1 h-4 w-4" />
+                          Revertir uso
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => viewTicketDetails(ticket)} title="Ver detalles">
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -1125,6 +1168,35 @@ export function AllTicketsTable({ tickets, events }: AllTicketsTableProps) {
               disabled={Boolean(ticketToMarkUsed && loadingId === ticketToMarkUsed.id)}
             >
               {ticketToMarkUsed && loadingId === ticketToMarkUsed.id ? "Registrando..." : "Sí, marcar usada"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(ticketToRestoreUsed)}
+        onOpenChange={(open) => {
+          if (!open && loadingId !== ticketToRestoreUsed?.id) setTicketToRestoreUsed(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Revertir el uso de esta entrada?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ticketToRestoreUsed
+                ? `La entrada de ${ticketToRestoreUsed.buyer_name} para ${ticketToRestoreUsed.events.title} volverá a quedar confirmada. El QR podrá validarse nuevamente.`
+                : "La entrada volverá a quedar confirmada y podrá validarse nuevamente."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(ticketToRestoreUsed && loadingId === ticketToRestoreUsed.id)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRestoreUsedTicket}
+              disabled={Boolean(ticketToRestoreUsed && loadingId === ticketToRestoreUsed.id)}
+            >
+              {ticketToRestoreUsed && loadingId === ticketToRestoreUsed.id ? "Revirtiendo..." : "Sí, revertir uso"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

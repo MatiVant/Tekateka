@@ -54,7 +54,7 @@ export default async function AllTicketsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <AllTicketsTable tickets={tickets || []} events={events || []} />
+            <AllTicketsTable tickets={tickets || []} events={events || []} canRestoreUsedTickets={profile?.role === 'superadmin'} />
           </CardContent>
         </Card>
       </main>

@@ -93,7 +93,7 @@ export default async function EventTicketsPage({
             <section aria-labelledby="sold-tickets-title" className="mb-8">
               <h2 id="sold-tickets-title" className="mb-1 text-lg font-semibold">Entradas vendidas</h2>
               <p className="mb-4 text-sm text-muted-foreground">Revisá las compras y el estado de cada entrada.</p>
-              <AllTicketsTable tickets={tickets || []} />
+              <AllTicketsTable tickets={tickets || []} canRestoreUsedTickets={profile?.role === 'superadmin'} />
             </section>
             <EventSettlement eventId={id} tickets={tickets || []} initialSettlement={initialSettlement} />
           </CardContent>
