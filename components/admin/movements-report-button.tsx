@@ -18,10 +18,14 @@ export function MovementsReportButton({ movements, showOrganizer = false }: { mo
         Ver informe de movimientos
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-6xl overflow-y-auto p-4 sm:max-w-6xl sm:p-6">
           <DialogHeader>
-            <DialogTitle>Movimientos de mis eventos</DialogTitle>
-            <DialogDescription>Actividad de tickets y pagos únicamente de tus eventos.</DialogDescription>
+            <DialogTitle>{showOrganizer ? "Movimientos de la plataforma" : "Movimientos de mis eventos"}</DialogTitle>
+            <DialogDescription>
+              {showOrganizer
+                ? "Actividad financiera de eventos, organizadores y pagos de la plataforma."
+                : "Actividad de tickets y pagos únicamente de tus eventos."}
+            </DialogDescription>
           </DialogHeader>
           <MovementsTable movements={movements} showOrganizer={showOrganizer} />
         </DialogContent>
