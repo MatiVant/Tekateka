@@ -5,8 +5,6 @@ import {
   CheckCircle2,
   CreditCard,
   LayoutList,
-  MessageSquareText,
-  Tags,
   Ticket,
   Users,
   Wallet,
@@ -36,15 +34,6 @@ type SuperAdminDashboardProps = {
   }
   events: DashboardEvent[]
 }
-
-const sections = [
-  { title: "Todos los eventos", description: "Buscar y administrar eventos", href: "/superadmin/events", icon: LayoutList },
-  { title: "Usuarios y organizadores", description: "Solicitudes, cuentas y suscripciones", href: "#organizers", icon: Users },
-  { title: "Categorías", description: "Administrar etiquetas disponibles", href: "#categories", icon: Tags },
-  { title: "Audiencias", description: "Intereses y recomendaciones", href: "#audiences", icon: CalendarDays },
-  { title: "Mensajes", description: "Bandeja de consultas", href: "#messages", icon: MessageSquareText },
-  { title: "Movimientos", description: "Reporte financiero de la plataforma", href: "#movements", icon: Wallet },
-]
 
 function formatEventDate(value: string | null) {
   if (!value) return "Fecha sin definir"
@@ -148,31 +137,6 @@ export function SuperAdminDashboard({ metrics, events }: SuperAdminDashboardProp
             )}
           </CardContent>
         </Card>
-      </section>
-
-      <section aria-labelledby="sections-title" className="flex flex-col gap-4">
-        <div>
-          <h2 id="sections-title" className="text-xl font-semibold tracking-tight">Secciones internas</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Accesos directos a las herramientas de administración.</p>
-        </div>
-        <nav aria-label="Secciones de superadministración" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {sections.map(({ title, description, href, icon: Icon }) => (
-            <Link key={title} href={href} className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <Card className="h-full transition-colors group-hover:bg-muted/50">
-                <CardContent className="flex items-center gap-4 p-4">
-                  <span className="rounded-lg bg-muted p-2.5 text-muted-foreground transition-colors group-hover:text-foreground">
-                    <Icon aria-hidden="true" className="size-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{title}</span>
-                    <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
-                  </span>
-                  <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </nav>
       </section>
     </div>
   )
