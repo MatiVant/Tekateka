@@ -43,11 +43,6 @@ export default async function EventTicketLinksPage({
             Volver a entradas vendidas
           </Link>
         </Button>
-        <Button asChild variant="outline" className="w-fit">
-          <Link href={`/admin/events/${id}/tickets`}>
-            Ver entradas vendidas
-          </Link>
-        </Button>
       </div>
 
       <section className="mx-auto max-w-4xl">
