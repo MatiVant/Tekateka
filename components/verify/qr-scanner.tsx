@@ -46,8 +46,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const [isManualCheckInPending, setIsManualCheckInPending] = useState(false);
   const [manualSearchOpen, setManualSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanFrameRef = useRef<number | null>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
   const [result, setResult] = useState<{
     type: 'success' | 'error' | 'warning';
     message: string;
@@ -171,43 +170,46 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   useEffect(() => {
     if (scanMode !== 'camera' || result) return;
     let active = true;
+    let scanned = false;
+    let stopScanner: (() => void) | null = null;
+
     const startCamera = async () => {
       setCameraError(null);
-      const BarcodeDetectorClass = (window as Window & { BarcodeDetector?: new (options?: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>> } }).BarcodeDetector;
-      if (!BarcodeDetectorClass) {
-        setCameraError('Tu navegador no permite detectar QR desde la cámara. Usá el modo manual.');
-        return;
-      }
       try {
-        const detector = new BarcodeDetectorClass({ formats: ['qr_code'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-        streamRef.current = stream;
-        if (!videoRef.current || !active) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        const scan = async () => {
-          if (!active || !videoRef.current) return;
-          const codes = await detector.detect(videoRef.current);
-          const value = codes[0]?.rawValue;
-          if (value) {
-            const match = value.match(/\/ticket\/([^/?#]+)/);
-            await verifyTicket(decodeURIComponent(match?.[1] ?? value));
-            return;
-          }
-          scanFrameRef.current = requestAnimationFrame(scan);
-        };
-        scanFrameRef.current = requestAnimationFrame(scan);
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera access is unavailable in this browser.');
+        }
+
+        const { BrowserQRCodeReader } = await import('@zxing/browser');
+        if (!active || !videoRef.current) return;
+
+        const reader = new BrowserQRCodeReader();
+        const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (decoded) => {
+          if (!active || scanned || !decoded) return;
+          scanned = true;
+          const value = decoded.getText();
+          const match = value.match(/\/ticket\/([^/?#]+)/);
+          void verifyTicket(decodeURIComponent(match?.[1] ?? value));
+        });
+
+        stopScanner = () => controls.stop();
+        if (!active) {
+          stopScanner();
+          return;
+        }
+        scannerControlsRef.current = controls;
       } catch (error) {
         console.error('[v0] Error al iniciar lector QR:', error);
-        setCameraError('No se pudo acceder a la cámara. Revisá los permisos o usá el modo manual.');
+        if (active) setCameraError('No se pudo acceder a la cámara. Revisá los permisos o usá el modo manual.');
       }
     };
+
     void startCamera();
     return () => {
       active = false;
-      if (scanFrameRef.current) cancelAnimationFrame(scanFrameRef.current);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      stopScanner?.();
+      scannerControlsRef.current?.stop();
+      scannerControlsRef.current = null;
     };
   }, [scanMode, result, verifyTicket]);
 
