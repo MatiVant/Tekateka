@@ -48,6 +48,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Link vencido o inválido" }, { status: 401 })
     }
 
+    if (action === "list_all") {
+      const { data: tickets, error } = await supabase
+        .from("tickets")
+        .select("id, buyer_name, buyer_email, status, purchased_at, verified_at")
+        .eq("event_id", link.event_id)
+        .order("buyer_name", { ascending: true })
+        .order("purchased_at", { ascending: false })
+        .limit(1000)
+      if (error) throw error
+      return NextResponse.json({ tickets: tickets ?? [] })
+    }
+
     if (action === "search_by_email") {
       if (typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         return NextResponse.json({ error: "Ingresá un email válido" }, { status: 400 })

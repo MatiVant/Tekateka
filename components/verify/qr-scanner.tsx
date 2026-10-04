@@ -23,9 +23,13 @@ import {
 type ManualTicket = {
   id: string;
   buyer_name: string | null;
+  buyer_email?: string | null;
   status: string;
   purchased_at: string | null;
+  verified_at?: string | null;
 };
+
+type AllTicket = ManualTicket;
 
 interface QRScannerProps {
   userId?: string;
@@ -40,6 +44,9 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState('');
   const [manualTickets, setManualTickets] = useState<ManualTicket[]>([]);
+  const [allTickets, setAllTickets] = useState<AllTicket[]>([]);
+  const [isLoadingAllTickets, setIsLoadingAllTickets] = useState(false);
+  const [allTicketsError, setAllTicketsError] = useState<string | null>(null);
   const [manualLookupError, setManualLookupError] = useState<string | null>(null);
   const [isSearchingManual, setIsSearchingManual] = useState(false);
   const [ticketToCheckIn, setTicketToCheckIn] = useState<ManualTicket | null>(null);
@@ -221,6 +228,26 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
     }
   };
 
+  const loadAllTickets = async () => {
+    if (!checkerToken || isLoadingAllTickets) return;
+    setIsLoadingAllTickets(true);
+    setAllTicketsError(null);
+    try {
+      const response = await fetch('/api/check-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: checkerToken, action: 'list_all' }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'No se pudo cargar la lista de entradas.');
+      setAllTickets(payload.tickets ?? []);
+    } catch (error) {
+      setAllTicketsError(error instanceof Error ? error.message : 'No se pudo cargar la lista de entradas.');
+    } finally {
+      setIsLoadingAllTickets(false);
+    }
+  };
+
   const searchManualTickets = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!checkerToken || !manualEmail.trim() || isSearchingManual) return;
@@ -263,7 +290,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       }
       setTicketToCheckIn(null);
       setManualSearchOpen(false);
-      setManualTickets([]);
+      setManualTickets((current) => current.map((ticket) => ticket.id === ticketToCheckIn.id ? { ...ticket, status: 'used', verified_at: new Date().toISOString() } : ticket));
+      setAllTickets((current) => current.map((ticket) => ticket.id === ticketToCheckIn.id ? { ...ticket, status: 'used', verified_at: new Date().toISOString() } : ticket));
       setManualEmail('');
       setResult({ type: 'success', message: payload.message, ticket: payload.ticket });
     } catch (error) {
@@ -332,7 +360,51 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       )}
 
       {checkerToken && scanMode === 'manual' && !result && (
-        <section className="rounded-xl border bg-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4">
+          <section className="rounded-xl border bg-card p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-semibold">Lista de entradas</h2>
+                <p className="text-sm text-muted-foreground">Consultá quién ingresó y quién todavía no.</p>
+              </div>
+              <Button type="button" variant="outline" onClick={loadAllTickets} disabled={isLoadingAllTickets}>
+                {isLoadingAllTickets ? 'Cargando…' : allTickets.length ? 'Actualizar lista' : 'Ver todas las entradas'}
+              </Button>
+            </div>
+            {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}
+            {allTickets.length > 0 && (
+              <div className="mt-4 overflow-x-auto rounded-lg border">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="bg-muted/60 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Titular</th>
+                      <th className="px-3 py-2 font-medium">Estado</th>
+                      <th className="px-3 py-2 font-medium">¿Ingresó?</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {allTickets.map((ticket) => {
+                      const entered = ticket.status === 'used';
+                      return (
+                        <tr key={ticket.id}>
+                          <td className="px-3 py-3">
+                            <p className="font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                            {ticket.buyer_email && <p className="text-xs text-muted-foreground">{ticket.buyer_email}</p>}
+                          </td>
+                          <td className="px-3 py-3 text-muted-foreground">{ticket.status === 'cancelled' ? 'Cancelada' : ticket.status === 'confirmed' ? 'Confirmada' : ticket.status === 'used' ? 'Utilizada' : 'Pendiente'}</td>
+                          <td className="px-3 py-3">
+                            <Badge variant={entered ? 'default' : 'outline'}>{entered ? 'Sí' : 'No'}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border bg-card p-4 sm:p-5">
           <button
             type="button"
             className="flex w-full items-center justify-between gap-3 text-left"
@@ -405,7 +477,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
               )}
             </div>
           )}
-        </section>
+          </section>
+        </div>
       )}
 
       <AlertDialog open={Boolean(ticketToCheckIn)} onOpenChange={(open) => { if (!open && !isManualCheckInPending) setTicketToCheckIn(null); }}>
