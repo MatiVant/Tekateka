@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Select,
   SelectContent,
@@ -98,6 +99,28 @@ interface TicketPurchaseGroup {
   purchaseTotal: number
 }
 
+function summarizePurchaseGroup(key: string, tickets: Ticket[]): TicketPurchaseGroup {
+  const ticketPrices = tickets.map((ticket) => Number(ticket.final_price ?? ticket.events.price ?? 0))
+  const unitTotal = ticketPrices.reduce((sum, price) => sum + price, 0)
+  const perTicketPrice = ticketPrices.every((price) => price === ticketPrices[0]) ? ticketPrices[0] : null
+  const purchaseTotal = tickets.reduce(
+    (sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events.price ?? 0),
+    0,
+  )
+
+  return { key, tickets, unitTotal, perTicketPrice, purchaseTotal }
+}
+
+function isConfirmedTicket(ticket: Ticket) {
+  return ticket.status !== "cancelled" &&
+    (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved")
+}
+
+function getTicketListView(ticket: Ticket): TicketListView {
+  if (ticket.status === "cancelled") return "cancelled"
+  return isConfirmedTicket(ticket) ? "confirmed" : "pending"
+}
+
 function groupTicketsByPurchase(tickets: Ticket[]): TicketPurchaseGroup[] {
   const groups = new Map<string, Ticket[]>()
 
@@ -130,19 +153,23 @@ interface EventOption {
   title: string
 }
 
+type TicketListView = "confirmed" | "pending" | "cancelled"
+
 interface AllTicketsTableProps {
   tickets: Ticket[] | undefined
   events?: EventOption[]
   canRestoreUsedTickets?: boolean
+  initialView?: TicketListView
 }
 
-export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false }: AllTicketsTableProps) {
+export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false, initialView = "confirmed" }: AllTicketsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [isBulkLoading, setIsBulkLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEventId, setSelectedEventId] = useState("all")
+  const [listView, setListView] = useState<TicketListView>(initialView)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [ticketToMarkUsed, setTicketToMarkUsed] = useState<Ticket | null>(null)
   const [ticketToRestoreUsed, setTicketToRestoreUsed] = useState<Ticket | null>(null)
@@ -423,34 +450,33 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
     [tickets],
   )
 
-  const visiblePurchaseGroups = useMemo(() => {
+  const scopedPurchaseGroups = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
-    return allPurchaseGroups
-      .filter((group) =>
-        group.tickets.some((ticket) => {
-          if (selectedEventId !== "all" && ticket.events?.id !== selectedEventId) return false
-          if (!search) return true
-          return (
-            ticket.buyer_name.toLowerCase().includes(search) ||
-            ticket.buyer_email.toLowerCase().includes(search) ||
-            ticket.qr_code.toLowerCase().includes(search) ||
-            ticket.events.title.toLowerCase().includes(search)
-          )
-        }),
-      )
-      .sort((first, second) => {
-        const hasSoldTicket = (group: TicketPurchaseGroup) => group.tickets.some((ticket) =>
-          ticket.status !== "cancelled" && (
-            ticket.status === "confirmed" ||
-            ticket.status === "used" ||
-            ticket.payment_status === "approved" ||
-            Boolean(ticket.payment_receipt_url)
-          ),
+    return allPurchaseGroups.flatMap((group) => {
+      const matchingTickets = group.tickets.filter((ticket) => {
+        if (selectedEventId !== "all" && ticket.events?.id !== selectedEventId) return false
+        if (!search) return true
+        return (
+          ticket.buyer_name.toLowerCase().includes(search) ||
+          ticket.buyer_email.toLowerCase().includes(search) ||
+          ticket.qr_code.toLowerCase().includes(search) ||
+          ticket.events.title.toLowerCase().includes(search)
         )
-        return Number(hasSoldTicket(second)) - Number(hasSoldTicket(first))
       })
+      return matchingTickets.length ? [summarizePurchaseGroup(group.key, matchingTickets)] : []
+    })
   }, [allPurchaseGroups, searchTerm, selectedEventId])
 
+  const scopedTickets = scopedPurchaseGroups.flatMap((group) => group.tickets)
+  const ticketCounts = {
+    confirmed: scopedTickets.filter((ticket) => getTicketListView(ticket) === "confirmed").length,
+    pending: scopedTickets.filter((ticket) => getTicketListView(ticket) === "pending").length,
+    cancelled: scopedTickets.filter((ticket) => getTicketListView(ticket) === "cancelled").length,
+  }
+  const visiblePurchaseGroups = scopedPurchaseGroups.flatMap((group) => {
+    const matchingTickets = group.tickets.filter((ticket) => getTicketListView(ticket) === listView)
+    return matchingTickets.length ? [summarizePurchaseGroup(group.key, matchingTickets)] : []
+  })
   const filteredTickets = visiblePurchaseGroups.flatMap((group) => group.tickets)
 
   const toggleSelected = (ticketId: string, checked: boolean) => {
@@ -905,26 +931,57 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
           </Button>
         </div>
 
+        <ToggleGroup
+          type="single"
+          value={listView}
+          onValueChange={(value) => {
+            if (value) {
+              setListView(value as TicketListView)
+              setSelectedIds(new Set())
+            }
+          }}
+          variant="outline"
+          size="sm"
+          aria-label="Filtrar entradas por estado"
+          className="w-full sm:w-fit"
+        >
+          <ToggleGroupItem value="confirmed" aria-label={`Confirmadas: ${ticketCounts.confirmed}`}>
+            Confirmadas <span className="ml-2 text-muted-foreground">{ticketCounts.confirmed}</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="pending" aria-label={`Pendientes: ${ticketCounts.pending}`}>
+            Pendientes <span className="ml-2 text-muted-foreground">{ticketCounts.pending}</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="cancelled" aria-label={`Canceladas: ${ticketCounts.cancelled}`}>
+            Canceladas <span className="ml-2 text-muted-foreground">{ticketCounts.cancelled}</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-3">
             <span className="text-sm font-medium">{selectedIds.size} entrada(s) seleccionada(s)</span>
-  <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
-  <CheckCircle className="mr-2 h-4 w-4" />
-  Aprobar seleccionadas
-  </Button>
-  <Button size="sm" variant="outline" onClick={handleBulkResendTickets} disabled={isBulkLoading}>
-  <Send className="mr-2 h-4 w-4" />
-  Reenviar juntas
-  </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setIsBulkRejectDialogOpen(true)}
-              disabled={isBulkLoading}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Rechazar seleccionadas
-            </Button>
+            {listView === "pending" && (
+              <>
+                <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Aprobar seleccionadas
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setIsBulkRejectDialogOpen(true)}
+                  disabled={isBulkLoading}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Rechazar seleccionadas
+                </Button>
+              </>
+            )}
+            {listView === "confirmed" && (
+              <Button size="sm" variant="outline" onClick={handleBulkResendTickets} disabled={isBulkLoading}>
+                <Send className="mr-2 h-4 w-4" />
+                Reenviar juntas
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={isBulkLoading}>
               Limpiar selección
             </Button>
@@ -1183,9 +1240,15 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
           </table>
         </div>
 
-        {filteredTickets.length === 0 && (searchTerm || selectedEventId !== "all") && (
+        {filteredTickets.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            No se encontraron tickets que coincidan con los filtros
+            {searchTerm || selectedEventId !== "all"
+              ? "No se encontraron entradas que coincidan con los filtros."
+              : listView === "confirmed"
+                ? "Todavía no hay entradas confirmadas."
+                : listView === "pending"
+                  ? "No hay entradas pendientes para revisar."
+                  : "No hay entradas canceladas."}
           </div>
         )}
 

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { requireAuth } from '@/lib/auth';
-import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -8,7 +7,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
 
-export default async function AllTicketsPage() {
+export default async function AllTicketsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>
+}) {
+  const { view } = await searchParams
+  const initialView = view === "pending" || view === "cancelled" ? view : "confirmed"
   const { authorized, user, profile } = await requireAuth(['organizer']);
 
   if (!authorized || !user) {
@@ -48,13 +53,13 @@ export default async function AllTicketsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Todas las Entradas</CardTitle>
+            <CardTitle>Entradas</CardTitle>
             <CardDescription>
-              Gestiona todas las entradas, confirma pagos y revisa comprobantes
+              La lista abre en confirmadas. Usa los filtros para revisar pendientes y canceladas.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <AllTicketsTable tickets={tickets || []} events={events || []} canRestoreUsedTickets={profile?.role === 'superadmin'} />
+            <AllTicketsTable tickets={tickets || []} events={events || []} canRestoreUsedTickets={profile?.role === 'superadmin'} initialView={initialView} />
           </CardContent>
         </Card>
       </main>

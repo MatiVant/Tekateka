@@ -27,6 +27,7 @@ type AdminTicketSummary = {
   final_price: number | string | null
   net_amount: number | string | null
   payment_fee_amount: number | string | null
+  payment_receipt_url: string | null
   events: { price: number | string | null } | null
 }
 
@@ -144,33 +145,34 @@ export default async function AdminPage() {
   const eventRecords = (allOrganizerEvents || []) as OrganizerEventSummary[]
   const settlementRecords = (settlements || []) as EventSettlementSummary[]
   const totalEvents = events?.length || 0
-  const paidTickets = ticketRecords.filter((ticket) =>
+  const soldTickets = ticketRecords.filter((ticket) =>
+    ticket.status !== "cancelled" &&
+    (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved" || Boolean(ticket.payment_receipt_url)),
+  )
+  const confirmedTickets = ticketRecords.filter((ticket) =>
     ticket.status !== "cancelled" &&
     (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"),
-  )
-  const confirmedTickets = paidTickets.length
+  ).length
   const pendingTickets = ticketRecords.filter(
     (ticket) => ticket.status === "pending" && ticket.payment_status !== "approved",
   ).length
   const ticketCharge = (ticket: AdminTicketSummary) => Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events?.price ?? 0)
-  const transferRevenue = paidTickets
+  const transferRevenue = soldTickets
     .filter((ticket) => ticket.payment_method === "transfer")
     .reduce((sum, ticket) => sum + ticketCharge(ticket), 0)
-  const mercadoPagoRevenue = paidTickets
+  const mercadoPagoRevenue = soldTickets
     .filter((ticket) => ticket.payment_method === "mercado_pago" || ticket.payment_method === "external_link" || ["mercado_pago", "mercadopago"].includes(ticket.payment_provider ?? ""))
     .reduce((sum, ticket) => sum + ticketCharge(ticket), 0)
   const doorRevenue = settlementRecords.reduce(
     (sum, settlement) => sum + Number(settlement.door_paid_count ?? 0) * Number(settlement.door_paid_unit_price ?? 0),
     0,
   )
-  const totalRevenue = paidTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0) + doorRevenue
+  const totalRevenue = soldTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0) + doorRevenue
   const eventReports = eventRecords.map((event) => {
-    const eventTickets = paidTickets.filter((ticket) => ticket.event_id === event.id)
-    const eventPendingTickets = ticketRecords.filter((ticket) => ticket.event_id === event.id && ticket.status === "pending" && ticket.payment_status !== "approved")
+    const eventTickets = soldTickets.filter((ticket) => ticket.event_id === event.id)
     return {
       event,
       count: eventTickets.length,
-      pendingCount: eventPendingTickets.length,
       gross: eventTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0),
       fees: eventTickets.reduce((sum, ticket) => sum + Number(ticket.payment_fee_amount ?? 0), 0),
       net: eventTickets.reduce((sum, ticket) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
@@ -227,9 +229,14 @@ export default async function AdminPage() {
         {profile?.subscription_active && profile?.role !== "superadmin" && <div className="mb-8 rounded-lg border border-primary/20 bg-card p-4"><p className="text-sm"><span className="font-medium text-primary">Suscripción Activa</span> - Eventos ilimitados</p></div>}
 
         {/* Resumen compacto */}
-        <section className="mb-3">
-          <h2 className="text-xl font-bold">Total histórico</h2>
-          <p className="text-sm text-muted-foreground">Resumen acumulado de todos tus eventos.</p>
+        <section className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold">Resumen de ventas</h2>
+            <p className="text-sm text-muted-foreground">Incluye pagos aprobados y comprobantes cargados; excluye entradas canceladas.</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/tickets">Ver listas de entradas</Link>
+          </Button>
         </section>
         <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           <div className="rounded-lg border border-border bg-card p-4">
@@ -237,16 +244,17 @@ export default async function AdminPage() {
             <div className="text-3xl font-bold text-foreground">{totalEvents}</div>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas confirmadas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-3xl font-bold text-foreground">{confirmedTickets}</div>
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas vendidas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-3xl font-bold text-foreground">{soldTickets.length}</div>
+            <p className="mt-1 text-xs text-muted-foreground">{confirmedTickets} confirmadas; incluye comprobantes a revisar</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
             <div className="text-3xl font-bold text-foreground">{pendingTickets}</div>
-            <Button asChild variant="link" className="mt-2 h-auto px-0 text-xs"><Link href="/admin/tickets">Revisar</Link></Button>
+            <Button asChild variant="link" className="mt-2 h-auto px-0 text-xs"><Link href="/admin/tickets?view=pending">Revisar pendientes</Link></Button>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero transferido</span><Banknote aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Transferencias informadas</span><Banknote aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-2xl font-bold text-foreground">{formatCurrency(transferRevenue)}</div>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
@@ -258,14 +266,43 @@ export default async function AdminPage() {
             <div className="text-2xl font-bold text-foreground">{formatCurrency(doorRevenue)}</div>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Total recaudado</span><DollarSign aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Total vendido</span><DollarSign aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
           </div>
         </div>
 
         <section className="mb-12">
-          <div className="mb-6"><h2 className="text-xl font-bold">Total histórico por evento</h2><p className="text-sm text-muted-foreground">Entradas confirmadas y pendientes de confirmación, total cobrado, cargos de Mercado Pago y neto.</p></div>
-          <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="p-3 text-left">Evento</th><th className="p-3 text-right">Confirmadas</th><th className="p-3 text-right">Pendientes</th><th className="p-3 text-right">Cobrado</th><th className="p-3 text-right">Cargos</th><th className="p-3 text-right">Neto</th></tr></thead><tbody>{eventReports.map(({ event, count, pendingCount, gross, fees, net }) => <tr key={event.id} className="border-t"><td className="p-3 font-medium">{event.title}</td><td className="p-3 text-right">{count}</td><td className="p-3 text-right">{pendingCount > 0 ? <span className="text-amber-600 dark:text-amber-500 font-medium">{pendingCount}</span> : pendingCount}</td><td className="p-3 text-right">{formatCurrency(gross)}</td><td className="p-3 text-right">{formatCurrency(fees)}</td><td className="p-3 text-right font-semibold">{formatCurrency(net)}</td></tr>)}{eventReports.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Todavía no hay ventas.</td></tr>}</tbody></table></div>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Ventas por evento</h2>
+            <p className="text-sm text-muted-foreground">Cuenta pagos aprobados o con comprobante cargado. Las pendientes y canceladas se consultan en sus listas.</p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-3 text-left">Evento</th>
+                  <th className="p-3 text-right">Vendidas</th>
+                  <th className="p-3 text-right">Total vendido</th>
+                  <th className="p-3 text-right">Cargos</th>
+                  <th className="p-3 text-right">Neto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventReports.map(({ event, count, gross, fees, net }) => (
+                  <tr key={event.id} className="border-t">
+                    <td className="p-3 font-medium">{event.title}</td>
+                    <td className="p-3 text-right">{count}</td>
+                    <td className="p-3 text-right">{formatCurrency(gross)}</td>
+                    <td className="p-3 text-right">{formatCurrency(fees)}</td>
+                    <td className="p-3 text-right font-semibold">{formatCurrency(net)}</td>
+                  </tr>
+                ))}
+                {eventReports.length === 0 && (
+                  <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Todavía no hay ventas.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         {externalPayments && externalPayments.length > 0 && (
