@@ -38,7 +38,7 @@ export default function LoginPage() {
       if (!user) throw new Error("No se pudo obtener el usuario")
 
       // Obtener el perfil del usuario para redirigir según su rol
-      const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", user.id).single()
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
 
       if (profile?.role === "organizer" || profile?.role === "superadmin") {
         router.push("/admin")
