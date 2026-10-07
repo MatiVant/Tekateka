@@ -112,6 +112,7 @@ export async function POST(request: Request) {
       ...(status === "approved" ? { status: "confirmed" } : {}),
     })
     .in("id", ticketIds)
+    .neq("status", "cancelled")
   if (ticketSyncError) {
     console.error("[v0] No se pudo sincronizar el estado de las entradas:", ticketSyncError)
     return NextResponse.json({ error: "No se pudo sincronizar el pago" }, { status: 500 })

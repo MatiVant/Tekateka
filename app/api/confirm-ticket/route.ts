@@ -38,6 +38,10 @@ export async function POST(request: Request) {
         ? await supabase.from("tickets").select("*").in("id", ticketIds).eq("event_id", ticket.event_id).eq("buyer_email", ticket.buyer_email)
         : { data: [ticket] }
     const groupedTickets = purchaseTicketsResult.data?.length ? purchaseTicketsResult.data : [ticket]
+    const cancelledTickets = groupedTickets.filter((item) => item.status === "cancelled")
+    if (cancelledTickets.length > 0) {
+      return NextResponse.json({ error: "Una entrada cancelada no puede confirmarse. Restaurala primero si corresponde." }, { status: 409 })
+    }
     const pendingTickets = groupedTickets.filter((item) => item.status === "pending")
     const wasAlreadyConfirmed = pendingTickets.length === 0 && groupedTickets.every((item) => item.status === "confirmed")
 

@@ -33,7 +33,7 @@ export default async function ArtistSharePage({ params }: { params: Promise<{ to
   const { data: tickets } = await supabase.from("tickets").select("id, buyer_name, buyer_email, buyer_phone, status, payment_status, payment_method, final_price, charged_amount, payment_receipt_url, purchased_at, ticket_tiers(name), ticket_promotions(promotion_codes(code, promotion_type, discount_value))").eq("event_id", link.event_id).order("purchased_at", { ascending: false })
   if (!event) notFound()
   const rows = (tickets ?? []) as ShareTicket[]
-  const confirmed = rows.filter((ticket) => ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved")
+  const confirmed = rows.filter((ticket) => ticket.status !== "cancelled" && (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"))
   const pending = rows.filter((ticket) => ticket.status === "pending" && ticket.payment_status !== "approved")
   const free = confirmed.filter((ticket) => ticket.payment_method === "free" || Number(ticket.final_price) === 0)
   const discounted = confirmed.filter((ticket) => Number(ticket.final_price) > 0 && Boolean(ticket.ticket_promotions?.length))

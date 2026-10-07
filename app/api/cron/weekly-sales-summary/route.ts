@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
     const rows = (events ?? []).map((event) => {
       const eventTickets = (tickets ?? []).filter((ticket) => ticket.event_id === event.id)
-      const sold = eventTickets.filter((ticket) => ticket.status !== "cancelled" && (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved" || Boolean(ticket.payment_receipt_url)))
+      const sold = eventTickets.filter((ticket) => ticket.status !== "cancelled" && (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"))
       const pending = eventTickets.filter((ticket) => ticket.status === "pending" && ticket.payment_status !== "approved")
       const gross = sold.reduce((sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0)
       return { title: event.title, sold: sold.length, pending: pending.length, gross }
