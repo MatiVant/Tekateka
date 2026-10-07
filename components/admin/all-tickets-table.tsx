@@ -116,6 +116,11 @@ function isConfirmedTicket(ticket: Ticket) {
     (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved")
 }
 
+function isSaleTicket(ticket: Ticket) {
+  return ticket.status !== "cancelled" &&
+    (ticket.payment_status === "approved" || Boolean(ticket.payment_receipt_url))
+}
+
 function getTicketListView(ticket: Ticket): TicketListView {
   if (ticket.status === "cancelled") return "cancelled"
   return isConfirmedTicket(ticket) ? "confirmed" : "pending"
@@ -468,6 +473,8 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
   }, [allPurchaseGroups, searchTerm, selectedEventId])
 
   const scopedTickets = scopedPurchaseGroups.flatMap((group) => group.tickets)
+  const saleTickets = scopedTickets.filter(isSaleTicket)
+  const soldAmount = groupTicketsByPurchase(saleTickets).reduce((total, group) => total + group.purchaseTotal, 0)
   const ticketCounts = {
     confirmed: scopedTickets.filter((ticket) => getTicketListView(ticket) === "confirmed").length,
     pending: scopedTickets.filter((ticket) => getTicketListView(ticket) === "pending").length,
@@ -1252,13 +1259,16 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
           </div>
         )}
 
-  <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-5">
-  <div><p className="text-sm text-muted-foreground">Total histórico</p><p className="text-2xl font-bold">{tickets.length}</p></div>
-  <div><p className="text-sm text-muted-foreground">Confirmados</p><p className="text-2xl font-bold text-green-600">{tickets.filter((t) => t.status === "confirmed").length}</p></div>
-  <div><p className="text-sm text-muted-foreground">Recaudación histórica</p><p className="text-xl font-bold">{formatCurrency(groupTicketsByPurchase(tickets).reduce((total, group) => total + group.purchaseTotal, 0))}</p></div>
-  <div><p className="text-sm text-muted-foreground">Gratis</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) === 0 || t.payment_method === "free").length}</p></div>
-  <div><p className="text-sm text-muted-foreground">Con descuento</p><p className="text-2xl font-bold">{tickets.filter((t) => Number(t.final_price) > 0 && Boolean(t.ticket_promotions?.length)).length}</p></div>
-  </div>
+        <section aria-label="Resumen de ventas" className="grid grid-cols-1 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-2">
+          <div>
+            <p className="text-sm text-muted-foreground">Entradas vendidas</p>
+            <p className="text-2xl font-bold">{saleTickets.length}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Total vendido</p>
+            <p className="text-2xl font-bold">{formatCurrency(soldAmount)}</p>
+          </div>
+        </section>
       </div>
 
       <section className="ticket-export-print">
