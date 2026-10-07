@@ -231,16 +231,13 @@ export function PurchaseFlow({
           // Solo se envía un único email consolidado por compra, no uno por entrada.
           sendEmail: i === quantity - 1,
           ticketQuantity: quantity,
+          purchaseItemIndex: i,
           paymentResumeToken: sharedPaymentResumeToken,
           purchaseGroupId,
         }
 
-        console.log(`[v0] Creando ticket ${i + 1}/${quantity}...`, ticketData)
-
         const ticket = await createTicket(ticketData)
-        createdTicketIds.push(ticket.id)
-
-        console.log(`[v0] Ticket ${i + 1}/${quantity} creado exitosamente:`, ticket.id)
+        if (!createdTicketIds.includes(ticket.id)) createdTicketIds.push(ticket.id)
       }
 
       setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia

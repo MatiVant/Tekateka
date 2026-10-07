@@ -23,6 +23,7 @@ interface CreateTicketData {
   ticketQuantity?: number
   paymentResumeToken?: string
   purchaseGroupId?: string
+  purchaseItemIndex?: number
 }
 
 export async function createTicket(data: CreateTicketData) {
@@ -78,6 +79,30 @@ export async function createTicket(data: CreateTicketData) {
       if (promo.promotion_type === "2x1") serverPrice = serverPrice / 2
     }
     if (Math.abs(Number(data.final_price) - Math.max(0, serverPrice)) > 0.01) throw new Error("El precio de la compra cambió, actualizá la página")
+
+    const reuseCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    const requestedQuantity = Math.max(1, data.ticketQuantity ?? 1)
+    const { data: pendingTickets, error: pendingError } = await supabase
+      .from("tickets")
+      .select("id, purchase_group_id, purchased_at, payment_status, status")
+      .eq("event_id", data.event_id)
+      .ilike("buyer_email", buyerEmail)
+      .eq("status", "pending")
+      .gte("purchased_at", reuseCutoff)
+      .not("purchase_group_id", "is", null)
+      .order("purchased_at", { ascending: false })
+
+    if (pendingError) throw new Error("No se pudo verificar una compra pendiente")
+    const existingGroupId = pendingTickets?.[0]?.purchase_group_id
+    const existingGroup = existingGroupId
+      ? pendingTickets.filter((ticket) => ticket.purchase_group_id === existingGroupId)
+      : []
+
+    if (existingGroup.length >= requestedQuantity) {
+      const existingTicket = existingGroup[data.purchaseItemIndex ?? 0]
+      if (!existingTicket) throw new Error("No se pudo recuperar la compra pendiente")
+      return existingTicket
+    }
 
     const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
       p_event_id: data.event_id,
