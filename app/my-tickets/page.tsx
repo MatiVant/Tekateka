@@ -1,10 +1,26 @@
 import { createClient } from "@/lib/supabase/server"
+import Image from "next/image"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, CheckCircle, Clock, XCircle } from "lucide-react"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { QRCodeDisplay } from "@/components/qr-code-display"
+
+type BuyerTicket = {
+  id: string
+  status: string
+  purchased_at: string
+  buyer_name: string
+  qr_code: string
+  events: {
+    title: string
+    event_date: string
+    venue: string
+    image_url: string | null
+  }
+}
 
 export default async function MyTicketsPage() {
   const supabase = await createClient()
@@ -25,22 +41,24 @@ export default async function MyTicketsPage() {
     )
   `
 
-  const { data: ticketsByUser } = await supabase
+  const normalizedEmail = userData.user.email?.trim().toLowerCase()
+  if (userData.user.email_confirmed_at && normalizedEmail) {
+    const escapedEmail = normalizedEmail.replace(/[\\%_]/g, "\\$&")
+    const adminSupabase = createAdminClient()
+    await adminSupabase
+      .from("tickets")
+      .update({ buyer_id: userData.user.id })
+      .is("buyer_id", null)
+      .ilike("buyer_email", escapedEmail)
+  }
+
+  const { data: tickets } = await supabase
     .from("tickets")
     .select(ticketSelect)
     .eq("buyer_id", userData.user.id)
     .order("purchased_at", { ascending: false })
 
-  // Compatibilidad con compras anteriores creadas antes de guardar buyer_id.
-  const { data: ticketsByEmail } = await supabase
-    .from("tickets")
-    .select(ticketSelect)
-    .eq("buyer_email", userData.user.email ?? "")
-    .order("purchased_at", { ascending: false })
-
-  const tickets = Array.from(
-    new Map([...(ticketsByUser || []), ...(ticketsByEmail || [])].map((ticket) => [ticket.id, ticket])).values(),
-  ).sort((a, b) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime())
+  const ticketRecords = (tickets ?? []) as BuyerTicket[]
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -77,18 +95,21 @@ export default async function MyTicketsPage() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl md:text-4xl font-bold mb-8">Mis Entradas</h1>
 
-        {tickets && tickets.length > 0 ? (
+        {ticketRecords.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {tickets.map((ticket: any) => (
+            {ticketRecords.map((ticket) => (
               <Card key={ticket.id} className="overflow-hidden">
                 <div className="aspect-video relative overflow-hidden bg-muted">
-                  <img
+                  <Image
                     src={
                       ticket.events.image_url ||
                       `/placeholder.svg?height=300&width=500&query=evento+${encodeURIComponent(ticket.events.title)}`
                     }
                     alt={ticket.events.title}
-                    className="object-cover w-full h-full"
+                    fill
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    unoptimized
+                    className="object-cover"
                   />
                 </div>
 

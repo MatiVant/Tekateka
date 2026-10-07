@@ -2,13 +2,13 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check, Minus, Plus } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
@@ -69,8 +69,6 @@ export function PurchaseFlow({
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [receiptNotes, setReceiptNotes] = useState("")
   const [uploading, setUploading] = useState(false)
-  const [tierLoading, setTierLoading] = useState(true)
-
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [finalPrice, setFinalPrice] = useState(eventPrice)
@@ -83,26 +81,9 @@ export function PurchaseFlow({
   const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : mercadoPagoLink ? "external_link" : "mercado_pago"
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(defaultPaymentMethod)
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
-  const router = useRouter()
+  const [supabase] = useState(() => createClient())
 
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchTiers()
-    fetchEventMaxTickets()
-    const payment = new URLSearchParams(window.location.search).get("payment")
-    if (payment === "success") {
-      setPaymentNotice("Pago recibido. Estamos confirmando tu compra; revisá tu email para recibir las entradas.")
-      setStep("success")
-    } else if (payment === "pending") {
-      setPaymentNotice("El pago quedó pendiente. Te avisaremos por email cuando Mercado Pago lo confirme.")
-      setStep("success")
-    } else if (payment === "failure") {
-      setPaymentNotice("El pago no se completó. Podés volver e intentarlo nuevamente.")
-    }
-  }, [eventId])
-
-  const fetchTiers = async () => {
+  const fetchTiers = useCallback(async () => {
     try {
       const { data, error: fetchError } = await supabase
         .from("ticket_tiers")
@@ -123,12 +104,10 @@ export function PurchaseFlow({
       console.error("[v0] Error fetching tiers:", error)
       setTiers([])
       setFinalPrice(eventPrice)
-    } finally {
-      setTierLoading(false)
     }
-  }
+  }, [eventId, eventPrice, supabase])
 
-  const fetchEventMaxTickets = async () => {
+  const fetchEventMaxTickets = useCallback(async () => {
     try {
       const { data, error: fetchError } = await supabase
         .from("events")
@@ -141,7 +120,25 @@ export function PurchaseFlow({
     } catch (error) {
       console.error("[v0] Error fetching max tickets:", error)
     }
-  }
+  }, [eventId, supabase])
+
+  useEffect(() => {
+    const payment = new URLSearchParams(window.location.search).get("payment")
+
+    queueMicrotask(() => {
+      void fetchTiers()
+      void fetchEventMaxTickets()
+      if (payment === "success") {
+        setPaymentNotice("Pago recibido. Estamos confirmando tu compra; podés seguir el estado en Mis entradas.")
+        setStep("success")
+      } else if (payment === "pending") {
+        setPaymentNotice("El pago quedó pendiente. Consultá el estado actualizado en Mis entradas.")
+        setStep("success")
+      } else if (payment === "failure") {
+        setPaymentNotice("El pago no se completó. Podés volver e intentarlo nuevamente.")
+      }
+    })
+  }, [eventId, fetchEventMaxTickets, fetchTiers])
 
   const validatePromotion = async () => {
     const selectedTier = tiers.find((t) => t.id === selectedTierId)
@@ -209,7 +206,6 @@ export function PurchaseFlow({
         priceToUse = finalPrice
       }
 
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
       const sharedPaymentResumeToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`
       const purchaseGroupId = crypto.randomUUID()
       const createdTicketIds: string[] = []
@@ -232,7 +228,6 @@ export function PurchaseFlow({
             | "transfer"
             | "free",
           marketing_consent: marketingConsent,
-          buyer_id: currentUser?.id ?? null,
           // Solo se envía un único email consolidado por compra, no uno por entrada.
           sendEmail: i === quantity - 1,
           ticketQuantity: quantity,
@@ -778,22 +773,35 @@ export function PurchaseFlow({
   }
 
   if (step === "success") {
+    const paymentWasReturned = paymentNotice?.includes("Pago recibido") || paymentNotice?.includes("pago quedó pendiente")
+
     return (
       <div className="text-center space-y-4 py-6">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-2">
           <CheckCircle2 className="w-8 h-8 text-primary" />
         </div>
         <h3 className="text-xl font-semibold">
-          {isFree ? "¡Entradas Confirmadas!" : "Compra Pendiente de Confirmación"}
+          {isFree ? "¡Entradas Confirmadas!" : paymentWasReturned ? "Pago recibido" : "Compra Pendiente de Confirmación"}
         </h3>
         {paymentNotice && <Alert><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <p className="text-muted-foreground text-sm leading-relaxed">
           {isFree
-            ? `Has reservado ${quantity} ${quantity === 1 ? "entrada" : "entradas"} para ${eventTitle}. Recibirás un email con ${quantity === 1 ? "tu código QR" : "tus códigos QR"}.`
-            : `Hemos recibido tu comprobante de pago por ${quantity} ${quantity === 1 ? "entrada" : "entradas"}. El organizador lo verificará y confirmará tus entradas. Recibirás un email con ${quantity === 1 ? "tu código QR" : "tus códigos QR"} cuando ${quantity === 1 ? "esté confirmada" : "estén confirmadas"}.`}
+            ? `Has reservado ${quantity} ${quantity === 1 ? "entrada" : "entradas"} para ${eventTitle}. Encontrarás el estado y el código QR en Mis entradas.`
+            : paymentWasReturned
+              ? "Tu pago está en proceso de confirmación. Consultá el estado actualizado y tus códigos QR en Mis entradas."
+              : `Hemos recibido tu comprobante de pago por ${quantity} ${quantity === 1 ? "entrada" : "entradas"}. El organizador lo verificará. Encontrarás el estado actualizado y tus códigos QR en Mis entradas.`}
         </p>
-        <p className="text-sm text-muted-foreground">
-          Te enviamos los detalles a: <strong>{email}</strong>
+        {email && <p className="text-sm text-muted-foreground">Correo informado: <strong>{email}</strong></p>}
+        <div className="flex flex-col justify-center gap-2 sm:flex-row">
+          <Button asChild>
+            <Link href="/my-tickets">Ver mis entradas</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/auth/sign-up">Crear cuenta para hacer seguimiento</Link>
+          </Button>
+        </div>
+          <p className="text-xs text-muted-foreground">
+          Si compraste como invitado, creá una cuenta con el mismo correo para vincular la compra automáticamente.
         </p>
       </div>
     )

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
+import { getCurrentUser } from "@/lib/auth"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -18,7 +19,6 @@ interface CreateTicketData {
   final_price: number
   payment_method?: "mercado_pago" | "external_link" | "transfer" | "free"
   marketing_consent?: boolean
-  buyer_id?: string | null
   sendEmail?: boolean
   ticketQuantity?: number
   paymentResumeToken?: string
@@ -29,6 +29,10 @@ export async function createTicket(data: CreateTicketData) {
   const supabase = createClient()
 
   try {
+    const buyer = await getCurrentUser()
+    const buyerEmail = data.buyer_email.trim().toLowerCase()
+    if (!buyerEmail) throw new Error("El email del comprador es obligatorio")
+
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
     const { data: event, error: eventError } = await supabase.from("events").select("price, status, is_pay_what_you_want, sales_start_at, sales_end_at").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
@@ -79,10 +83,10 @@ export async function createTicket(data: CreateTicketData) {
       p_event_id: data.event_id,
       p_tier_id: data.tier_id,
       p_buyer_name: data.buyer_name,
-      p_buyer_email: data.buyer_email,
+      p_buyer_email: buyerEmail,
       p_qr_code: data.qr_code,
       p_final_price: data.final_price,
-      p_buyer_id: data.buyer_id ?? null,
+      p_buyer_id: buyer?.user.id ?? null,
       p_marketing_consent: data.marketing_consent ?? false,
     })
 
@@ -121,7 +125,7 @@ export async function createTicket(data: CreateTicketData) {
 
     if (isFreeTicket) {
       try {
-        if (resend && data.sendEmail !== false) {
+        if (resend && data.sendEmail !== false && normalizedPaymentMethod !== "free") {
           const { data: eventDetails } = await supabase.from("events").select("title, event_date, venue").eq("id", data.event_id).single()
           const requestHeaders = await headers()
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
@@ -130,7 +134,7 @@ export async function createTicket(data: CreateTicketData) {
           const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
           await resend.emails.send({
             from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
-            to: data.buyer_email,
+            to: buyerEmail,
             subject: `Tu entrada gratuita: ${eventDetails?.title || "TekaTeka"}`,
             html: `<!doctype html><html><body style="margin:0;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><main style="max-width:620px;margin:auto;padding:28px 18px"><header style="padding:12px 0 22px;border-bottom:4px solid #f4511e"><div style="font-size:34px;font-weight:900;letter-spacing:-2px">Te<span style="color:#f4511e">k</span>aTeka</div><div style="margin-top:10px;font-size:11px;letter-spacing:4px;text-transform:uppercase">Más cultura. Más encuentros.</div></header><section style="background:#fffdf7;border:1px solid #e7dcc8;border-radius:0 0 18px 18px;padding:30px;text-align:center"><p style="color:#f4511e;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Entrada gratuita</p><h1 style="font-size:30px;letter-spacing:-1px">Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><div style="margin:26px 0;padding:24px;background:#fff;border:1px solid #e7dcc8;border-radius:16px"><p><strong>${eventDetails?.event_date ? new Date(eventDetails.event_date).toLocaleString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }) : ""}</strong></p><p>${eventDetails?.venue || ""}</p><img src="${qrImageUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto"><p style="font-family:monospace;font-weight:bold;color:#f4511e">${data.qr_code}</p><p><strong>Presentá este QR al ingresar.</strong></p></div><p><a href="${ticketUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:13px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir entrada digital</a></p><p style="color:#6b6258;font-size:13px">Este código es único y personal. No lo compartas.</p></section><footer style="margin-top:24px;font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</footer></main></body></html>`,
           })
@@ -148,7 +152,7 @@ export async function createTicket(data: CreateTicketData) {
       if (data.sendEmail !== false) {
         const { data: event } = await supabase
           .from("events")
-          .select("id, title, mercado_pago_link, transfer_alias, transfer_account_holder, organizer_id")
+          .select("id, title, mercado_pago_link, transfer_alias, transfer_account_holder")
           .eq("id", data.event_id)
           .single()
 
@@ -156,27 +160,17 @@ export async function createTicket(data: CreateTicketData) {
           const quantity = data.ticketQuantity ?? 1
           const totalAmount = data.final_price * quantity
           const entradasLabel = quantity === 1 ? "entrada" : `${quantity} entradas`
-          const { data: organizer } = await supabase.from("profiles").select("email, full_name").eq("id", event.organizer_id).maybeSingle()
           const requestHeaders = await headers()
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
           const forwardedProto = requestHeaders.get("x-forwarded-proto") || (forwardedHost?.includes("localhost") ? "http" : "https")
           const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
           const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
-          const adminTicketsUrl = `${siteUrl.replace(/\/$/, "")}/admin/events/${event.id}/tickets`
           await resend.emails.send({
             from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
-            to: data.buyer_email,
+            to: buyerEmail,
             subject: `Compra recibida: ${event.title}`,
-            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${normalizedPaymentMethod === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${normalizedPaymentMethod === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${normalizedPaymentMethod === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
+            html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${normalizedPaymentMethod === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${normalizedPaymentMethod === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${normalizedPaymentMethod === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p><p>Después, podés consultar el estado y tus entradas en <a href="${siteUrl.replace(/\/$/, "")}/my-tickets">Mis entradas</a> con la cuenta asociada a esta compra.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
           })
-          if (organizer?.email && organizer.email !== data.buyer_email) {
-            await resend.emails.send({
-              from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
-              to: organizer.email,
-              subject: `Nueva compra pendiente de confirmación: ${event.title}`,
-              html: `<p>Hola ${organizer.full_name || ""},</p><p>Se creó una nueva compra de ${entradasLabel} para <strong>${event.title}</strong>.</p><p>Comprador: ${data.buyer_name} (${data.buyer_email}).</p><p>Ingresá al panel de administración para revisar el pago y confirmar las entradas cuando corresponda.</p><p><a href="${adminTicketsUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Revisar entrada en el panel</a></p><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
-            })
-          }
         }
       }
     } catch (emailError) {

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
 import { PendingOwnershipTransfers } from "@/components/admin/pending-ownership-transfers"
+import { WeeklySalesSummaryButton } from "@/components/admin/weekly-sales-summary-button"
 import { getPendingTransfers } from "@/app/actions/event-ownership-transfer"
 // import { archivePastEvents } from "@/app/actions/archive-event"
 
@@ -18,6 +19,7 @@ const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(amount)
 
 type AdminTicketSummary = {
+  id: string
   event_id: string
   status: string | null
   payment_status: string | null
@@ -28,7 +30,9 @@ type AdminTicketSummary = {
   net_amount: number | string | null
   payment_fee_amount: number | string | null
   payment_receipt_url: string | null
-  events: { price: number | string | null } | null
+  purchased_at: string | null
+  buyer_name: string
+  events: { price: number | string | null; title: string } | null
 }
 
 type OrganizerEventSummary = { id: string; title: string; status: string | null }
@@ -110,6 +114,7 @@ export default async function AdminPage() {
     .from("tickets")
     .select("*, events!inner(*)")
     .eq("events.organizer_id", user.id)
+    .order("purchased_at", { ascending: false })
 
   const { data: externalPayments } = await adminSupabase
     .from("external_payment_notifications")
@@ -145,6 +150,10 @@ export default async function AdminPage() {
   const eventRecords = (allOrganizerEvents || []) as OrganizerEventSummary[]
   const settlementRecords = (settlements || []) as EventSettlementSummary[]
   const totalEvents = events?.length || 0
+  const recentPurchases = ticketRecords
+    .filter((ticket) => ticket.status !== "cancelled")
+    .sort((a, b) => new Date(b.purchased_at ?? 0).getTime() - new Date(a.purchased_at ?? 0).getTime())
+  const recentPurchasePreview = recentPurchases.slice(0, 6)
   const soldTickets = ticketRecords.filter((ticket) =>
     ticket.status !== "cancelled" &&
     (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved" || Boolean(ticket.payment_receipt_url)),
@@ -230,9 +239,12 @@ export default async function AdminPage() {
             <h2 className="text-xl font-bold">Resumen de ventas</h2>
             <p className="text-sm text-muted-foreground">Incluye pagos aprobados y comprobantes cargados; excluye entradas canceladas.</p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/tickets">Ver listas de entradas</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/tickets">Ver listas de entradas</Link>
+            </Button>
+            {profile?.role === "organizer" && <WeeklySalesSummaryButton />}
+          </div>
         </section>
         <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           <div className="rounded-lg border border-border bg-card p-4">
@@ -265,6 +277,27 @@ export default async function AdminPage() {
             <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
           </div>
         </div>
+
+        <section className="mb-12" aria-labelledby="recent-purchases-title">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="recent-purchases-title" className="text-xl font-bold">Entradas nuevas</h2>
+              <p className="text-sm text-muted-foreground">Las compras más recientes de tus eventos. No enviamos avisos por cada compra.</p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{recentPurchasePreview.length} mostradas</span>
+          </div>
+          <div className="divide-y rounded-lg border bg-card">
+            {recentPurchasePreview.length ? recentPurchasePreview.map((ticket) => (
+              <div key={ticket.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+                <div>
+                  <p className="font-medium">{ticket.buyer_name} · {ticket.events?.title || "Evento"}</p>
+                  <p className="text-muted-foreground">{ticket.purchased_at ? new Date(ticket.purchased_at).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" }) : "Fecha no disponible"}</p>
+                </div>
+                <span className="rounded-full border px-2.5 py-1 text-xs">{ticket.status === "used" ? "Usada" : ticket.status === "confirmed" || ticket.payment_status === "approved" ? "Confirmada" : "Pendiente"}</span>
+              </div>
+            )) : <p className="p-6 text-center text-sm text-muted-foreground">Todavía no hay compras nuevas.</p>}
+          </div>
+        </section>
 
         <section className="mb-12">
           <div className="mb-6">
