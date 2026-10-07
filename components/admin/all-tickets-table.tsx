@@ -425,18 +425,30 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
 
   const visiblePurchaseGroups = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
-    return allPurchaseGroups.filter((group) =>
-      group.tickets.some((ticket) => {
-        if (selectedEventId !== "all" && ticket.events?.id !== selectedEventId) return false
-        if (!search) return true
-        return (
-          ticket.buyer_name.toLowerCase().includes(search) ||
-          ticket.buyer_email.toLowerCase().includes(search) ||
-          ticket.qr_code.toLowerCase().includes(search) ||
-          ticket.events.title.toLowerCase().includes(search)
+    return allPurchaseGroups
+      .filter((group) =>
+        group.tickets.some((ticket) => {
+          if (selectedEventId !== "all" && ticket.events?.id !== selectedEventId) return false
+          if (!search) return true
+          return (
+            ticket.buyer_name.toLowerCase().includes(search) ||
+            ticket.buyer_email.toLowerCase().includes(search) ||
+            ticket.qr_code.toLowerCase().includes(search) ||
+            ticket.events.title.toLowerCase().includes(search)
+          )
+        }),
+      )
+      .sort((first, second) => {
+        const hasSoldTicket = (group: TicketPurchaseGroup) => group.tickets.some((ticket) =>
+          ticket.status !== "cancelled" && (
+            ticket.status === "confirmed" ||
+            ticket.status === "used" ||
+            ticket.payment_status === "approved" ||
+            Boolean(ticket.payment_receipt_url)
+          ),
         )
-      }),
-    )
+        return Number(hasSoldTicket(second)) - Number(hasSoldTicket(first))
+      })
   }, [allPurchaseGroups, searchTerm, selectedEventId])
 
   const filteredTickets = visiblePurchaseGroups.flatMap((group) => group.tickets)

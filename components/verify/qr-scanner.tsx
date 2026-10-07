@@ -365,7 +365,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="font-semibold">Lista de entradas</h2>
-                <p className="text-sm text-muted-foreground">Consultá quién ingresó y quién todavía no.</p>
+                <p className="text-sm text-muted-foreground">Entradas habilitadas para ingresar y registro de quienes ya entraron.</p>
               </div>
               <Button type="button" variant="outline" onClick={loadAllTickets} disabled={isLoadingAllTickets}>
                 {isLoadingAllTickets ? 'Cargando…' : allTickets.length ? 'Actualizar lista' : 'Ver todas las entradas'}
@@ -374,12 +374,13 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}
             {allTickets.length > 0 && (
               <div className="mt-4 overflow-x-auto rounded-lg border">
-                <table className="w-full min-w-[520px] text-sm">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60 text-left">
                     <tr>
                       <th className="px-3 py-2 font-medium">Titular</th>
                       <th className="px-3 py-2 font-medium">Estado</th>
                       <th className="px-3 py-2 font-medium">¿Ingresó?</th>
+                      <th className="px-3 py-2 text-right font-medium">Acción</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -391,9 +392,16 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                             <p className="font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
                             {ticket.buyer_email && <p className="text-xs text-muted-foreground">{ticket.buyer_email}</p>}
                           </td>
-                          <td className="px-3 py-3 text-muted-foreground">{ticket.status === 'cancelled' ? 'Cancelada' : ticket.status === 'confirmed' ? 'Confirmada' : ticket.status === 'used' ? 'Utilizada' : 'Pendiente'}</td>
+                          <td className="px-3 py-3 text-muted-foreground">{ticket.status === 'confirmed' ? 'Confirmada' : 'Utilizada'}</td>
                           <td className="px-3 py-3">
                             <Badge variant={entered ? 'default' : 'outline'}>{entered ? 'Sí' : 'No'}</Badge>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {ticket.status === 'confirmed' && (
+                              <Button type="button" size="sm" onClick={() => setTicketToCheckIn(ticket)}>
+                                <CheckCircle data-icon="inline-start" /> Registrar ingreso
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       );

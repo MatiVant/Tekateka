@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/auth"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MovementsReportButton } from "@/components/admin/movements-report-button"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
-import { Calendar, Ticket, DollarSign, Users, Plus, Clock, XCircle } from "lucide-react"
+import { Calendar, Ticket, DollarSign, Plus, Clock, XCircle, Banknote, CreditCard, DoorOpen } from "lucide-react"
 import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,6 +16,22 @@ import { getPendingTransfers } from "@/app/actions/event-ownership-transfer"
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(amount)
+
+type AdminTicketSummary = {
+  event_id: string
+  status: string | null
+  payment_status: string | null
+  payment_method: string | null
+  payment_provider: string | null
+  charged_amount: number | string | null
+  final_price: number | string | null
+  net_amount: number | string | null
+  payment_fee_amount: number | string | null
+  events: { price: number | string | null } | null
+}
+
+type OrganizerEventSummary = { id: string; title: string; status: string | null }
+type EventSettlementSummary = { door_paid_count: number | null; door_paid_unit_price: number | string | null }
 
 export default async function AdminPage() {
   const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
@@ -118,24 +133,47 @@ export default async function AdminPage() {
         .limit(200)
     : { data: [] }
 
+  const { data: settlements } = organizerEventIds.length
+    ? await adminSupabase
+        .from("event_settlements")
+        .select("event_id, door_paid_count, door_paid_unit_price")
+        .in("event_id", organizerEventIds)
+    : { data: [] }
+
+  const ticketRecords = (tickets || []) as AdminTicketSummary[]
+  const eventRecords = (allOrganizerEvents || []) as OrganizerEventSummary[]
+  const settlementRecords = (settlements || []) as EventSettlementSummary[]
   const totalEvents = events?.length || 0
-  const totalTickets = tickets?.length || 0
-  const confirmedTickets = tickets?.filter((t) => t.payment_status === "approved" || t.status === "confirmed").length || 0
-  const pendingTickets = tickets?.filter((t) => t.payment_status !== "approved" && t.status === "pending").length || 0
-  const totalRevenue =
-    tickets
-      ?.filter((t) => t.payment_status === "approved" || t.status === "confirmed")
-      .reduce((sum, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? ticket.events.price ?? 0), 0) || 0
-  const eventReports = (allOrganizerEvents || []).map((event: any) => {
-    const eventTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && (ticket.payment_status === "approved" || ticket.status === "confirmed"))
-    const eventPendingTickets = (tickets || []).filter((ticket: any) => ticket.event_id === event.id && ticket.payment_status !== "approved" && ticket.status === "pending")
+  const paidTickets = ticketRecords.filter((ticket) =>
+    ticket.status !== "cancelled" &&
+    (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"),
+  )
+  const confirmedTickets = paidTickets.length
+  const pendingTickets = ticketRecords.filter(
+    (ticket) => ticket.status === "pending" && ticket.payment_status !== "approved",
+  ).length
+  const ticketCharge = (ticket: AdminTicketSummary) => Number(ticket.charged_amount ?? ticket.final_price ?? ticket.events?.price ?? 0)
+  const transferRevenue = paidTickets
+    .filter((ticket) => ticket.payment_method === "transfer")
+    .reduce((sum, ticket) => sum + ticketCharge(ticket), 0)
+  const mercadoPagoRevenue = paidTickets
+    .filter((ticket) => ticket.payment_method === "mercado_pago" || ticket.payment_method === "external_link" || ["mercado_pago", "mercadopago"].includes(ticket.payment_provider ?? ""))
+    .reduce((sum, ticket) => sum + ticketCharge(ticket), 0)
+  const doorRevenue = settlementRecords.reduce(
+    (sum, settlement) => sum + Number(settlement.door_paid_count ?? 0) * Number(settlement.door_paid_unit_price ?? 0),
+    0,
+  )
+  const totalRevenue = paidTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0) + doorRevenue
+  const eventReports = eventRecords.map((event) => {
+    const eventTickets = paidTickets.filter((ticket) => ticket.event_id === event.id)
+    const eventPendingTickets = ticketRecords.filter((ticket) => ticket.event_id === event.id && ticket.status === "pending" && ticket.payment_status !== "approved")
     return {
       event,
       count: eventTickets.length,
       pendingCount: eventPendingTickets.length,
-      gross: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0),
-      fees: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.payment_fee_amount ?? 0), 0),
-      net: eventTickets.reduce((sum: number, ticket: any) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
+      gross: eventTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0),
+      fees: eventTickets.reduce((sum, ticket) => sum + Number(ticket.payment_fee_amount ?? 0), 0),
+      net: eventTickets.reduce((sum, ticket) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
     }
   })
 
@@ -193,41 +231,35 @@ export default async function AdminPage() {
           <h2 className="text-xl font-bold">Total histórico</h2>
           <p className="text-sm text-muted-foreground">Resumen acumulado de todos tus eventos.</p>
         </section>
-        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="p-4 bg-card border border-border rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Eventos Activos</span>
-              <Calendar className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
-            </div>
+        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Eventos activos</span><Calendar aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-3xl font-bold text-foreground">{totalEvents}</div>
           </div>
-
-          <div className="p-4 bg-card border border-border rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Entradas Vendidas</span>
-              <Ticket className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
-            </div>
-            <div className="text-3xl font-bold text-foreground">{totalTickets}</div>
-            <p className="text-xs text-muted-foreground mt-2">{confirmedTickets} confirmadas</p>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas confirmadas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-3xl font-bold text-foreground">{confirmedTickets}</div>
           </div>
-
-          <div className="p-4 bg-card border border-border rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Ingresos Confirmados</span>
-              <DollarSign className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
-            </div>
-            <div className="text-3xl font-bold text-foreground">${totalRevenue.toFixed(2)}</div>
-          </div>
-
-          <div className="p-4 bg-card border border-border rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Pendientes</span>
-              <Users className="h-5 w-5 text-primary/60 group-hover:text-primary transition-colors" />
-            </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
             <div className="text-3xl font-bold text-foreground">{pendingTickets}</div>
-            <Button asChild variant="link" className="px-0 h-auto mt-2 text-xs">
-              <Link href="/admin/tickets">Revisar</Link>
-            </Button>
+            <Button asChild variant="link" className="mt-2 h-auto px-0 text-xs"><Link href="/admin/tickets">Revisar</Link></Button>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero transferido</span><Banknote aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(transferRevenue)}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero por Mercado Pago</span><CreditCard aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(mercadoPagoRevenue)}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero en puerta</span><DoorOpen aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(doorRevenue)}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Total recaudado</span><DollarSign aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
           </div>
         </div>
 

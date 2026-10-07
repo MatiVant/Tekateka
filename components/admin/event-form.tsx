@@ -91,7 +91,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   )
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState(event?.max_tickets_per_person?.toString() || "")
   const [mercadoPagoLink, setMercadoPagoLink] = useState(event?.mercado_pago_link || "")
-  const [paymentMethods, setPaymentMethods] = useState<string[]>(event?.payment_methods?.length ? event.payment_methods : ["mercado_pago", "transfer"])
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(event?.payment_methods?.length ? event.payment_methods : ["transfer"])
   const [transferAlias, setTransferAlias] = useState(event?.transfer_alias || "")
   const [transferAccountHolder, setTransferAccountHolder] = useState(event?.transfer_account_holder || "")
   const [ticketTiers, setTicketTiers] = useState<

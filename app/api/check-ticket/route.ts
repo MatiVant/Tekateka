@@ -53,6 +53,8 @@ export async function POST(request: Request) {
         .from("tickets")
         .select("id, buyer_name, buyer_email, status, purchased_at, verified_at")
         .eq("event_id", link.event_id)
+        .in("status", ["confirmed", "used"])
+        .order("status", { ascending: true })
         .order("buyer_name", { ascending: true })
         .order("purchased_at", { ascending: false })
         .limit(1000)
