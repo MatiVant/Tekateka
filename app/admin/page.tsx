@@ -149,10 +149,6 @@ export default async function AdminPage() {
     ticket.status !== "cancelled" &&
     (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved" || Boolean(ticket.payment_receipt_url)),
   )
-  const confirmedTickets = ticketRecords.filter((ticket) =>
-    ticket.status !== "cancelled" &&
-    (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"),
-  ).length
   const pendingTickets = ticketRecords.filter(
     (ticket) => ticket.status === "pending" && ticket.payment_status !== "approved",
   ).length
@@ -246,7 +242,6 @@ export default async function AdminPage() {
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas vendidas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-3xl font-bold text-foreground">{soldTickets.length}</div>
-            <p className="mt-1 text-xs text-muted-foreground">{confirmedTickets} confirmadas; incluye comprobantes a revisar</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
