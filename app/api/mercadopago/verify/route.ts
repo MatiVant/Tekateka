@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   const accessToken = await getProducerAccessToken(event.organizer_id)
   if (!accessToken) return NextResponse.json({ error: "Mercado Pago no está conectado" }, { status: 409 })
 
-  let payment: any = null
+  type MercadoPagoPayment = { id: string | number; status: string }
+  let payment: MercadoPagoPayment | null = null
   if (ticket.payment_id) {
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(ticket.payment_id)}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" })
     if (response.ok) payment = await response.json()

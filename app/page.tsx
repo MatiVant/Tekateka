@@ -20,10 +20,25 @@ export default async function HomePage() {
     .in("status", ["active", "inactive", "sold_out"])
     .order("event_date", { ascending: true })
 
-  const { data: confirmedTickets } = await supabase
-    .from("tickets")
-    .select("event_id")
-    .eq("status", "confirmed")
+  const eventIds = (events || []).map((event) => event.id)
+  const { data: confirmedTickets } = eventIds.length
+    ? await supabase
+        .from("tickets")
+        .select("event_id")
+        .eq("status", "confirmed")
+        .in("event_id", eventIds)
+    : { data: [] }
+  const { data: ticketTiers } = eventIds.length
+    ? await supabase
+        .from("ticket_tiers")
+        .select("event_id, base_price")
+        .in("event_id", eventIds)
+        .order("base_price", { ascending: true })
+    : { data: [] }
+  const minPriceByEvent = (ticketTiers || []).reduce<Record<string, number>>((prices, tier) => {
+    if (prices[tier.event_id] === undefined) prices[tier.event_id] = tier.base_price
+    return prices
+  }, {})
   const confirmedByEvent = (confirmedTickets || []).reduce<Record<string, number>>((counts, ticket) => {
     counts[ticket.event_id] = (counts[ticket.event_id] || 0) + 1
     return counts
@@ -31,6 +46,7 @@ export default async function HomePage() {
   const eventsWithAvailability = (events || []).map((event) => ({
     ...event,
     confirmed_count: confirmedByEvent[event.id] || 0,
+    min_price: minPriceByEvent[event.id] ?? null,
   }))
   const featuredEvents = eventsWithAvailability.slice(0, 3)
   const regularEvents = eventsWithAvailability.slice(3)

@@ -37,11 +37,7 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchTiers();
-  }, [eventId]);
-
-  const fetchTiers = async () => {
+  async function fetchTiers() {
     try {
       const { data, error: fetchError } = await supabase
         .from('ticket_tiers')
@@ -56,6 +52,10 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
       setError('Error al cargar los tipos de entrada');
     }
   };
+
+  useEffect(() => {
+    window.setTimeout(() => { void fetchTiers() }, 0)
+  }, [eventId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

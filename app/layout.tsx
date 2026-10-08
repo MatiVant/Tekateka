@@ -12,6 +12,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono
 const _outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"),
   title: "TekaTeka — Tus eventos. Tus entradas.",
   description: "Descubrí eventos, comprá entradas y compartí tus encuentros con TekaTeka.",
   generator: "v0.app",
