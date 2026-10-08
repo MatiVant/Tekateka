@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { compressReceipt, isPdf } from "@/lib/compress-image"
 
 export function ResumeReceiptUpload({ token }: { token: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -16,8 +17,9 @@ export function ResumeReceiptUpload({ token }: { token: string }) {
     setLoading(true)
     setMessage(null)
     try {
+      const uploadFile = isPdf(file) ? file : await compressReceipt(file)
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", uploadFile)
       formData.append("token", token)
       formData.append("notes", notes)
       const response = await fetch("/api/upload-receipt", { method: "POST", body: formData })

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, MapPin, Ticket, ArrowLeft, Clock } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { PurchaseFlow } from "@/components/purchase-flow"
 import { formatCurrency } from "@/lib/format"
@@ -96,15 +97,15 @@ export default async function EventDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="aspect-video relative overflow-hidden rounded-lg bg-muted mb-6">
-              <img
-                src={
-                  event.image_url ||
-                  `/placeholder.svg?height=600&width=1000&query=evento+${encodeURIComponent(event.title) || "/placeholder.svg"}`
-                }
+              <Image
+                src={event.image_url || `/placeholder.svg?height=600&width=1000&query=evento+${encodeURIComponent(event.title)}`}
                 alt={event.title}
-  className="object-cover w-full h-full"
-  style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
-  />
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                className="object-cover"
+                style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
+              />
             </div>
 
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-balance">{event.title}</h1>

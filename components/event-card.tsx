@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Ticket, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/format"
 import { useState, useEffect } from "react"
@@ -68,13 +69,12 @@ export function EventCard({ event, featured = false }: EventCardProps) {
       className={`group overflow-hidden rounded-2xl border-foreground/10 bg-card/80 transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${featured ? "h-full" : ""}`}
     >
       <div className={`relative overflow-hidden bg-muted ${featured ? "aspect-[16/10]" : "aspect-video"}`}>
-        <img
-          src={
-            event.image_url ||
-            `/placeholder.svg?height=${featured ? 600 : 400}&width=${featured ? 800 : 600}&query=evento+${encodeURIComponent(event.title)}`
-          }
+        <Image
+          src={event.image_url || `/placeholder.svg?height=${featured ? 600 : 400}&width=${featured ? 800 : 600}&query=evento+${encodeURIComponent(event.title)}`}
           alt={event.title}
-          className="object-cover w-full h-full group-hover:scale-103 transition-transform duration-700"
+          fill
+          sizes={featured ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
+          className="object-cover transition-transform duration-700 group-hover:scale-103"
           style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />

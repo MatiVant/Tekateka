@@ -16,6 +16,7 @@ import { validatePromotion as validatePromotionServer } from "@/app/actions/vali
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
+import { compressReceipt, isPdf } from "@/lib/compress-image"
 
 interface TicketTier {
   id: string
@@ -282,10 +283,11 @@ export function PurchaseFlow({
     setError(null)
 
     try {
+      const uploadFile = isPdf(receiptFile) ? receiptFile : await compressReceipt(receiptFile)
       const formData = new FormData()
-      formData.append("file", receiptFile)
+      formData.append("file", uploadFile)
 
-      console.log("[v0] Subiendo comprobante...")
+      console.log("[v0] Subiendo comprobante optimizado...")
 
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
@@ -301,8 +303,6 @@ export function PurchaseFlow({
       }
 
       const { url } = await uploadResponse.json()
-      console.log("[v0] Comprobante subido exitosamente:", url)
-
       // Un mismo comprobante corresponde a toda la compra: se aplica a todas las entradas.
       await Promise.all(idsToUpdate.map((id) => updateTicketReceipt(id, url, receiptNotes || undefined)))
 

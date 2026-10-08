@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateOrganizerCover } from "@/app/actions/update-organizer-cover"
+import { compressCover } from "@/lib/compress-image"
 
 type OrganizerCoverAdminEditorProps = {
   organizerProfileId: string
@@ -35,8 +36,9 @@ export function OrganizerCoverAdminEditor({ organizerProfileId, currentCoverUrl 
 
     setIsSaving(true)
     try {
+      const uploadFile = await compressCover(file)
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", uploadFile)
       const uploadResponse = await fetch("/api/upload/organization-cover", {
         method: "POST",
         body: formData,

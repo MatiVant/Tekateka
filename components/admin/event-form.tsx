@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { formatCurrency } from "@/lib/format"
 import { saveEvent } from "@/app/actions/save-event"
 import { EventCreatedShareCard } from "@/components/admin/event-created-share-card"
+import { compressEventImage } from "@/lib/compress-image"
 
 interface EventFormProps {
   userId: string
@@ -174,8 +175,9 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
     setIsUploading(true)
 
     try {
+      const uploadFile = await compressEventImage(file)
       const uploadFormData = new FormData()
-      uploadFormData.append("file", file)
+      uploadFormData.append("file", uploadFile)
 
       const response = await fetch("/api/upload", {
         method: "POST",
