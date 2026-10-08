@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,6 @@ export function EventVisibilityToggle({ eventId, isPublic }: EventVisibilityTogg
   const [isVisible, setIsVisible] = useState(isPublic)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  useEffect(() => setIsVisible(isPublic), [isPublic])
   const { toast } = useToast()
 
   const handleToggle = async () => {

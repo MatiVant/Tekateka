@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const supabase = createClient()
     const { data: tickets, error } = await supabase.from("tickets").select("*, events(id, organizer_id, title, event_date, venue)").in("id", ticketIds)
     if (error || !tickets?.length || tickets.length !== ticketIds.length) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
-    if (profile?.role !== "superadmin" && tickets.some((item: any) => item.events?.organizer_id !== user.id)) return NextResponse.json({ error: "No tenés permiso para reenviar estas entradas" }, { status: 403 })
+    if (profile?.role !== "superadmin" && tickets.some((item: { events?: { organizer_id?: string | null } | null }) => item.events?.organizer_id !== user.id)) return NextResponse.json({ error: "No tenés permiso para reenviar estas entradas" }, { status: 403 })
     const firstTicket = tickets[0]
     const sameBuyer = tickets.every((item) => item.buyer_email === firstTicket.buyer_email && item.events?.id === firstTicket.events?.id)
     if (!sameBuyer) return NextResponse.json({ error: "Las entradas deben pertenecer al mismo comprador y evento" }, { status: 400 })

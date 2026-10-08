@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     : supabase.from("events").select("title, description, image_url, image_position_x, image_position_y, venue, event_date, organizer_id").eq("slug", id).maybeSingle()
   const { data: event } = await eventQuery
   if (!event) return { title: "Evento | TekaTeka" }
-  if (new Date(event.event_date).getTime() < Date.now() && !(await canViewPastEvent(event.organizer_id))) {
+  const now = new Date().getTime()
+  if (new Date(event.event_date).getTime() < now && !(await canViewPastEvent(event.organizer_id))) {
     return { title: "Evento no disponible | TekaTeka" }
   }
   const date = new Date(event.event_date).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
@@ -53,7 +54,8 @@ export default async function EventDetailPage({
     console.error("[v0] Error fetching event:", error)
     notFound()
   }
-  if (new Date(event.event_date).getTime() < Date.now() && !(await canViewPastEvent(event.organizer_id))) {
+  const now = new Date().getTime()
+  if (new Date(event.event_date).getTime() < now && !(await canViewPastEvent(event.organizer_id))) {
     notFound()
   }
 
@@ -65,7 +67,6 @@ export default async function EventDetailPage({
   const confirmedCount = confirmedTickets ?? 0
   const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
   const eventDate = new Date(event.event_date)
-  const now = Date.now()
   const beforeSalesStart = event.sales_start_at && now < new Date(event.sales_start_at).getTime()
   const afterSalesEnd = event.sales_end_at && now >= new Date(event.sales_end_at).getTime()
   const eventHasStarted = now >= eventDate.getTime()

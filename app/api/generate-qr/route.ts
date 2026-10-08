@@ -34,10 +34,10 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ qrDataUrl })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[v0] Error al generar QR:', error)
     return NextResponse.json(
-      { error: 'Error al generar código QR', details: error.message },
+      { error: 'Error al generar código QR', details: error instanceof Error ? error.message : 'Error desconocido' },
       { status: 500 }
     )
   }

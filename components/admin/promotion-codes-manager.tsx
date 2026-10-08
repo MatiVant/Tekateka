@@ -49,11 +49,7 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchCodes()
-  }, [eventId])
-
-  const fetchCodes = async () => {
+  async function fetchCodes() {
     try {
       const { data, error: fetchError } = await supabase
         .from("promotion_codes")
@@ -68,6 +64,10 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
       setError("Error al cargar códigos de promoción")
     }
   }
+
+  useEffect(() => {
+    window.setTimeout(() => { void fetchCodes() }, 0)
+  }, [eventId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

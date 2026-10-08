@@ -385,7 +385,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
                           variant="outline"
                           onClick={() => {
                             setSelectedOrganizer(organizer)
-                            setSubscriptionStatus(organizer.subscription_status as any)
+                            setSubscriptionStatus(organizer.subscription_status === "active" || organizer.subscription_status === "inactive" ? organizer.subscription_status : "free")
                             setAction("subscription")
                           }}
                         >
@@ -537,7 +537,9 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
           <div className="space-y-4">
             <div>
               <Label htmlFor="subscription">Estado de Suscripción</Label>
-              <Select value={subscriptionStatus} onValueChange={(value: any) => setSubscriptionStatus(value)}>
+              <Select value={subscriptionStatus} onValueChange={(value) => {
+                if (value === "free" || value === "active" || value === "inactive") setSubscriptionStatus(value)
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

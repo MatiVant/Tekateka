@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     
     if (action === 'subscription') {
       // Actualizar suscripción
-      const updateData: any = {
+      const updateData: Record<string, string | null> = {
         subscription_status: subscriptionStatus,
       };
 

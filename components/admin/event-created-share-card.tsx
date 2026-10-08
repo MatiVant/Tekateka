@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { createArtistShareLink } from "@/app/actions/artist-share-links"
 import { Button } from "@/components/ui/button"
@@ -37,15 +37,12 @@ async function copyText(value: string) {
 }
 
 export function EventCreatedShareCard({ eventId, eventTitle, onBackToPanel }: EventCreatedShareCardProps) {
-  const [publicUrl, setPublicUrl] = useState(`/events/${eventId}`)
+  const publicUrl = `${typeof window === "undefined" ? "" : window.location.origin}/events/${eventId}`
   const [artistUrl, setArtistUrl] = useState("")
   const [busy, setBusy] = useState(false)
   const [copiedLink, setCopiedLink] = useState<"public" | "artist" | null>(null)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    setPublicUrl(`${window.location.origin}/events/${eventId}`)
-  }, [eventId])
 
   async function handleCopy(url: string, kind: "public" | "artist") {
     try {

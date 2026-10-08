@@ -37,7 +37,7 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
     counts[ticket.event_id] = current
     return counts
   }, {})
-  const now = Date.now()
+  const now = new Date().getTime()
   const sortedEvents = [...(events || [])].sort((a, b) => {
     const aTime = new Date(a.event_date).getTime()
     const bTime = new Date(b.event_date).getTime()

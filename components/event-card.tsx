@@ -29,23 +29,26 @@ interface EventCardProps {
     confirmed_count?: number
     sales_start_at?: string | null
     sales_end_at?: string | null
+    min_price?: number | null
   }
   featured?: boolean
 }
 
 export function EventCard({ event, featured = false }: EventCardProps) {
   const eventDate = new Date(event.event_date)
-  const [confirmedCount, setConfirmedCount] = useState(event.confirmed_count ?? 0)
+  const [confirmedCount] = useState(event.confirmed_count ?? 0)
   const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
-  const now = Date.now()
+  const now = new Date().getTime()
   const isBeforeStart = now < eventDate.getTime()
   const isBeforeSalesEnd = !event.sales_end_at || now < new Date(event.sales_end_at).getTime()
   const isAfterSalesStart = !event.sales_start_at || now >= new Date(event.sales_start_at).getTime()
   const isAvailable = event.status === "active" && realAvailableTickets > 0 && isBeforeStart && isBeforeSalesEnd && isAfterSalesStart
 
-  const [minPrice, setMinPrice] = useState<number | null>(null)
+  const [minPrice, setMinPrice] = useState<number | null>(event.min_price ?? null)
 
   useEffect(() => {
+    if (event.min_price !== undefined) return
+
     const fetchMinPrice = async () => {
       try {
         const supabase = createClient()

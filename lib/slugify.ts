@@ -8,7 +8,9 @@ export function slugify(value: string) {
     .slice(0, 80) || "evento"
 }
 
-export async function createUniqueEventSlug(supabase: any, title: string, eventId?: string) {
+import type { SupabaseClient } from "@supabase/supabase-js"
+
+export async function createUniqueEventSlug(supabase: SupabaseClient, title: string, eventId?: string) {
   const base = slugify(title)
   let slug = base
   let suffix = 2
