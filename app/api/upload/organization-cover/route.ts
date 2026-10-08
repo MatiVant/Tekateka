@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { uploadPublicFile } from "@/lib/supabase/storage-upload"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
@@ -59,13 +59,9 @@ export async function POST(request: NextRequest) {
 
     const extensionByType = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const
     const pathname = `organization-covers/${user.id}/${crypto.randomUUID()}.${extensionByType[file.type as keyof typeof extensionByType]}`
-    const blob = await put(pathname, file, {
-      access: "public",
-      addRandomSuffix: false,
-      contentType: file.type,
-    })
+    const url = await uploadPublicFile("organization-covers", pathname, file)
 
-    return NextResponse.json({ url: blob.url })
+    return NextResponse.json({ url })
   } catch (error) {
     console.error("Organization cover upload failed:", error)
     return NextResponse.json({ error: "No se pudo subir la portada." }, { status: 500 })

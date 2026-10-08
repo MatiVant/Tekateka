@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { uploadPublicFile } from "@/lib/supabase/storage-upload"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -17,20 +17,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "El comprobante debe pesar menos de 5 MB" }, { status: 400 })
     }
 
-    // Upload to Vercel Blob
-    const blob = await put(file.name, file, {
-      access: "public",
-      addRandomSuffix: true,
-    })
+    const url = await uploadPublicFile("event-images", `events/${crypto.randomUUID()}-${file.name}`, file)
 
     return NextResponse.json({
-      url: blob.url,
+      url,
       filename: file.name,
       size: file.size,
       type: file.type,
     })
   } catch (error) {
     console.error("Upload error:", error)
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 })
+    return NextResponse.json({ error: "STORAGE_UPLOAD_UNAVAILABLE" }, { status: 503 })
   }
 }

@@ -311,7 +311,7 @@ export function PurchaseFlow({
     } catch (error: unknown) {
       console.error("[v0] Error al subir comprobante:", error)
       if (!(error instanceof TypeError)) {
-        setError(error instanceof Error ? error.message : "Error al subir comprobante")
+        setError(error instanceof Error && error.message === "STORAGE_UPLOAD_UNAVAILABLE" ? "STORAGE_UPLOAD_UNAVAILABLE" : error instanceof Error ? error.message : "Error al subir comprobante")
       }
     } finally {
       setUploading(false)
@@ -501,7 +501,7 @@ export function PurchaseFlow({
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error === "STORAGE_UPLOAD_UNAVAILABLE" ? <>Disculpa las molestias ocasionadas. Podés enviar el comprobante a <a className="font-semibold underline" href="https://wa.me/5493426105033" target="_blank" rel="noreferrer">+54 9 3426 10-5033 por WhatsApp</a> para que confirmemos tus entradas.</> : error}</AlertDescription>
           </Alert>
         )}
 
@@ -596,7 +596,7 @@ export function PurchaseFlow({
           </div>
         )}
 
-        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error === "STORAGE_UPLOAD_UNAVAILABLE" ? <>Disculpa las molestias ocasionadas. Podés enviar el comprobante a <a className="font-semibold underline" href="https://wa.me/5493426105033" target="_blank" rel="noreferrer">+54 9 3426 10-5033 por WhatsApp</a> para que confirmemos tus entradas.</> : error}</AlertDescription></Alert>}
 
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>Volver atrás</Button>
@@ -746,7 +746,7 @@ export function PurchaseFlow({
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error === "STORAGE_UPLOAD_UNAVAILABLE" ? <>Disculpa las molestias ocasionadas. Podés enviar el comprobante a <a className="font-semibold underline" href="https://wa.me/5493426105033" target="_blank" rel="noreferrer">+54 9 3426 10-5033 por WhatsApp</a> para que confirmemos tus entradas.</> : error}</AlertDescription>
           </Alert>
         )}
 

@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { uploadPublicFile } from "@/lib/supabase/storage-upload"
 import { NextResponse } from "next/server"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
@@ -37,10 +37,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudieron identificar las entradas de la compra" }, { status: 500 })
   }
 
-  const blob = await put(`receipts/${ticketId}-${Date.now()}-${file.name}`, file, { access: "public", addRandomSuffix: true })
+  let url: string
+  try {
+    url = await uploadPublicFile("payment-receipts", `receipts/${ticketId}-${Date.now()}-${file.name}`, file)
+  } catch (error) {
+    console.error("Admin receipt upload error:", error)
+    return NextResponse.json({ error: "No se pudo subir el comprobante" }, { status: 503 })
+  }
   const { error } = await supabase
     .from("tickets")
-    .update({ payment_receipt_url: blob.url })
+    .update({ payment_receipt_url: url })
     .in("id", relatedTickets.map((relatedTicket) => relatedTicket.id))
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
