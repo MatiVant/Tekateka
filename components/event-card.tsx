@@ -86,8 +86,11 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 
         {!isAvailable && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-            <Badge variant="destructive" className="text-base px-4 py-2 font-semibold">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+            <Badge
+              variant="destructive"
+              className="rounded-md border-2 border-white/80 bg-destructive px-6 py-3 text-xl font-black uppercase tracking-[0.18em] shadow-2xl shadow-black/40"
+            >
               {event.status === "sold_out" || realAvailableTickets === 0 ? "Agotado" : "No Disponible"}
             </Badge>
           </div>
