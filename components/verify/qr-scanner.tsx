@@ -60,6 +60,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
     ticket?: {
       buyer_name: string;
       buyer_email: string;
+      id: string;
       qr_code: string;
       status: string;
       purchased_at: string;
@@ -139,29 +140,10 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
         return;
       }
 
-      // Ticket válido - marcarlo como usado
-      const { data: updatedTicket, error: updateError } = await supabase
-        .from('tickets')
-        .update({
-          status: 'used',
-          verified_at: new Date().toISOString(),
-          verified_by: userId,
-        })
-        .eq('id', ticket.id)
-        .eq('status', 'confirmed')
-        .select('id')
-        .maybeSingle()
-
-      if (updateError) throw updateError
-      if (!updatedTicket) {
-        setResult({ type: 'warning', message: 'Este ticket ya fue utilizado anteriormente.', ticket: { ...ticket, status: 'used' } })
-        return
-      }
-
       setResult({
         type: 'success',
-        message: 'Ticket válido. Entrada verificada correctamente.',
-        ticket: { ...ticket, status: 'used' },
+        message: 'Ticket válido. Confirmá el ingreso para marcarlo como usado.',
+        ticket: { ...ticket, status: 'confirmed' },
       });
     } catch (error) {
       console.error('[v0] Error al verificar ticket:', error);
@@ -299,6 +281,29 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       setTicketToCheckIn(null);
     } finally {
       setIsManualCheckInPending(false);
+    }
+  };
+
+  const registerQrCheckIn = async () => {
+    if (!result?.ticket || isScanning) return;
+    setIsScanning(true);
+    try {
+      if (checkerToken) {
+        const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, action: 'check_in', qrCode: result.ticket.qr_code }) });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'No se pudo registrar el ingreso.');
+        setResult({ type: payload.type, message: payload.message, ticket: payload.ticket });
+        return;
+      }
+      const supabase = createClient();
+      const { data, error } = await supabase.from('tickets').update({ status: 'used', verified_at: new Date().toISOString(), verified_by: userId }).eq('id', result.ticket.id).eq('status', 'confirmed').select('id').maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('La entrada ya fue utilizada o cambió de estado.');
+      setResult({ type: 'success', message: 'Ingreso registrado correctamente. La entrada ahora figura como usada.', ticket: { ...result.ticket, status: 'used' } });
+    } catch (error) {
+      setResult({ type: 'error', message: error instanceof Error ? error.message : 'No se pudo registrar el ingreso.', ticket: result.ticket });
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -539,7 +544,13 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
 
           {result.ticket && <TicketDetails ticket={result.ticket} />}
 
-          <Button onClick={handleScanAgain} className="w-full">
+          {result.ticket?.status === 'confirmed' && result.type === 'success' && (
+            <Button onClick={() => void registerQrCheckIn()} className="w-full" disabled={isScanning}>
+              {isScanning ? 'Registrando ingreso…' : 'Registrar ingreso'}
+            </Button>
+          )}
+
+          <Button onClick={handleScanAgain} variant={result.ticket?.status === 'confirmed' && result.type === 'success' ? 'outline' : 'default'} className="w-full">
             Escanear Otro Ticket
           </Button>
         </div>

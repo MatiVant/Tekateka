@@ -3,6 +3,7 @@ import crypto from "node:crypto"
 import { createClient } from "@/lib/supabase/admin"
 
 type TicketDetailsRecord = {
+  id: string
   buyer_name: string
   buyer_email: string
   qr_code: string
@@ -17,6 +18,7 @@ type EventDetailsRecord = {
 }
 
 const ticketDetails = (ticket: TicketDetailsRecord, event: EventDetailsRecord, status = ticket.status) => ({
+  id: ticket.id,
   buyer_name: ticket.buyer_name,
   buyer_email: ticket.buyer_email,
   qr_code: ticket.qr_code,
@@ -109,6 +111,10 @@ export async function POST(request: Request) {
     }
     if (ticket.status !== "confirmed") {
       return NextResponse.json({ type: "warning", message: "La entrada está pendiente de confirmación.", ticket: ticketDetails(ticket, event) })
+    }
+
+    if (action !== "check_in") {
+      return NextResponse.json({ type: "success", message: "Entrada válida. Confirmá el ingreso para marcarla como usada.", ticket: ticketDetails(ticket, event, "confirmed") })
     }
 
     const { data: updatedTicket, error } = await supabase
