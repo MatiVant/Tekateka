@@ -37,6 +37,7 @@ type AdminTicketSummary = {
 
 type OrganizerEventSummary = { id: string; title: string; status: string | null }
 type EventSettlementSummary = { door_paid_count: number | null; door_paid_unit_price: number | string | null }
+type DoorSaleSummary = { event_id: string; quantity: number; unit_price: number | string }
 
 export default async function AdminPage() {
   const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
@@ -145,10 +146,14 @@ export default async function AdminPage() {
         .select("event_id, door_paid_count, door_paid_unit_price")
         .in("event_id", organizerEventIds)
     : { data: [] }
+  const { data: doorSales } = organizerEventIds.length
+    ? await adminSupabase.from("door_sales").select("event_id, quantity, unit_price").in("event_id", organizerEventIds)
+    : { data: [] }
 
   const ticketRecords = (tickets || []) as AdminTicketSummary[]
   const eventRecords = (allOrganizerEvents || []) as OrganizerEventSummary[]
   const settlementRecords = (settlements || []) as EventSettlementSummary[]
+  const doorSaleRecords = (doorSales || []) as DoorSaleSummary[]
   const totalEvents = events?.length || 0
   const recentPurchases = ticketRecords
     .filter((ticket) => ticket.status !== "cancelled")
@@ -168,17 +173,17 @@ export default async function AdminPage() {
   const mercadoPagoRevenue = soldTickets
     .filter((ticket) => ticket.payment_method === "mercado_pago" || ticket.payment_method === "external_link" || ["mercado_pago", "mercadopago"].includes(ticket.payment_provider ?? ""))
     .reduce((sum, ticket) => sum + ticketCharge(ticket), 0)
-  const doorRevenue = settlementRecords.reduce(
-    (sum, settlement) => sum + Number(settlement.door_paid_count ?? 0) * Number(settlement.door_paid_unit_price ?? 0),
-    0,
-  )
+  const legacyDoorRevenue = settlementRecords.reduce((sum, settlement) => sum + Number(settlement.door_paid_count ?? 0) * Number(settlement.door_paid_unit_price ?? 0), 0)
+  const doorRevenue = doorSaleRecords.reduce((sum, sale) => sum + Number(sale.quantity) * Number(sale.unit_price), 0) || legacyDoorRevenue
+  const doorTicketCount = doorSaleRecords.reduce((sum, sale) => sum + Number(sale.quantity), 0) || settlementRecords.reduce((sum, settlement) => sum + Number(settlement.door_paid_count ?? 0), 0)
   const totalRevenue = soldTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0) + doorRevenue
+  const totalSoldCount = soldTickets.length + doorTicketCount
   const eventReports = eventRecords.map((event) => {
     const eventTickets = soldTickets.filter((ticket) => ticket.event_id === event.id)
     return {
       event,
-      count: eventTickets.length,
-      gross: eventTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0),
+      count: eventTickets.length + doorSaleRecords.filter((sale) => sale.event_id === event.id).reduce((sum, sale) => sum + Number(sale.quantity), 0),
+      gross: eventTickets.reduce((sum, ticket) => sum + ticketCharge(ticket), 0) + doorSaleRecords.filter((sale) => sale.event_id === event.id).reduce((sum, sale) => sum + Number(sale.quantity) * Number(sale.unit_price), 0),
       fees: eventTickets.reduce((sum, ticket) => sum + Number(ticket.payment_fee_amount ?? 0), 0),
       net: eventTickets.reduce((sum, ticket) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
     }
@@ -253,7 +258,7 @@ export default async function AdminPage() {
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas vendidas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-3xl font-bold text-foreground">{soldTickets.length}</div>
+            <div className="text-3xl font-bold text-foreground">{totalSoldCount}</div>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
