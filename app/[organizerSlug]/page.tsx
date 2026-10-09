@@ -83,7 +83,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
 
   const eventIds = (events ?? []).map((event) => event.id)
   const { data: confirmedTickets } = eventIds.length
-    ? await supabase.from("tickets").select("event_id").in("event_id", eventIds).eq("status", "confirmed")
+    ? await supabase.from("tickets").select("event_id").in("event_id", eventIds).in("status", ["pending", "confirmed", "used"])
     : { data: [] as { event_id: string }[] }
 
   const confirmedByEvent = (confirmedTickets ?? []).reduce<Record<string, number>>((counts, ticket) => {
