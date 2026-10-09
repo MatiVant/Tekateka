@@ -789,6 +789,11 @@ export function PurchaseFlow({
               : `Hemos recibido tu comprobante de pago por ${quantity} ${quantity === 1 ? "entrada" : "entradas"}. El organizador lo verificará. Encontrarás el estado actualizado y tus códigos QR en Mis entradas.`}
         </p>
         {email && <p className="text-sm text-muted-foreground">Correo informado: <strong>{email}</strong></p>}
+        <Alert className="text-left">
+          <AlertDescription>
+            Te enviamos la información de tus entradas por correo. Si no la encontrás, revisá también la carpeta de spam o correo no deseado.
+          </AlertDescription>
+        </Alert>
         <div className="flex flex-col justify-center gap-2 sm:flex-row">
           <Button asChild>
             <Link href="/my-tickets">Ver mis entradas</Link>
