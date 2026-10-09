@@ -4,6 +4,7 @@ import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { QRScanner } from '@/components/verify/qr-scanner';
 import { Scan } from 'lucide-react';
+import { DoorSaleForm } from '@/components/verify/door-sale-form';
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ event?: string | string[] }> }) {
   const [{ event }, { authorized, user, profile }] = await Promise.all([
@@ -43,6 +44,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
             </CardHeader>
             <CardContent>
               <QRScanner userId={user.id} eventId={eventId} />
+              <DoorSaleForm eventId={eventId} />
             </CardContent>
           </Card>
         </div>
