@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
                     </ul>
                   </div>
 
-                  <p>Si crees que esto es un error o necesitas ayuda, no dudes en contactarnos.</p>
+                  <p>Si crees que esto es un error o necesitas ayuda, no dudes en contactarnos.</p><p style="font-size:13px;color:#666"><strong>Si no encontrás este correo, revisá también la carpeta de spam o correo no deseado.</strong></p>
                   
                   <div class="footer">
                     <p>Este email fue enviado por <strong>TekaTeka</strong></p>
