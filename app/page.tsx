@@ -25,7 +25,7 @@ export default async function HomePage() {
     ? await supabase
         .from("tickets")
         .select("event_id")
-        .eq("status", "confirmed")
+        .in("status", ["pending", "confirmed", "used"])
         .in("event_id", eventIds)
     : { data: [] }
   const { data: ticketTiers } = eventIds.length

@@ -35,11 +35,21 @@ export async function createTicket(data: CreateTicketData) {
     if (!buyerEmail) throw new Error("El email del comprador es obligatorio")
 
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
-    const { data: event, error: eventError } = await supabase.from("events").select("price, status, is_pay_what_you_want, sales_start_at, sales_end_at").eq("id", data.event_id).single()
+    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, sales_start_at, sales_end_at").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
     const now = Date.now()
     if (event.sales_start_at && now < new Date(event.sales_start_at).getTime()) throw new Error(`La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`)
     if (event.sales_end_at && now >= new Date(event.sales_end_at).getTime()) throw new Error("La venta para este evento ya finalizó")
+
+    const requestedQuantity = Math.max(1, data.ticketQuantity ?? 1)
+    const { count: activeTicketCount, error: capacityError } = await supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", data.event_id)
+      .in("status", ["pending", "confirmed", "used"])
+    if (capacityError) throw new Error("No se pudo verificar la disponibilidad del evento")
+    const remainingTickets = Math.max(0, Number(event.total_tickets ?? event.available_tickets ?? 0) - Number(activeTicketCount ?? 0))
+    if (requestedQuantity > remainingTickets) throw new Error(remainingTickets > 0 ? `Solo quedan ${remainingTickets} entradas disponibles` : "Se agotaron las entradas para este evento")
 
     let serverPrice = Number(event.price || 0)
     const originalPrice = serverPrice
@@ -81,7 +91,6 @@ export async function createTicket(data: CreateTicketData) {
     if (Math.abs(Number(data.final_price) - Math.max(0, serverPrice)) > 0.01) throw new Error("El precio de la compra cambió, actualizá la página")
 
     const reuseCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-    const requestedQuantity = Math.max(1, data.ticketQuantity ?? 1)
     const { data: pendingTickets, error: pendingError } = await supabase
       .from("tickets")
       .select("id, purchase_group_id, purchased_at, payment_status, status")
