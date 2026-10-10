@@ -50,6 +50,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Link vencido o inválido" }, { status: 401 })
     }
 
+    if (action === "door_sale") {
+      const quantity = Math.floor(Number(body.quantity))
+      const unitPrice = Math.round(Number(body.unitPrice) * 100) / 100
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) return NextResponse.json({ error: "La cantidad debe estar entre 1 y 1.000" }, { status: 400 })
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) return NextResponse.json({ error: "El precio no es válido" }, { status: 400 })
+      const { error } = await supabase.from("door_sales").insert({ event_id: link.event_id, quantity, unit_price: unitPrice, buyer_name: typeof body.buyerName === "string" ? body.buyerName.trim().slice(0, 120) || null : null, buyer_note: typeof body.note === "string" ? body.note.trim().slice(0, 500) || null : null, created_by: link.organizer_id })
+      if (error) throw error
+      return NextResponse.json({ message: "Venta en puerta registrada." })
+    }
+
     if (action === "list_all") {
       const { data: tickets, error } = await supabase
         .from("tickets")

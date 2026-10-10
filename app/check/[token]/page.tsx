@@ -1,4 +1,5 @@
 import { QRScanner } from "@/components/verify/qr-scanner"
+import { DoorSaleForm } from "@/components/verify/door-sale-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Scan } from "lucide-react"
 
@@ -14,7 +15,7 @@ export default async function CheckerPage({ params }: { params: Promise<{ token:
         </div>
         <Card>
           <CardHeader><CardTitle>Verificar entrada</CardTitle><CardDescription>Este acceso temporal solo permite validar entradas del evento asociado.</CardDescription></CardHeader>
-          <CardContent><QRScanner checkerToken={token} /></CardContent>
+          <CardContent><QRScanner checkerToken={token} /><DoorSaleForm checkerToken={token} /></CardContent>
         </Card>
       </div>
     </main>
