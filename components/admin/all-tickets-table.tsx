@@ -160,14 +160,24 @@ interface EventOption {
 
 type TicketListView = "confirmed" | "pending" | "cancelled"
 
+interface DoorSale {
+  id: string
+  quantity: number
+  unit_price: number | string
+  buyer_name: string | null
+  buyer_note: string | null
+  created_at: string
+}
+
 interface AllTicketsTableProps {
   tickets: Ticket[] | undefined
+  doorSales?: DoorSale[]
   events?: EventOption[]
   canRestoreUsedTickets?: boolean
   initialView?: TicketListView
 }
 
-export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false, initialView = "confirmed" }: AllTicketsTableProps) {
+export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUsedTickets = false, initialView = "confirmed" }: AllTicketsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -474,7 +484,9 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
 
   const scopedTickets = scopedPurchaseGroups.flatMap((group) => group.tickets)
   const saleTickets = scopedTickets.filter(isSaleTicket)
-  const soldAmount = groupTicketsByPurchase(saleTickets).reduce((total, group) => total + group.purchaseTotal, 0)
+  const doorTicketCount = doorSales.reduce((total, sale) => total + (Number(sale.quantity) || 0), 0)
+  const doorSalesAmount = doorSales.reduce((total, sale) => total + (Number(sale.quantity) || 0) * (Number(sale.unit_price) || 0), 0)
+  const soldAmount = groupTicketsByPurchase(saleTickets).reduce((total, group) => total + group.purchaseTotal, 0) + doorSalesAmount
   const ticketCounts = {
     confirmed: scopedTickets.filter((ticket) => getTicketListView(ticket) === "confirmed").length,
     pending: scopedTickets.filter((ticket) => getTicketListView(ticket) === "pending").length,
@@ -598,7 +610,7 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
     }
   }
 
-  if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+  if ((!tickets || !Array.isArray(tickets) || tickets.length === 0) && doorSales.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center">
         <p className="text-xl font-medium tracking-tight text-foreground" style={{ fontFamily: "var(--font-outfit)" }}>
@@ -1259,10 +1271,25 @@ export function AllTicketsTable({ tickets, events, canRestoreUsedTickets = false
           </div>
         )}
 
+        {listView === "confirmed" && doorSales.length > 0 && (
+          <section aria-label="Ventas en puerta" className="mb-4 rounded-lg border border-dashed bg-muted/20 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">Ventas en puerta</p>
+                <p className="text-sm text-muted-foreground">Sin identificación del comprador ni código QR.</p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">{doorTicketCount} {doorTicketCount === 1 ? "entrada" : "entradas"} en puerta</p>
+                <p className="text-sm text-muted-foreground">{formatCurrency(doorSalesAmount)}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section aria-label="Resumen de ventas" className="grid grid-cols-1 gap-3 rounded-lg bg-muted/30 p-4 sm:grid-cols-2">
           <div>
             <p className="text-sm text-muted-foreground">Entradas vendidas</p>
-            <p className="text-2xl font-bold">{saleTickets.length}</p>
+            <p className="text-2xl font-bold">{saleTickets.length + doorTicketCount}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Total vendido</p>

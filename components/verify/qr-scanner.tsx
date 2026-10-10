@@ -31,6 +31,15 @@ type ManualTicket = {
 
 type AllTicket = ManualTicket;
 
+type DoorSale = {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  buyer_name: string | null;
+  buyer_note: string | null;
+  created_at: string;
+};
+
 interface QRScannerProps {
   userId?: string;
   eventId?: string;
@@ -45,6 +54,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const [manualEmail, setManualEmail] = useState('');
   const [manualTickets, setManualTickets] = useState<ManualTicket[]>([]);
   const [allTickets, setAllTickets] = useState<AllTicket[]>([]);
+  const [doorSales, setDoorSales] = useState<DoorSale[]>([]);
   const [isLoadingAllTickets, setIsLoadingAllTickets] = useState(false);
   const [allTicketsError, setAllTicketsError] = useState<string | null>(null);
   const [manualLookupError, setManualLookupError] = useState<string | null>(null);
@@ -232,6 +242,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'No se pudo cargar la lista de entradas.');
       setAllTickets(payload.tickets ?? []);
+      setDoorSales(payload.doorSales ?? []);
     } catch (error) {
       setAllTicketsError(error instanceof Error ? error.message : 'No se pudo cargar la lista de entradas.');
     } finally {
@@ -382,7 +393,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                 <p className="text-sm text-muted-foreground">Entradas habilitadas para ingresar y registro de quienes ya entraron.</p>
               </div>
               <Button type="button" variant="outline" onClick={loadAllTickets} disabled={isLoadingAllTickets}>
-                {isLoadingAllTickets ? 'Cargando…' : allTickets.length ? 'Actualizar lista' : 'Ver todas las entradas'}
+                {isLoadingAllTickets ? 'Cargando…' : allTickets.length || doorSales.length ? 'Actualizar lista' : 'Ver todas las entradas'}
               </Button>
             </div>
             {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}
@@ -392,6 +403,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                   <thead className="bg-muted/60 text-left">
                     <tr>
                       <th className="px-3 py-2 font-medium">Titular</th>
+                      <th className="px-3 py-2 font-medium">Origen</th>
                       <th className="px-3 py-2 font-medium">Estado</th>
                       <th className="px-3 py-2 font-medium">¿Ingresó?</th>
                       <th className="px-3 py-2 text-right font-medium">Acción</th>
@@ -406,6 +418,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                             <p className="font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
                             {ticket.buyer_email && <p className="text-xs text-muted-foreground">{ticket.buyer_email}</p>}
                           </td>
+                          <td className="px-3 py-3 text-muted-foreground">Online</td>
                           <td className="px-3 py-3 text-muted-foreground">{ticket.status === 'confirmed' ? 'Confirmada' : 'Utilizada'}</td>
                           <td className="px-3 py-3">
                             <Badge variant={entered ? 'default' : 'outline'}>{entered ? 'Sí' : 'No'}</Badge>
@@ -422,6 +435,37 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {doorSales.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-semibold">Ventas en puerta</h3>
+                <p className="text-sm text-muted-foreground">No generan QR; quedan registradas como ventas cobradas en el acceso.</p>
+                <div className="mt-3 overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead className="bg-muted/60 text-left">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Comprador</th>
+                        <th className="px-3 py-2 font-medium">Origen</th>
+                        <th className="px-3 py-2 font-medium">Cantidad</th>
+                        <th className="px-3 py-2 font-medium">Precio</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {doorSales.map((sale) => (
+                        <tr key={sale.id}>
+                          <td className="px-3 py-3">
+                            <p className="font-medium">{sale.buyer_name || 'Venta sin nombre'}</p>
+                            {sale.buyer_note && <p className="text-xs text-muted-foreground">{sale.buyer_note}</p>}
+                          </td>
+                          <td className="px-3 py-3 text-muted-foreground">Puerta</td>
+                          <td className="px-3 py-3">{sale.quantity}</td>
+                          <td className="px-3 py-3">{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(sale.unit_price))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </section>

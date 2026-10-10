@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3 } from "lucide-react"
@@ -30,6 +31,11 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
     ? (queriedEvents || []).filter((event) => new Date(event.event_date) < yesterday)
     : (queriedEvents || []).filter((event) => event.status !== "finished" || new Date(event.event_date) >= yesterday)
   const { data: eventTickets } = await supabase.from("tickets").select("event_id, status, payment_status")
+  const eventIds = events.map((event) => event.id)
+  const adminSupabase = createAdminClient()
+  const { data: doorSales } = eventIds.length
+    ? await adminSupabase.from("door_sales").select("event_id, quantity").in("event_id", eventIds)
+    : { data: [] }
   const salesByEvent = (eventTickets || []).reduce<Record<string, { confirmed: number; pending: number }>>((counts, ticket) => {
     const current = counts[ticket.event_id] || { confirmed: 0, pending: 0 }
     if (ticket.status === "confirmed" || ticket.payment_status === "approved") current.confirmed += 1
@@ -37,6 +43,11 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
     counts[ticket.event_id] = current
     return counts
   }, {})
+  for (const sale of doorSales || []) {
+    const current = salesByEvent[sale.event_id] || { confirmed: 0, pending: 0 }
+    current.confirmed += Number(sale.quantity) || 0
+    salesByEvent[sale.event_id] = current
+  }
   const now = new Date().getTime()
   const sortedEvents = [...(events || [])].sort((a, b) => {
     const aTime = new Date(a.event_date).getTime()

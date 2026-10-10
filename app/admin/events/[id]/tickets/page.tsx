@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Link2, ScanLine } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@/lib/supabase/admin';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
 import { getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
@@ -53,6 +54,13 @@ export default async function EventTicketsPage({
     .eq('event_id', id)
     .order('purchased_at', { ascending: false });
 
+  const adminSupabase = createAdminClient();
+  const { data: doorSales } = await adminSupabase
+    .from('door_sales')
+    .select('id, quantity, unit_price, buyer_name, buyer_note, created_at')
+    .eq('event_id', id)
+    .order('created_at', { ascending: false });
+
   return (
     <div className="min-h-screen bg-muted/30">
       
@@ -94,9 +102,13 @@ export default async function EventTicketsPage({
             <section aria-labelledby="sold-tickets-title" className="mb-8">
               <h2 id="sold-tickets-title" className="mb-1 text-lg font-semibold">Entradas confirmadas</h2>
               <p className="mb-4 text-sm text-muted-foreground">Las confirmadas aparecen primero; podés cambiar a pendientes o canceladas en los filtros.</p>
-              <AllTicketsTable tickets={tickets || []} canRestoreUsedTickets={profile?.role === 'superadmin'} />
+              <AllTicketsTable
+                tickets={tickets || []}
+                doorSales={doorSales || []}
+                canRestoreUsedTickets={profile?.role === 'superadmin'}
+              />
             </section>
-            <EventSettlement eventId={id} tickets={tickets || []} initialSettlement={initialSettlement} />
+            <EventSettlement eventId={id} tickets={tickets || []} doorSales={doorSales || []} initialSettlement={initialSettlement} />
           </CardContent>
         </Card>
       </main>

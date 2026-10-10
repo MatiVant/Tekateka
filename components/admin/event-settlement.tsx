@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Banknote, Check, Plus, ReceiptText, Trash2 } from 'lucide-react'
 
 type Ticket = { final_price?: number | string | null; payment_status?: string | null }
+type DoorSale = { quantity: number; unit_price: number | string }
 type Expense = { name: string; amount: number }
 type Settlement = {
   door_paid_count?: number
@@ -26,7 +27,7 @@ type Settlement = {
 
 const money = (value: number) => value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
 
-export function EventSettlement({ eventId, tickets, initialSettlement }: { eventId: string; tickets: Ticket[]; initialSettlement: Settlement }) {
+export function EventSettlement({ eventId, tickets, doorSales, initialSettlement }: { eventId: string; tickets: Ticket[]; doorSales: DoorSale[]; initialSettlement: Settlement }) {
   const [doorPaid, setDoorPaid] = useState(initialSettlement?.door_paid_count ?? 0)
   const [doorPrice, setDoorPrice] = useState(initialSettlement?.door_paid_unit_price ?? 0)
   const [doorFree, setDoorFree] = useState(initialSettlement?.door_free_count ?? 0)
@@ -38,7 +39,8 @@ export function EventSettlement({ eventId, tickets, initialSettlement }: { event
   const [isPending, startTransition] = useTransition()
 
   const onlineRevenue = tickets.reduce((sum, ticket) => sum + (['approved', 'confirmed'].includes(String(ticket.payment_status)) ? Number(ticket.final_price || 0) : 0), 0)
-  const doorRevenue = doorPaid * doorPrice
+  const recordedDoorRevenue = doorSales.reduce((sum, sale) => sum + (Number(sale.quantity) || 0) * (Number(sale.unit_price) || 0), 0)
+  const doorRevenue = doorSales.length > 0 ? recordedDoorRevenue : doorPaid * doorPrice
   const totalRevenue = onlineRevenue + doorRevenue
   const totalExpenses = expenses.reduce((sum, expense) => sum + Math.max(0, Number(expense.amount) || 0), 0)
   const artistAmount = Math.max(0, (basis === 'net' ? totalRevenue - totalExpenses : totalRevenue) * (percentage / 100))
@@ -95,7 +97,7 @@ export function EventSettlement({ eventId, tickets, initialSettlement }: { event
               <div className="flex size-9 items-center justify-center rounded-xl bg-muted text-foreground"><Banknote aria-hidden="true" /></div>
               <div>
                 <h3 className="font-semibold">Ventas en puerta</h3>
-                <p className="text-sm text-muted-foreground">Completá solo lo vendido o entregado presencialmente.</p>
+                <p className="text-sm text-muted-foreground">Durante el evento, registrá las ventas usando el enlace de la puerta. Completá estos campos solo si necesitás agregar entradas después del show.</p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

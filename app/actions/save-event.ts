@@ -43,6 +43,22 @@ interface TicketTier {
   sales_end_at?: string | null
 }
 
+function databaseError(operation: string, error: unknown) {
+  if (error && typeof error === 'object') {
+    const databaseError = error as { code?: string; details?: string | null; hint?: string | null; message?: string }
+    const parts = [
+      databaseError.message,
+      databaseError.code ? `Código: ${databaseError.code}` : null,
+      databaseError.details ? `Detalles: ${databaseError.details}` : null,
+      databaseError.hint ? `Ayuda: ${databaseError.hint}` : null,
+    ].filter(Boolean)
+
+    if (parts.length > 0) return new Error(`${operation}: ${parts.join(' — ')}`)
+  }
+
+  return error instanceof Error ? error : new Error(`${operation}: Error desconocido`)
+}
+
 export async function saveEvent(
   eventData: EventData,
   ticketTiers: TicketTier[],
@@ -118,7 +134,8 @@ export async function saveEvent(
       return { success: true, eventId: newEvent.id }
     }
   } catch (error) {
+    const normalizedError = databaseError('No se pudo guardar el evento', error)
     console.error('[v0] Error al guardar evento:', error)
-    throw error
+    throw normalizedError
   }
 }

@@ -61,17 +61,26 @@ export async function POST(request: Request) {
     }
 
     if (action === "list_all") {
-      const { data: tickets, error } = await supabase
-        .from("tickets")
-        .select("id, buyer_name, buyer_email, status, purchased_at, verified_at")
-        .eq("event_id", link.event_id)
-        .in("status", ["confirmed", "used"])
-        .order("status", { ascending: true })
-        .order("buyer_name", { ascending: true })
-        .order("purchased_at", { ascending: false })
-        .limit(1000)
-      if (error) throw error
-      return NextResponse.json({ tickets: tickets ?? [] })
+      const [{ data: tickets, error: ticketsError }, { data: doorSales, error: doorSalesError }] = await Promise.all([
+        supabase
+          .from("tickets")
+          .select("id, buyer_name, buyer_email, status, purchased_at, verified_at")
+          .eq("event_id", link.event_id)
+          .in("status", ["confirmed", "used"])
+          .order("status", { ascending: true })
+          .order("buyer_name", { ascending: true })
+          .order("purchased_at", { ascending: false })
+          .limit(1000),
+        supabase
+          .from("door_sales")
+          .select("id, quantity, unit_price, buyer_name, buyer_note, created_at")
+          .eq("event_id", link.event_id)
+          .order("created_at", { ascending: false })
+          .limit(1000),
+      ])
+      if (ticketsError) throw ticketsError
+      if (doorSalesError) throw doorSalesError
+      return NextResponse.json({ tickets: tickets ?? [], doorSales: doorSales ?? [] })
     }
 
     if (action === "search_by_email") {
