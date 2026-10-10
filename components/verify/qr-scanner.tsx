@@ -205,11 +205,18 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const value = manualCode.trim();
-    if (value) {
+    if (!value) return;
+    let code = value;
+    try {
+      const url = new URL(value);
+      const pathMatch = url.pathname.match(/\/ticket\/([^/]+)/i);
+      code = pathMatch?.[1] ?? url.searchParams.get('qr') ?? url.searchParams.get('code') ?? value;
+    } catch {
       const match = value.match(/\/ticket\/([^/?#]+)/i);
-      void verifyTicket(decodeURIComponent(match?.[1] ?? value));
-      setManualCode('');
+      code = match?.[1] ?? value;
     }
+    void verifyTicket(decodeURIComponent(code).trim());
+    setManualCode('');
   };
 
   const loadAllTickets = async () => {

@@ -105,7 +105,16 @@ export async function POST(request: Request) {
       if (typeof qrCode !== "string" || !qrCode.trim() || qrCode.length > 500) {
         return NextResponse.json({ error: "Ingresá el código de la entrada" }, { status: 400 })
       }
-      ticketQuery = ticketQuery.eq("qr_code", qrCode.trim())
+      let normalizedQrCode = qrCode.trim()
+      try {
+        const url = new URL(normalizedQrCode)
+        const pathMatch = url.pathname.match(/\/ticket\/([^/]+)/i)
+        normalizedQrCode = pathMatch?.[1] ?? url.searchParams.get("qr") ?? url.searchParams.get("code") ?? normalizedQrCode
+      } catch {
+        const pathMatch = normalizedQrCode.match(/\/ticket\/([^/?#]+)/i)
+        normalizedQrCode = pathMatch?.[1] ?? normalizedQrCode
+      }
+      ticketQuery = ticketQuery.eq("qr_code", decodeURIComponent(normalizedQrCode).trim())
     }
 
     const { data: ticket } = await ticketQuery.maybeSingle()
