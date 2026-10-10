@@ -7,21 +7,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function DoorSaleForm({ eventId }: { eventId?: string }) {
+export function DoorSaleForm({ eventId, checkerToken, defaultPrice }: { eventId?: string; checkerToken?: string; defaultPrice?: number | null }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [unitPrice, setUnitPrice] = useState('')
+  const [unitPrice, setUnitPrice] = useState(defaultPrice != null ? String(defaultPrice) : '')
   const [buyerName, setBuyerName] = useState('')
   const [note, setNote] = useState('')
 
-  if (!eventId) return null
+  if (!eventId && !checkerToken) return null
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     setMessage('')
     startTransition(async () => {
       try {
-        await createDoorSale(eventId, { quantity: Number(quantity), unitPrice: Number(unitPrice), buyerName, note })
+        if (checkerToken) {
+          const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, action: 'door_sale', quantity: Number(quantity), unitPrice: Number(unitPrice), buyerName, note }) })
+          const payload = await response.json()
+          if (!response.ok) throw new Error(payload.error || 'No se pudo registrar la venta.')
+        } else {
+          await createDoorSale(eventId!, { quantity: Number(quantity), unitPrice: Number(unitPrice), buyerName, note })
+        }
         setMessage('Venta en puerta registrada.')
         setQuantity('1'); setBuyerName(''); setNote('')
       } catch (error) { setMessage(error instanceof Error ? error.message : 'No se pudo registrar la venta.') }

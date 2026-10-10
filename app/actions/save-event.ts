@@ -13,6 +13,7 @@ interface EventData {
   venue: string
   location_url: string | null
   price: number
+  door_ticket_price: number | null
   is_pay_what_you_want: boolean
   total_tickets: number
   available_tickets: number
