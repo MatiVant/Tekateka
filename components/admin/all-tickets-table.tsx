@@ -654,7 +654,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
   const handleBulkResendTickets = async () => {
     const ids = Array.from(selectedIds)
     if (ids.length === 0) return
-    const selected = tickets.filter((ticket) => selectedIds.has(ticket.id))
+    const selected = (tickets ?? []).filter((ticket) => selectedIds.has(ticket.id))
     const sameBuyer = selected.every((ticket) => ticket.buyer_email === selected[0]?.buyer_email && ticket.events?.id === selected[0]?.events?.id)
     if (!sameBuyer) { toast({ title: "No se pueden agrupar", description: "Seleccioná entradas del mismo comprador y evento.", variant: "destructive" }); return }
     setIsBulkLoading(true)
