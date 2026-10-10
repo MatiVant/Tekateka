@@ -204,8 +204,10 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (manualCode.trim()) {
-      verifyTicket(manualCode);
+    const value = manualCode.trim();
+    if (value) {
+      const match = value.match(/\/ticket\/([^/?#]+)/i);
+      void verifyTicket(decodeURIComponent(match?.[1] ?? value));
       setManualCode('');
     }
   };
@@ -345,7 +347,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             <Input
               id="qrCode"
               type="text"
-              placeholder="TICKET-XXXXX-XXXXX"
+              placeholder="Código o enlace /ticket/..."
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
               onKeyDown={(event) => {
@@ -355,7 +357,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Ingresa el código QR manualmente o escanéalo
+              Pegá el código QR o el enlace completo de la entrada
             </p>
           </div>
           <Button type="submit" className="w-full" disabled={isScanning || !manualCode.trim()}>
