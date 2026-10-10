@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { QRScanner } from '@/components/verify/qr-scanner';
 import { Scan } from 'lucide-react';
 import { DoorSaleForm } from '@/components/verify/door-sale-form';
+import { createClient } from '@/lib/supabase/server';
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ event?: string | string[] }> }) {
   const [{ event }, { authorized, user, profile }] = await Promise.all([
@@ -18,6 +19,8 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   }
 
   const navbarUser = user.email ? { email: user.email } : null
+  const supabase = await createClient()
+  const { data: selectedEvent } = eventId ? await supabase.from('events').select('door_ticket_price').eq('id', eventId).maybeSingle() : { data: null }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -44,7 +47,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
             </CardHeader>
             <CardContent>
               <QRScanner userId={user.id} eventId={eventId} />
-              <DoorSaleForm eventId={eventId} />
+              <DoorSaleForm eventId={eventId} defaultPrice={selectedEvent?.door_ticket_price} />
             </CardContent>
           </Card>
         </div>

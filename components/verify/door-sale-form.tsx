@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function DoorSaleForm({ eventId, checkerToken }: { eventId?: string; checkerToken?: string }) {
+export function DoorSaleForm({ eventId, checkerToken, defaultPrice }: { eventId?: string; checkerToken?: string; defaultPrice?: number | null }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [unitPrice, setUnitPrice] = useState('')
+  const [unitPrice, setUnitPrice] = useState(defaultPrice != null ? String(defaultPrice) : '')
   const [buyerName, setBuyerName] = useState('')
   const [note, setNote] = useState('')
 

@@ -78,6 +78,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   const [venue, setVenue] = useState(event?.venue || "")
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
   const [price, setPrice] = useState(event?.price.toString() || "")
+  const [doorTicketPrice, setDoorTicketPrice] = useState((event as { door_ticket_price?: number | null } | undefined)?.door_ticket_price?.toString() || "")
   const [totalTickets, setTotalTickets] = useState(event?.total_tickets.toString() || "")
   const [imageUrl, setImageUrl] = useState(event?.image_url || "")
   const [isLoading, setIsLoading] = useState(false)
@@ -275,6 +276,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
         venue,
         location_url: locationUrl || null,
         price: basePrice,
+        door_ticket_price: doorTicketPrice.trim() ? Number.parseFloat(doorTicketPrice) : null,
         is_pay_what_you_want: eventType === "pwyw",
         total_tickets: Number.parseInt(totalTickets),
         available_tickets: event ? event.total_tickets : Number.parseInt(totalTickets),
@@ -513,8 +515,14 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
           </div>
         )}
 
-        {ticketTiers.length > 0 && (
-          <div className="space-y-2">
+  <div className="space-y-2">
+  <Label htmlFor="door-ticket-price">Precio en puerta ($)</Label>
+  <Input id="door-ticket-price" type="number" min="0" step="0.01" value={doorTicketPrice} onChange={(event) => setDoorTicketPrice(event.target.value)} placeholder="Se precarga en el link de acceso" />
+  <p className="text-xs text-muted-foreground">Queda guardado para que quien esté en la puerta no tenga que cargarlo cada vez.</p>
+  </div>
+
+  {ticketTiers.length > 0 && (
+  <div className="space-y-2">
             <Label className="text-muted-foreground">Precio Base del Evento</Label>
             <p className="text-sm">
               Los tipos de entrada definen sus propios precios. El precio más bajo es:{" "}
