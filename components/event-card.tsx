@@ -36,7 +36,7 @@ interface EventCardProps {
 
 export function EventCard({ event, featured = false }: EventCardProps) {
   const eventDate = new Date(event.event_date)
-  const [confirmedCount] = useState(event.confirmed_count ?? 0)
+  const confirmedCount = event.confirmed_count ?? 0
   const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
   const now = new Date().getTime()
   const isBeforeStart = now < eventDate.getTime()

@@ -90,10 +90,17 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
     counts[ticket.event_id] = (counts[ticket.event_id] ?? 0) + 1
     return counts
   }, {})
+  const { data: doorSales } = eventIds.length
+    ? await supabase.from("door_sales").select("event_id, quantity").in("event_id", eventIds)
+    : { data: [] as { event_id: string; quantity: number }[] }
+  const doorSalesByEvent = (doorSales ?? []).reduce<Record<string, number>>((counts, sale) => {
+    counts[sale.event_id] = (counts[sale.event_id] ?? 0) + Number(sale.quantity ?? 0)
+    return counts
+  }, {})
 
   const organizerEvents = (events ?? []).map((event) => ({
     ...event,
-    confirmed_count: confirmedByEvent[event.id] ?? 0,
+    confirmed_count: (confirmedByEvent[event.id] ?? 0) + (doorSalesByEvent[event.id] ?? 0),
   }))
 
   return (

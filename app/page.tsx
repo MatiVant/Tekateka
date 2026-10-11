@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { EventCard } from "@/components/event-card"
 import { Sparkles, Calendar, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +29,13 @@ export default async function HomePage() {
         .in("status", ["pending", "confirmed", "used"])
         .in("event_id", eventIds)
     : { data: [] }
+  const { data: doorSales } = eventIds.length
+    ? await createAdminClient().from("door_sales").select("event_id, quantity").in("event_id", eventIds)
+    : { data: [] }
+  const doorSalesByEvent = (doorSales || []).reduce<Record<string, number>>((counts, sale) => {
+    counts[sale.event_id] = (counts[sale.event_id] || 0) + Number(sale.quantity || 0)
+    return counts
+  }, {})
   const { data: ticketTiers } = eventIds.length
     ? await supabase
         .from("ticket_tiers")
@@ -45,7 +53,7 @@ export default async function HomePage() {
   }, {})
   const eventsWithAvailability = (events || []).map((event) => ({
     ...event,
-    confirmed_count: confirmedByEvent[event.id] || 0,
+    confirmed_count: (confirmedByEvent[event.id] || 0) + (doorSalesByEvent[event.id] || 0),
     min_price: minPriceByEvent[event.id] ?? null,
   }))
   const featuredEvents = eventsWithAvailability.slice(0, 3)

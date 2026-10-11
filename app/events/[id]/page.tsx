@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, MapPin, Ticket, ArrowLeft, Clock } from "lucide-react"
@@ -59,13 +60,15 @@ export default async function EventDetailPage({
     notFound()
   }
 
-  const { count: confirmedTickets } = await supabase
+  const { count: activeTickets } = await supabase
     .from("tickets")
     .select("id", { count: "exact", head: true })
     .eq("event_id", event.id)
-    .eq("status", "confirmed")
-  const confirmedCount = confirmedTickets ?? 0
-  const realAvailableTickets = Math.max(0, event.total_tickets - confirmedCount)
+    .in("status", ["pending", "confirmed", "used"])
+  const activeTicketCount = activeTickets ?? 0
+  const { data: doorSales } = await createAdminClient().from("door_sales").select("quantity").eq("event_id", event.id)
+  const doorSaleCount = (doorSales ?? []).reduce((total, sale) => total + Number(sale.quantity ?? 0), 0)
+  const realAvailableTickets = Math.max(0, event.total_tickets - activeTicketCount - doorSaleCount)
   const eventDate = new Date(event.event_date)
   const beforeSalesStart = event.sales_start_at && now < new Date(event.sales_start_at).getTime()
   const afterSalesEnd = event.sales_end_at && now >= new Date(event.sales_end_at).getTime()

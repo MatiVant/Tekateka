@@ -48,7 +48,10 @@ export async function createTicket(data: CreateTicketData) {
       .eq("event_id", data.event_id)
       .in("status", ["pending", "confirmed", "used"])
     if (capacityError) throw new Error("No se pudo verificar la disponibilidad del evento")
-    const remainingTickets = Math.max(0, Number(event.total_tickets ?? event.available_tickets ?? 0) - Number(activeTicketCount ?? 0))
+    const { data: doorSales, error: doorSalesError } = await supabase.from("door_sales").select("quantity").eq("event_id", data.event_id)
+    if (doorSalesError) throw new Error("No se pudo verificar las ventas en puerta")
+    const doorSaleCount = (doorSales ?? []).reduce((total, sale) => total + Number(sale.quantity ?? 0), 0)
+    const remainingTickets = Math.max(0, Number(event.total_tickets ?? event.available_tickets ?? 0) - Number(activeTicketCount ?? 0) - doorSaleCount)
     if (requestedQuantity > remainingTickets) throw new Error(remainingTickets > 0 ? `Solo quedan ${remainingTickets} entradas disponibles` : "Se agotaron las entradas para este evento")
 
     let serverPrice = Number(event.price || 0)

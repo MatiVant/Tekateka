@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { EventCard } from "@/components/event-card"
 import { CalendarDays, Ticket } from "lucide-react"
 
@@ -32,12 +33,19 @@ export default async function EventsPage() {
     counts[ticket.event_id] = (counts[ticket.event_id] ?? 0) + 1
     return counts
   }, {})
+  const { data: doorSales } = eventIds.length
+    ? await createAdminClient().from("door_sales").select("event_id, quantity").in("event_id", eventIds)
+    : { data: [] }
+  const doorSalesByEvent = (doorSales ?? []).reduce<Record<string, number>>((counts, sale) => {
+    counts[sale.event_id] = (counts[sale.event_id] ?? 0) + Number(sale.quantity ?? 0)
+    return counts
+  }, {})
 
   const availableEvents = (events ?? []).filter((event) => {
     const startsAt = new Date(event.event_date).getTime()
     const salesStart = event.sales_start_at ? new Date(event.sales_start_at).getTime() : null
     const salesEnd = event.sales_end_at ? new Date(event.sales_end_at).getTime() : null
-    const remaining = Number(event.total_tickets ?? 0) - (confirmedByEvent[event.id] ?? 0)
+    const remaining = Number(event.total_tickets ?? 0) - (confirmedByEvent[event.id] ?? 0) - (doorSalesByEvent[event.id] ?? 0)
 
     return startsAt > now.getTime()
       && (salesStart === null || salesStart <= now.getTime())
@@ -45,7 +53,7 @@ export default async function EventsPage() {
       && remaining > 0
   }).map((event) => ({
     ...event,
-    confirmed_count: confirmedByEvent[event.id] ?? 0,
+    confirmed_count: (confirmedByEvent[event.id] ?? 0) + (doorSalesByEvent[event.id] ?? 0),
   }))
 
   return (

@@ -45,6 +45,25 @@ interface EventFormProps {
   }
 }
 
+function formatArgentinaDateTimeLocal(value?: string | null) {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce<Record<string, string>>((result, part) => {
+    result[part.type] = part.value
+    return result
+  }, {})
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+}
+
 export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
@@ -72,8 +91,8 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   const [eventTime, setEventTime] = useState(
     argentinaDateTime ? `${argentinaDateTime.hour}:${argentinaDateTime.minute}` : "00:00",
   )
-  const [salesStartAt, setSalesStartAt] = useState(event?.sales_start_at ? event.sales_start_at.slice(0, 16) : "")
-  const [salesEndAt, setSalesEndAt] = useState(event?.sales_end_at ? event.sales_end_at.slice(0, 16) : "")
+  const [salesStartAt, setSalesStartAt] = useState(formatArgentinaDateTimeLocal(event?.sales_start_at))
+  const [salesEndAt, setSalesEndAt] = useState(formatArgentinaDateTimeLocal(event?.sales_end_at))
 
   const [venue, setVenue] = useState(event?.venue || "")
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
