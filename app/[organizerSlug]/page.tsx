@@ -113,7 +113,6 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
               alt=""
               fill
               priority
-              unoptimized
               sizes="100vw"
               className="object-cover"
             />

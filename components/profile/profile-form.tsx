@@ -149,7 +149,6 @@ export function ProfileForm({ email, role, initialFullName, initialOrganizationN
               alt="Vista previa de la portada del espacio"
               width={1280}
               height={480}
-              unoptimized
               className="aspect-[8/3] w-full rounded-lg border object-cover"
             />
           )}

@@ -88,8 +88,6 @@ export default async function EventDetailPage({
 
   const displayPrice = minPriceTier ? minPriceTier.base_price : event.price
   const imageUrl = event.image_url || `/placeholder.svg?height=600&width=1000&query=evento+${encodeURIComponent(event.title)}`
-  const isLegacyBlobImage = imageUrl.includes(".public.blob.vercel-storage.com")
-
   return (
     <div className="min-h-screen">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -108,7 +106,6 @@ export default async function EventDetailPage({
                 alt={event.title}
                 fill
                 priority
-                unoptimized={isLegacyBlobImage}
                 sizes="(max-width: 1024px) 100vw, 66vw"
                 className="object-cover"
                 style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}

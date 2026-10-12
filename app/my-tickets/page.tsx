@@ -108,7 +108,6 @@ export default async function MyTicketsPage() {
                     alt={ticket.events.title}
                     fill
                     sizes="(min-width: 1024px) 50vw, 100vw"
-                    unoptimized
                     className="object-cover"
                   />
                 </div>

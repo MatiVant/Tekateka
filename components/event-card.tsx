@@ -44,8 +44,6 @@ export function EventCard({ event, featured = false }: EventCardProps) {
   const isAfterSalesStart = !event.sales_start_at || now >= new Date(event.sales_start_at).getTime()
   const isAvailable = event.status === "active" && realAvailableTickets > 0 && isBeforeStart && isBeforeSalesEnd && isAfterSalesStart
   const imageUrl = event.image_url || `/placeholder.svg?height=${featured ? 600 : 400}&width=${featured ? 800 : 600}&query=evento+${encodeURIComponent(event.title)}`
-  const isLegacyBlobImage = imageUrl.includes(".public.blob.vercel-storage.com")
-
   const [minPrice, setMinPrice] = useState<number | null>(event.min_price ?? null)
 
   useEffect(() => {
@@ -78,7 +76,6 @@ export function EventCard({ event, featured = false }: EventCardProps) {
           src={imageUrl}
           alt={event.title}
           fill
-          unoptimized={isLegacyBlobImage}
           sizes={featured ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
           className="object-cover transition-transform duration-700 group-hover:scale-103"
           style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }}
