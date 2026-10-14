@@ -32,7 +32,7 @@ export default async function AllTicketsPage({
         price,
         organizer_id
       ),
-      ticket_tiers(name),
+      ticket_tiers(name, promotion_type),
       ticket_promotions(promotion_codes(code, promotion_type, discount_value))
     `)
   if (profile?.role !== 'superadmin') ticketsQuery = ticketsQuery.eq('events.organizer_id', user.id)

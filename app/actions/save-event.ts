@@ -41,6 +41,7 @@ interface TicketTier {
   tier_order: number
   sales_start_at?: string | null
   sales_end_at?: string | null
+  promotion_type?: "standard" | "2x1"
 }
 
 function databaseError(operation: string, error: unknown) {

@@ -50,7 +50,7 @@ export default async function EventTicketsPage({
         venue,
         price
       ),
-      ticket_tiers(name),
+      ticket_tiers(name, promotion_type),
       ticket_promotions(promotion_codes(code, promotion_type, discount_value))
     `)
     .eq('event_id', id)

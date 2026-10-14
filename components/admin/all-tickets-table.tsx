@@ -57,6 +57,7 @@ interface TicketPromotion {
 interface TicketTier {
   id: string
   name: string
+  promotion_type?: "standard" | "2x1"
 }
 
 interface Ticket {
@@ -111,10 +112,12 @@ function summarizePurchaseGroup(key: string, tickets: Ticket[]): TicketPurchaseG
 }
 
 function isTwoForOneTicket(ticket: Ticket) {
-  return ticket.ticket_promotions?.some((promotion) => {
+  const tierIsTwoForOne = ticket.ticket_tiers?.promotion_type === "2x1"
+  const promotionIsTwoForOne = ticket.ticket_promotions?.some((promotion) => {
     const promotionType = promotion.promotion_codes.promotion_type.toLowerCase().replace(/[-_\s]/g, "")
     return promotionType === "2x1" || promotionType === "twoforone"
   }) ?? false
+  return tierIsTwoForOne || promotionIsTwoForOne
 }
 
 function isConfirmedTicket(ticket: Ticket) {

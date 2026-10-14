@@ -23,6 +23,7 @@ interface TicketTier {
   name: string
   base_price: number
   available_quantity: number
+  promotion_type?: "standard" | "2x1"
 }
 
 interface PurchaseFlowProps {
@@ -88,7 +89,7 @@ export function PurchaseFlow({
     try {
       const { data, error: fetchError } = await supabase
         .from("ticket_tiers")
-        .select("id, name, base_price, available_quantity")
+        .select("id, name, base_price, available_quantity, promotion_type")
         .eq("event_id", eventId)
         .order("tier_order", { ascending: true })
 
@@ -178,7 +179,10 @@ export function PurchaseFlow({
     setSelectedTierId(tierId)
     const selectedTier = tiers.find((t) => t.id === tierId)
     if (selectedTier) {
-      setFinalPrice(selectedTier.base_price)
+      const isTwoForOne = selectedTier.promotion_type === "2x1"
+      setFinalPrice(isTwoForOne ? selectedTier.base_price / 2 : selectedTier.base_price)
+      setPromotionType(isTwoForOne ? "2x1" : null)
+      setQuantity(isTwoForOne ? 2 : 1)
       if (promotionCode) {
         await validatePromotion()
       }
@@ -403,7 +407,7 @@ export function PurchaseFlow({
         <div className="space-y-2">
           <Label htmlFor="quantity">Cantidad de Entradas</Label>
           {(() => {
-            const stepperDisabled = Boolean(discountApplied && promotionType !== "2x1")
+            const stepperDisabled = promotionType !== null
             return (
               <div className="flex items-center gap-3">
                 <Button
@@ -446,8 +450,8 @@ export function PurchaseFlow({
             )
           })()}
           <p className="text-xs text-muted-foreground">
-  {discountApplied && promotionType === "2x1"
-  ? "Este código incluye 2 entradas por el valor de 1"
+  {promotionType === "2x1"
+  ? "Este tipo de entrada incluye 2 entradas por el valor indicado"
   : discountApplied
   ? "Este código permite obtener 1 sola entrada"
   : maxTicketsPerPerson

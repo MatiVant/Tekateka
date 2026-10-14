@@ -123,16 +123,26 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
       quantity: string
       sales_start_at: string
       sales_end_at: string
+      promotion_type: "standard" | "2x1"
     }>
   >([])
   const [showTierForm, setShowTierForm] = useState(false)
-  const [tierFormData, setTierFormData] = useState({
+  const [tierFormData, setTierFormData] = useState<{
+    name: string
+    description: string
+    base_price: string
+    quantity: string
+    sales_start_at: string
+    sales_end_at: string
+    promotion_type: "standard" | "2x1"
+  }>({
     name: "",
     description: "",
     base_price: "",
     quantity: "",
     sales_start_at: "",
     sales_end_at: "",
+    promotion_type: "standard" as const,
   })
   const router = useRouter()
   const { toast } = useToast()
@@ -321,6 +331,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
         available_quantity: Number.parseInt(tier.quantity),
         sales_start_at: tier.sales_start_at ? new Date(tier.sales_start_at).toISOString() : null,
         sales_end_at: tier.sales_end_at ? new Date(tier.sales_end_at).toISOString() : null,
+        promotion_type: tier.promotion_type,
         tier_order: index,
       }))
 
@@ -356,7 +367,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
     }
 
     setTicketTiers([...ticketTiers, { ...tierFormData }])
-    setTierFormData({ name: "", description: "", base_price: "", quantity: "", sales_start_at: "", sales_end_at: "" })
+    setTierFormData({ name: "", description: "", base_price: "", quantity: "", sales_start_at: "", sales_end_at: "", promotion_type: "standard" })
     setShowTierForm(false)
   }
 
@@ -653,6 +664,20 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="tier-promotion-type">Modalidad</Label>
+                  <select
+                    id="tier-promotion-type"
+                    value={tierFormData.promotion_type}
+                    onChange={(e) => setTierFormData({ ...tierFormData, promotion_type: e.target.value as "standard" | "2x1" })}
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    <option value="standard">Entrada individual</option>
+                    <option value="2x1">2x1 (crea 2 entradas)</option>
+                  </select>
+                  {tierFormData.promotion_type === "2x1" && <p className="text-xs text-muted-foreground">El precio ingresado es el total de las 2 entradas.</p>}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="tier-price">Precio ($) *</Label>
@@ -705,6 +730,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
                     {tier.description && <p className="text-sm text-muted-foreground">{tier.description}</p>}
                     <p className="text-sm">
                       {formatCurrency(Number.parseFloat(tier.base_price))} - {tier.quantity} disponibles
+                      {tier.promotion_type === "2x1" && <span className="ml-2 font-medium text-primary">2x1</span>}
                     </p>
                   </div>
                   <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveTier(index)}>

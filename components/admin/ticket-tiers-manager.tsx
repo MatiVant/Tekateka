@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Plus, Trash2, Edit } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 
 interface TicketTier {
@@ -17,6 +17,7 @@ interface TicketTier {
   quantity: number;
   available_quantity: number;
   tier_order: number;
+  promotion_type: "standard" | "2x1";
 }
 
 interface TicketTiersManagerProps {
@@ -27,15 +28,36 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
   const [tiers, setTiers] = useState<TicketTier[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingTierId, setEditingTierId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     base_price: '',
     quantity: '',
+    promotion_type: 'standard' as 'standard' | '2x1',
   });
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '', base_price: '', quantity: '', promotion_type: 'standard' });
+    setEditingTierId(null);
+    setShowForm(false);
+  };
+
+  const startEditing = (tier: TicketTier) => {
+    setEditingTierId(tier.id);
+    setFormData({
+      name: tier.name,
+      description: tier.description || '',
+      base_price: String(tier.base_price),
+      quantity: String(tier.quantity),
+      promotion_type: tier.promotion_type,
+    });
+    setShowForm(true);
+    setError(null);
+  };
 
   async function fetchTiers() {
     try {
@@ -63,26 +85,52 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
     setError(null);
 
     try {
-      const { error: insertError } = await supabase
-        .from('ticket_tiers')
-        .insert({
-          event_id: eventId,
-          name: formData.name,
-          description: formData.description || null,
-          base_price: parseFloat(formData.base_price),
-          quantity: parseInt(formData.quantity),
-          available_quantity: parseInt(formData.quantity),
-          tier_order: tiers.length,
-        });
+      const quantity = parseInt(formData.quantity);
+      const basePrice = parseFloat(formData.base_price);
+      let saveError;
 
-      if (insertError) throw insertError;
+      if (editingTierId) {
+        const currentTier = tiers.find((tier) => tier.id === editingTierId);
+        const soldQuantity = currentTier ? currentTier.quantity - currentTier.available_quantity : 0;
+        if (quantity < soldQuantity) {
+          throw new Error(`La cantidad no puede ser menor que las ${soldQuantity} entradas ya vendidas`);
+        }
 
-      setFormData({ name: '', description: '', base_price: '', quantity: '' });
-      setShowForm(false);
-      fetchTiers();
+        const result = await supabase
+          .from('ticket_tiers')
+          .update({
+            name: formData.name,
+            description: formData.description || null,
+            base_price: basePrice,
+            quantity,
+            available_quantity: quantity - soldQuantity,
+            promotion_type: formData.promotion_type,
+          })
+          .eq('id', editingTierId);
+        saveError = result.error;
+      } else {
+        const result = await supabase
+          .from('ticket_tiers')
+          .insert({
+            event_id: eventId,
+            name: formData.name,
+            description: formData.description || null,
+            base_price: basePrice,
+            quantity,
+            available_quantity: quantity,
+            tier_order: tiers.length,
+            promotion_type: formData.promotion_type,
+          });
+        saveError = result.error;
+      }
+
+      if (saveError) throw saveError;
+
+      resetForm();
+      void fetchTiers();
     } catch (error) {
-      console.error('[v0] Error creating tier:', error);
-      setError(error instanceof Error ? error.message : 'Error al crear tipo de entrada');
+      console.error('[v0] Error saving tier:', error);
+      setError(error instanceof Error ? error.message : 'Error al guardar tipo de entrada');
     } finally {
       setIsLoading(false);
     }
@@ -107,16 +155,34 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Tipos de Entrada</h3>
-        <Button onClick={() => setShowForm(!showForm)} size="sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Tipos de entrada</h3>
+          <p className="text-sm text-muted-foreground">Definí precio, cupo y modalidad de cada entrada.</p>
+        </div>
+        <Button
+          onClick={() => {
+            if (showForm) {
+              resetForm();
+            } else {
+              setError(null);
+              setShowForm(true);
+            }
+          }}
+          size="sm"
+          className="w-fit"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Agregar Tipo
         </Button>
       </div>
 
       {showForm && (
-        <Card className="p-6">
+        <Card className="rounded-xl border-dashed bg-muted/20 p-4 sm:p-6">
+          <div className="mb-4">
+            <h4 className="font-semibold">{editingTierId ? 'Editar tipo de entrada' : 'Nuevo tipo de entrada'}</h4>
+            {editingTierId && <p className="text-sm text-muted-foreground">Las entradas ya vendidas se conservan y no se modifican.</p>}
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="tier-name">Nombre del Tipo *</Label>
@@ -137,6 +203,19 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tier-promotion-type">Modalidad</Label>
+              <select
+                id="tier-promotion-type"
+                value={formData.promotion_type}
+                onChange={(e) => setFormData({ ...formData, promotion_type: e.target.value as 'standard' | '2x1' })}
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="standard">Entrada individual</option>
+                <option value="2x1">2x1 (crea 2 entradas)</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -168,18 +247,18 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Button type="submit" disabled={isLoading}>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" className="w-fit" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Guardando...
                   </>
                 ) : (
-                  'Guardar Tipo'
+                  editingTierId ? 'Guardar cambios' : 'Guardar Tipo'
                 )}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="outline" className="w-fit" onClick={resetForm}>
                 Cancelar
               </Button>
             </div>
@@ -191,21 +270,32 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
 
       <div className="space-y-2">
         {tiers.map((tier) => (
-          <Card key={tier.id} className="p-4 flex items-center justify-between">
-            <div>
+          <Card key={tier.id} className="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h4 className="font-semibold">{tier.name}</h4>
               {tier.description && <p className="text-sm text-muted-foreground">{tier.description}</p>}
               <p className="text-sm">
                 {formatCurrency(tier.base_price)} - {tier.available_quantity}/{tier.quantity} disponibles
               </p>
             </div>
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => handleDelete(tier.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="flex self-end gap-2 sm:self-center">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={`Editar ${tier.name}`}
+                onClick={() => startEditing(tier)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="destructive"
+                size="icon-sm"
+                aria-label={`Eliminar ${tier.name}`}
+                onClick={() => handleDelete(tier.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </Card>
         ))}
       </div>

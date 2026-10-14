@@ -148,16 +148,19 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Códigos de Promoción</h3>
-        <Button onClick={() => setShowForm(!showForm)} size="sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Códigos de promoción</h3>
+          <p className="text-sm text-muted-foreground">Aplicá descuentos sin modificar los tipos de entrada.</p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)} size="sm" className="w-fit">
           <Plus className="h-4 w-4 mr-2" />
           Agregar Código
         </Button>
       </div>
 
       {showForm && (
-        <Card className="p-6">
+        <Card className="rounded-xl border-dashed bg-muted/20 p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="code">Código *</Label>
@@ -259,8 +262,8 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
               />
             </div>
 
-            <div className="flex gap-3">
-              <Button type="submit" disabled={isLoading}>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" className="w-fit" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -270,7 +273,7 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
                   "Guardar Código"
                 )}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="outline" className="w-fit" onClick={() => setShowForm(false)}>
                 Cancelar
               </Button>
             </div>
@@ -284,9 +287,9 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
         {codes.map((code) => (
           <Card
             key={code.id}
-            className={`p-4 flex items-center justify-between ${!code.is_active ? "opacity-50" : ""}`}
+            className={`flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between ${!code.is_active ? "opacity-50" : ""}`}
           >
-            <div>
+            <div className="min-w-0">
               <h4 className="font-semibold">{code.code}</h4>
               <p className="text-sm text-muted-foreground">{getDiscountText(code)}</p>
               {code.category && <p className="text-xs text-slate-500">Categoría: {code.category}</p>}
@@ -295,7 +298,7 @@ export function PromotionCodesManager({ eventId }: PromotionCodesManagerProps) {
                 {code.max_uses ? `/${code.max_uses}` : ""} - Válido hasta {code.valid_until}
               </p>
             </div>
-            <Button variant="destructive" size="icon" onClick={() => handleDelete(code.id)}>
+            <Button variant="destructive" size="icon-sm" className="self-end sm:self-center" onClick={() => handleDelete(code.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </Card>
