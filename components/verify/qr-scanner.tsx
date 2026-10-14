@@ -334,7 +334,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Selector de modo */}
       <div className="flex gap-2 p-1 bg-muted rounded-lg">
         <Button
@@ -442,12 +442,16 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                   const entered = ticket.status === 'used';
                   return (
                     <article key={ticket.id} className="rounded-xl border bg-background p-3">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
-                          {ticket.buyer_email && <p className="truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>}
+                          <p className="break-words font-medium leading-tight">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                          {ticket.buyer_email && <p className="mt-1 truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>}
                         </div>
-                        <Badge variant={entered ? 'default' : 'outline'} className="shrink-0">{entered ? 'Ingresó' : 'No ingresó'}</Badge>
+                        {entered ? (
+                          <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" aria-label="Ingresó" />
+                        ) : (
+                          <Badge variant="outline" className="shrink-0 text-[10px]">No ingresó</Badge>
+                        )}
                       </div>
                       {ticket.status === 'confirmed' && (
                         <Button type="button" size="sm" className="mt-3 w-full" onClick={() => setTicketToCheckIn(ticket)}>

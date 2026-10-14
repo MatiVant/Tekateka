@@ -107,6 +107,7 @@ export default async function EventTicketsPage({
               <AllTicketsTable
                 tickets={tickets || []}
                 doorSales={doorSales || []}
+                fixedEventId={id}
                 canRestoreUsedTickets={profile?.role === 'superadmin'}
               />
             </section>

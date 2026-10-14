@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Select,
   SelectContent,
@@ -111,6 +110,13 @@ function summarizePurchaseGroup(key: string, tickets: Ticket[]): TicketPurchaseG
   return { key, tickets, unitTotal, perTicketPrice, purchaseTotal }
 }
 
+function isTwoForOneTicket(ticket: Ticket) {
+  return ticket.ticket_promotions?.some((promotion) => {
+    const promotionType = promotion.promotion_codes.promotion_type.toLowerCase().replace(/[-_\s]/g, "")
+    return promotionType === "2x1" || promotionType === "twoforone"
+  }) ?? false
+}
+
 function isConfirmedTicket(ticket: Ticket) {
   return ticket.status !== "cancelled" &&
     (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved")
@@ -173,17 +179,18 @@ interface AllTicketsTableProps {
   tickets: Ticket[] | undefined
   doorSales?: DoorSale[]
   events?: EventOption[]
+  fixedEventId?: string
   canRestoreUsedTickets?: boolean
   initialView?: TicketListView
 }
 
-export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUsedTickets = false, initialView = "confirmed" }: AllTicketsTableProps) {
+export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId, canRestoreUsedTickets = false, initialView = "confirmed" }: AllTicketsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [isBulkLoading, setIsBulkLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEventId, setSelectedEventId] = useState("all")
+  const [selectedEventId, setSelectedEventId] = useState(fixedEventId || "all")
   const [listView, setListView] = useState<TicketListView>(initialView)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [ticketToMarkUsed, setTicketToMarkUsed] = useState<Ticket | null>(null)
@@ -920,22 +927,24 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
               className="max-w-md"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Filtrar por evento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los eventos</SelectItem>
-                {eventOptions.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!fixedEventId && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger className="w-full sm:w-64">
+                  <SelectValue placeholder="Filtrar por evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los eventos</SelectItem>
+                  {eventOptions.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button type="button" variant="outline" onClick={exportSalesReport} disabled={filteredTickets.length === 0} title="Descargar un informe PDF independiente de la lista">
             <FileDown className="mr-2 h-4 w-4" />
             Informe PDF
@@ -950,30 +959,25 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
           </Button>
         </div>
 
-        <ToggleGroup
-          type="single"
-          value={listView}
-          onValueChange={(value) => {
-            if (value) {
+        <div className="flex w-full items-center gap-2 sm:w-fit">
+          <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Select
+            value={listView}
+            onValueChange={(value) => {
               setListView(value as TicketListView)
               setSelectedIds(new Set())
-            }
-          }}
-          variant="outline"
-          size="sm"
-          aria-label="Filtrar entradas por estado"
-          className="w-full sm:w-fit"
-        >
-          <ToggleGroupItem value="confirmed" aria-label={`Confirmadas: ${ticketCounts.confirmed}`}>
-            Confirmadas <span className="ml-2 text-muted-foreground">{ticketCounts.confirmed}</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="pending" aria-label={`Pendientes: ${ticketCounts.pending}`}>
-            Pendientes <span className="ml-2 text-muted-foreground">{ticketCounts.pending}</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="cancelled" aria-label={`Canceladas: ${ticketCounts.cancelled}`}>
-            Canceladas <span className="ml-2 text-muted-foreground">{ticketCounts.cancelled}</span>
-          </ToggleGroupItem>
-        </ToggleGroup>
+            }}
+          >
+            <SelectTrigger className="h-10 w-full sm:w-56" aria-label="Filtrar entradas por estado">
+              <SelectValue placeholder="Filtrar por estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="confirmed">Confirmadas ({ticketCounts.confirmed})</SelectItem>
+              <SelectItem value="pending">Pendientes ({ticketCounts.pending})</SelectItem>
+              <SelectItem value="cancelled">Canceladas ({ticketCounts.cancelled})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-3">
@@ -1012,31 +1016,42 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
             const isExpanded = expandedPurchaseGroups.has(group.key)
             const isGroupSelected = group.tickets.every((ticket) => selectedIds.has(ticket.id))
             const groupReceiptUrl = group.tickets.find((ticket) => ticket.payment_receipt_url)?.payment_receipt_url
-            const hasPaidTicket = group.tickets.some((ticket) => Number(ticket.final_price) > 0 && ticket.payment_method !== "free")
-            const groupStatuses = new Set(group.tickets.map((ticket) => ticket.status))
-            const groupStatus = groupStatuses.size === 1
-              ? getStatusBadge(group.tickets[0].status)
-              : <Badge variant="outline">Estados mixtos</Badge>
+            const isTwoForOneGroup = group.tickets.length === 2 && (
+              group.tickets.some(isTwoForOneTicket) ||
+              group.tickets.every((ticket) => Math.abs(Number(ticket.final_price ?? 0) * 2 - Number(ticket.events.price ?? 0)) < 0.01)
+            )
+            const compactTickets = isTwoForOneGroup ? group.tickets : group.tickets.slice(0, 1)
             return (
               <div key={group.key} className="space-y-2">
-                {group.tickets.length > 0 && !isExpanded && (
-                  <article className="rounded-xl border bg-card px-3 py-2.5 shadow-sm">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Checkbox checked={isGroupSelected} onCheckedChange={(checked) => togglePurchaseSelection(group, Boolean(checked))} aria-label={`Seleccionar compra de ${group.tickets[0].buyer_name}`} />
-                      <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{group.tickets[0].buyer_name}</h3>
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">{group.tickets.length}</Badge>
-                      <div className="shrink-0">{groupStatus}</div>
-                      {groupReceiptUrl ? (
-                        <Button type="button" variant="ghost" size="icon-sm" className="shrink-0" onClick={() => viewReceipt(groupReceiptUrl)} title="Ver comprobante" aria-label={`Ver comprobante de ${group.tickets[0].buyer_name}`}>
-                          <FileText className="h-4 w-4" />
+                {!isExpanded && compactTickets.map((ticket) => {
+                  const ticketReceiptUrl = ticket.payment_receipt_url || groupReceiptUrl
+                  const ticketIsPaid = Number(ticket.final_price) > 0 && ticket.payment_method !== "free"
+                  const ticketIsConfirmed = isConfirmedTicket(ticket)
+                  return (
+                    <article key={ticket.id} className="rounded-xl border bg-card px-3 py-2.5 shadow-sm">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Checkbox
+                          checked={isTwoForOneGroup ? selectedIds.has(ticket.id) : isGroupSelected}
+                          onCheckedChange={(checked) => isTwoForOneGroup ? toggleSelected(ticket.id, Boolean(checked)) : togglePurchaseSelection(group, Boolean(checked))}
+                          aria-label={`Seleccionar entrada de ${ticket.buyer_name}`}
+                        />
+                        <h3 className="min-w-0 flex-1 break-words text-sm font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
+                        {isTwoForOneGroup && <span className="shrink-0 text-xs font-medium text-muted-foreground">1 · {formatCurrency(ticket.final_price ?? ticket.events.price)}</span>}
+                        <div className="shrink-0">
+                          {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
+                        </div>
+                        {ticketReceiptUrl ? (
+                          <Button type="button" variant="ghost" size="icon-sm" className="shrink-0" onClick={() => viewReceipt(ticketReceiptUrl)} title="Ver comprobante" aria-label={`Ver comprobante de ${ticket.buyer_name}`}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        ) : ticketIsPaid ? <AdminReceiptUpload ticketId={ticket.id} compact /> : null}
+                        <Button type="button" variant="ghost" size="icon-sm" className={`shrink-0 ${ticketIsPaid && !ticketReceiptUrl ? "text-destructive hover:text-destructive" : ""}`} aria-expanded={isExpanded} onClick={() => togglePurchaseExpanded(group.key)} title="Ver detalle" aria-label={`Ver detalle de ${ticket.buyer_name}`}>
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
-                      ) : hasPaidTicket ? <AdminReceiptUpload ticketId={group.tickets[0].id} compact /> : null}
-                      <Button type="button" variant="ghost" size="icon-sm" className={`shrink-0 ${hasPaidTicket && !groupReceiptUrl ? "text-destructive hover:text-destructive" : ""}`} aria-expanded={isExpanded} onClick={() => togglePurchaseExpanded(group.key)} title={isExpanded ? "Ocultar detalle" : "Ver detalle"} aria-label={`${isExpanded ? "Ocultar" : "Ver"} detalle de ${group.tickets[0].buyer_name}`}>
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </article>
-                )}
+                      </div>
+                    </article>
+                  )
+                })}
                 {isExpanded && (
                   <div className={`relative ${group.tickets.length > 1 ? "ml-4 space-y-2 border-l-2 border-primary/30 pl-3" : "space-y-2"}`}>
                     <Button type="button" variant="ghost" size="icon-sm" className="absolute right-2 top-2 z-10" onClick={() => togglePurchaseExpanded(group.key)} aria-expanded="true" aria-label="Contraer detalle" title="Contraer detalle">
@@ -1049,15 +1064,15 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="truncate font-semibold">{ticket.buyer_name}</h3>
+                            <h3 className="break-words font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
                             <Badge variant={group.tickets.length > 1 ? "outline" : "secondary"} className="mt-1 text-[10px] font-medium">
                               {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
                             </Badge>
                           </div>
-                          {getStatusBadge(ticket.status)}
+                          {isConfirmedTicket(ticket) ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
                         </div>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>
-                        <p className="mt-3 text-sm font-medium">{ticket.events.title}</p>
+                        <p className="mt-1 break-all text-xs text-muted-foreground">{ticket.buyer_email}</p>
+                        {!fixedEventId && <p className="mt-3 text-sm font-medium">{ticket.events.title}</p>}
                         <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                           <span>Tipo: <strong className="text-foreground">{ticket.ticket_tiers?.name || "General"}</strong></span>
                           <span>Pago: <strong className="text-foreground">{ticket.payment_status || "—"}</strong></span>
@@ -1091,7 +1106,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
                     aria-label="Seleccionar todas las entradas visibles"
                   />
                 </th>
-                <th className="text-left p-4 font-medium text-xs">Evento</th>
+                {!fixedEventId && <th className="text-left p-4 font-medium text-xs">Evento</th>}
                 <th className="text-left p-4 font-medium text-xs">Comprador</th>
                 <th className="text-left p-4 font-medium text-xs">Tipo</th>
                 <th className="text-left p-4 font-medium text-xs">Promoción</th>
@@ -1113,7 +1128,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
                   <Fragment key={group.key}>
                     {group.tickets.length > 1 && (
                       <tr className="border-t bg-muted/20">
-                        <td colSpan={11} className="p-0">
+                        <td colSpan={fixedEventId ? 10 : 11} className="p-0">
                           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex min-w-0 items-start gap-3">
                               <Checkbox checked={isGroupSelected} onCheckedChange={(checked) => togglePurchaseSelection(group, Boolean(checked))} aria-label={`Seleccionar compra de ${group.tickets[0].buyer_name}`} className="mt-1" />
@@ -1149,7 +1164,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, canRestoreUse
                       aria-label={`Seleccionar entrada de ${ticket.buyer_name}`}
                     />
                   </td>
-                  <td className="p-4 font-medium">{ticket.events.title}</td>
+                  {!fixedEventId && <td className="p-4 font-medium">{ticket.events.title}</td>}
                   <td className="p-4">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{ticket.buyer_name}</span>
