@@ -398,7 +398,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             </div>
             {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}
             {allTickets.length > 0 && (
-              <div className="mt-4 overflow-x-auto rounded-lg border">
+              <>
+              <div className="mt-4 hidden overflow-x-auto rounded-lg border md:block">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60 text-left">
                     <tr>
@@ -436,12 +437,34 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4 space-y-2 md:hidden" aria-label="Entradas disponibles">
+                {allTickets.map((ticket) => {
+                  const entered = ticket.status === 'used';
+                  return (
+                    <article key={ticket.id} className="rounded-xl border bg-background p-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                          {ticket.buyer_email && <p className="truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>}
+                        </div>
+                        <Badge variant={entered ? 'default' : 'outline'} className="shrink-0">{entered ? 'Ingresó' : 'No ingresó'}</Badge>
+                      </div>
+                      {ticket.status === 'confirmed' && (
+                        <Button type="button" size="sm" className="mt-3 w-full" onClick={() => setTicketToCheckIn(ticket)}>
+                          <CheckCircle data-icon="inline-start" /> Registrar ingreso
+                        </Button>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+              </>
             )}
             {doorSales.length > 0 && (
               <div className="mt-6">
                 <h3 className="font-semibold">Ventas en puerta</h3>
                 <p className="text-sm text-muted-foreground">No generan QR; quedan registradas como ventas cobradas en el acceso.</p>
-                <div className="mt-3 overflow-x-auto rounded-lg border">
+                <div className="mt-3 hidden overflow-x-auto rounded-lg border md:block">
                   <table className="w-full min-w-[640px] text-sm">
                     <thead className="bg-muted/60 text-left">
                       <tr>
@@ -465,6 +488,20 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="mt-3 space-y-2 md:hidden" aria-label="Ventas en puerta">
+                  {doorSales.map((sale) => (
+                    <article key={sale.id} className="rounded-xl border bg-background p-3">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{sale.buyer_name || 'Venta sin nombre'}</p>
+                          {sale.buyer_note && <p className="truncate text-xs text-muted-foreground">{sale.buyer_note}</p>}
+                        </div>
+                        <Badge variant="secondary" className="shrink-0">{sale.quantity} {sale.quantity === 1 ? 'entrada' : 'entradas'}</Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(sale.unit_price))} por entrada · Puerta</p>
+                    </article>
+                  ))}
                 </div>
               </div>
             )}

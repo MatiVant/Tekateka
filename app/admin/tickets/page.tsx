@@ -31,7 +31,9 @@ export default async function AllTicketsPage({
         title,
         price,
         organizer_id
-      )
+      ),
+      ticket_tiers(name),
+      ticket_promotions(promotion_codes(code, promotion_type, discount_value))
     `)
   if (profile?.role !== 'superadmin') ticketsQuery = ticketsQuery.eq('events.organizer_id', user.id)
   const { data: tickets } = await ticketsQuery.order('purchased_at', { ascending: false })

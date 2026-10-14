@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { FileUp, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-export function AdminReceiptUpload({ ticketId }: { ticketId: string }) {
+export function AdminReceiptUpload({ ticketId, compact = false }: { ticketId: string; compact?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -31,9 +31,17 @@ export function AdminReceiptUpload({ ticketId }: { ticketId: string }) {
 
   return <>
     <input ref={inputRef} type="file" accept="image/*,.pdf" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file) }} />
-    <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={loading} title="Cargar comprobante">
-      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-      Cargar comprobante
+    <Button
+      variant={compact ? "ghost" : "outline"}
+      size={compact ? "icon-sm" : "sm"}
+      className={compact ? "shrink-0 text-destructive hover:text-destructive" : "w-full"}
+      onClick={() => inputRef.current?.click()}
+      disabled={loading}
+      title="Cargar comprobante"
+      aria-label="Cargar comprobante"
+    >
+      {loading ? <Loader2 className={`${compact ? "h-4 w-4" : "mr-2 h-4 w-4"} animate-spin`} /> : <FileUp className={compact ? "h-4 w-4" : "mr-2 h-4 w-4"} />}
+      {!compact && "Cargar comprobante"}
     </Button>
   </>
 }

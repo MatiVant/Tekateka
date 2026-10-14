@@ -187,6 +187,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </div>
         </div>
         {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
+          <div className="flex w-full flex-col gap-2">
           <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Eventos disponibles</Link></Button>
           <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/ayuda" onClick={() => setIsMenuOpen(false)}><CircleHelp className="mr-2 size-4" />Ayuda</Link></Button>
           {user ? <>
@@ -204,6 +205,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
             <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
             <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
           </>}
+          </div>
         </div>}
       </div>
     </nav>

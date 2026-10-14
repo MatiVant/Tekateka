@@ -61,18 +61,18 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <section className="relative overflow-hidden min-h-[600px] flex items-center" style={{ backgroundImage: 'url(/tekateka-home.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <section className="relative flex min-h-[500px] items-center overflow-hidden py-16 sm:min-h-[600px] sm:py-20" style={{ backgroundImage: 'url(/tekateka-home.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/80 to-background/55 sm:bg-gradient-to-r sm:from-background sm:via-background/80 sm:to-background/40" />
+        <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl teka-editorial">
-            <Image src="/tekateka-mark.png" alt="Isotipo TekaTeka" width={72} height={72} className="mb-5 h-16 w-16 object-contain rounded-xl" priority />
+            <Image src="/tekateka-mark.png" alt="Isotipo TekaTeka" width={72} height={72} className="mb-5 h-14 w-14 rounded-xl object-contain sm:h-16 sm:w-16" priority />
             <div className="mb-8">
-              <p className="mb-5 text-sm font-bold uppercase tracking-[0.24em] text-primary">Más cultura. Más encuentros.</p>
-              <h1 className="max-w-2xl text-6xl font-black leading-[0.9] tracking-[-0.07em] text-balance md:text-8xl">
+              <p className="mb-4 max-w-full text-xs font-bold uppercase tracking-[0.16em] text-primary sm:mb-5 sm:text-sm sm:tracking-[0.24em]">Más cultura. Más encuentros.</p>
+              <h1 className="max-w-2xl text-5xl font-black leading-[0.95] tracking-[-0.06em] text-balance sm:text-6xl md:text-8xl">
                 Descubrí qué está pasando cerca tuyo.
               </h1>
-              <p className="mt-7 max-w-xl text-xl leading-relaxed text-muted-foreground md:text-2xl">Eventos, música, teatro, fiestas y encuentros independientes.</p>
-              <Button asChild size="lg" className="mt-8 rounded-full px-7 font-bold"><Link href="/eventos">Ver eventos disponibles <span aria-hidden="true">→</span></Link></Button>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:mt-7 sm:text-xl md:text-2xl">Eventos, música, teatro, fiestas y encuentros independientes.</p>
+              <Button asChild size="lg" className="mt-7 w-full rounded-full px-7 font-bold sm:mt-8 sm:w-auto"><Link href="/eventos">Ver eventos disponibles <span aria-hidden="true">→</span></Link></Button>
             </div>
           </div>
         </div>

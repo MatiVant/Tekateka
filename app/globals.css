@@ -139,13 +139,31 @@
 }
 
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(oklch(0.25 0.02 55 / 0.06) 0.6px, transparent 0.6px);
     background-size: 7px 7px;
+  }
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+  input,
+  textarea,
+  select {
+    max-width: 100%;
   }
   ::selection { background: var(--primary); color: var(--primary-foreground); }
   .teka-paper { background: color-mix(in oklch, var(--card) 88%, var(--background)); border: 1px solid var(--border); border-radius: 1.25rem; box-shadow: 0 12px 35px oklch(0.2 0.02 55 / 0.07); }
@@ -153,7 +171,11 @@
   .teka-orange-line { background: var(--primary); height: 0.25rem; width: 5rem; }
   .teka-editorial { position: relative; isolation: isolate; }
   .teka-editorial::after { content: "✳"; position: absolute; right: 1.5rem; top: 1rem; color: var(--primary); font-size: 2rem; z-index: -1; }
-  @media (max-width: 640px) { body { background-size: 9px 9px; } }
+  @media (max-width: 640px) {
+    body { background-size: 9px 9px; }
+    .teka-paper { border-radius: 1rem; }
+    .teka-editorial::after { right: 0.75rem; top: 0.5rem; font-size: 1.5rem; }
+  }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif tracking-tight;
   }

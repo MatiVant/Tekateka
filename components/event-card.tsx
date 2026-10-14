@@ -113,13 +113,13 @@ export function EventCard({ event, featured = false }: EventCardProps) {
       </div>
 
       <CardContent className={`${featured ? "p-6" : "p-5"}`}>
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div className="rounded-md bg-primary/10 px-2.5 py-1.5 text-center text-primary">
+        <div className="mb-4 flex min-w-0 items-start justify-between gap-3 sm:gap-4">
+          <div className="shrink-0 rounded-md bg-primary/10 px-2.5 py-1.5 text-center text-primary">
             <span className="block text-xs font-semibold uppercase">{eventDate.toLocaleDateString("es-AR", { month: "short", timeZone: "America/Argentina/Buenos_Aires" })}</span>
             <span className="block text-xl font-bold leading-none">{eventDate.toLocaleDateString("es-AR", { day: "numeric", timeZone: "America/Argentina/Buenos_Aires" })}</span>
           </div>
           <h3
-            className={`flex-1 font-bold text-balance line-clamp-2 group-hover:text-primary transition-colors ${featured ? "text-2xl" : "text-xl"}`}
+            className={`min-w-0 flex-1 break-words font-bold text-balance line-clamp-2 group-hover:text-primary transition-colors ${featured ? "text-xl sm:text-2xl" : "text-lg sm:text-xl"}`}
           >
             {event.title}
           </h3>
@@ -130,9 +130,9 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         )}
 
         <div className="space-y-2.5">
-          <div className="flex items-center gap-2.5 text-sm">
-            <Calendar className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-foreground/80">
+          <div className="flex min-w-0 items-start gap-2.5 text-sm">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span className="min-w-0 break-words text-foreground/80">
               {eventDate.toLocaleDateString("es-ES", {
                 day: "numeric",
                 month: "short",
@@ -148,14 +148,14 @@ export function EventCard({ event, featured = false }: EventCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5 text-sm">
-            <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex min-w-0 items-start gap-2.5 text-sm">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             {event.location_url ? <a href={event.location_url} target="_blank" rel="noopener noreferrer" className="text-foreground/80 text-pretty line-clamp-1 underline-offset-4 hover:underline">{event.venue}</a> : <span className="text-foreground/80 text-pretty line-clamp-1">{event.venue}</span>}
           </div>
 
-          <div className="flex items-center gap-2.5 text-sm">
-            <Ticket className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-foreground/80">
+          <div className="flex min-w-0 items-start gap-2.5 text-sm">
+            <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span className="min-w-0 break-words text-foreground/80">
               {realAvailableTickets} de {event.total_tickets} disponibles
             </span>
           </div>

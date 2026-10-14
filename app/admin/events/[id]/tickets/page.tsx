@@ -49,7 +49,9 @@ export default async function EventTicketsPage({
         event_date,
         venue,
         price
-      )
+      ),
+      ticket_tiers(name),
+      ticket_promotions(promotion_codes(code, promotion_type, discount_value))
     `)
     .eq('event_id', id)
     .order('purchased_at', { ascending: false });
