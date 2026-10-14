@@ -39,7 +39,12 @@ type OrganizerEventSummary = { id: string; title: string; status: string | null 
 type EventSettlementSummary = { door_paid_count: number | null; door_paid_unit_price: number | string | null }
 type DoorSaleSummary = { event_id: string; quantity: number; unit_price: number | string }
 
-export default async function AdminPage() {
+type AdminPageProps = {
+  searchParams: Promise<{ tab?: string; activePage?: string; archivedPage?: string }>
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const { tab, activePage, archivedPage } = await searchParams
   const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
 
   if (!authorized || !user) {
@@ -188,6 +193,10 @@ export default async function AdminPage() {
       net: eventTickets.reduce((sum, ticket) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
     }
   })
+  const parsePage = (value?: string) => Math.max(1, Number.parseInt(value || "1", 10) || 1)
+  const activeEventsPage = parsePage(activePage)
+  const archivedEventsPage = parsePage(archivedPage)
+  const selectedEventsTab = tab === "archived" ? "archived" : "active"
 
   return (
     <div className="min-h-screen bg-background">
@@ -228,10 +237,10 @@ export default async function AdminPage() {
             <h2 className="text-xl font-bold">Listado de Eventos</h2>
             <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
           </div>
-          <Tabs defaultValue="active" className="w-full">
+          <Tabs defaultValue={selectedEventsTab} className="w-full">
             <div className="flex items-center justify-between mb-6"><TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList></div>
-            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} /></TabsContent>
-            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} /></TabsContent>
+            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} page={activeEventsPage} pageParam="activePage" tab="active" /></TabsContent>
+            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} page={archivedEventsPage} pageParam="archivedPage" tab="archived" /></TabsContent>
           </Tabs>
         </section>
 
@@ -251,35 +260,35 @@ export default async function AdminPage() {
             {profile?.role === "organizer" && <WeeklySalesSummaryButton />}
           </div>
         </section>
-        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Eventos activos</span><Calendar aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+        <div className="mb-8 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Eventos activos</span><Calendar aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-3xl font-bold text-foreground">{totalEvents}</div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas vendidas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Entradas vendidas</span><Ticket aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
             <div className="text-3xl font-bold text-foreground">{totalSoldCount}</div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Entradas pendientes</span><Clock aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-600" /></div>
             <div className="text-3xl font-bold text-foreground">{pendingTickets}</div>
             <Button asChild variant="link" className="mt-2 h-auto px-0 text-xs"><Link href="/admin/tickets?view=pending">Revisar pendientes</Link></Button>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Transferencias informadas</span><Banknote aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(transferRevenue)}</div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Transferencias informadas</span><Banknote aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="truncate text-2xl font-bold text-foreground">{formatCurrency(transferRevenue)}</div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero por Mercado Pago</span><CreditCard aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(mercadoPagoRevenue)}</div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Dinero por Mercado Pago</span><CreditCard aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="truncate text-2xl font-bold text-foreground">{formatCurrency(mercadoPagoRevenue)}</div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Dinero en puerta</span><DoorOpen aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(doorRevenue)}</div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Dinero en puerta</span><DoorOpen aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="truncate text-2xl font-bold text-foreground">{formatCurrency(doorRevenue)}</div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">Total vendido</span><DollarSign aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
+          <div className="min-w-0 rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 text-sm font-medium leading-tight text-muted-foreground">Total vendido</span><DollarSign aria-hidden="true" className="h-5 w-5 shrink-0 text-primary/60" /></div>
+            <div className="truncate text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
           </div>
         </div>
 

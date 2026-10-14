@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3 } from "lucide-react"
+import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
@@ -13,9 +13,12 @@ import { EventVisibilityToggle } from "@/components/admin/event-visibility-toggl
 interface EventsListProps {
   userId: string
   showArchived?: boolean
+  page?: number
+  pageParam?: string
+  tab?: string
 }
 
-export async function EventsList({ userId, showArchived = false }: EventsListProps) {
+export async function EventsList({ userId, showArchived = false, page = 1, pageParam = "activePage", tab = "active" }: EventsListProps) {
   const supabase = await createClient()
 
   const query = supabase.from("events").select("*").eq("organizer_id", userId)
@@ -57,6 +60,12 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
     if (aFuture !== bFuture) return aFuture ? -1 : 1
     return aFuture ? aTime - bTime : bTime - aTime
   })
+  const pageSize = 4
+  const totalPages = Math.ceil(sortedEvents.length / pageSize)
+  const currentPage = Math.min(Math.max(1, page), Math.max(1, totalPages))
+  const pageStart = (currentPage - 1) * pageSize
+  const visibleEvents = sortedEvents.slice(pageStart, pageStart + pageSize)
+  const pageHref = (targetPage: number) => `?tab=${tab}&${pageParam}=${targetPage}#event-list`
 
   if (!events || events.length === 0) {
     return (
@@ -74,8 +83,8 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
   }
 
   return (
-    <div className="space-y-4">
-      {sortedEvents.map((event) => {
+    <div id="event-list" className="space-y-4">
+      {visibleEvents.map((event) => {
         const isPastEvent = new Date(event.event_date) < new Date()
         const sales = salesByEvent[event.id] || { confirmed: 0, pending: 0 }
         const available = Math.max(0, event.total_tickets - sales.confirmed)
@@ -194,6 +203,30 @@ export async function EventsList({ userId, showArchived = false }: EventsListPro
           </div>
         )
       })}
+      {totalPages > 1 && (
+        <nav aria-label="Paginación de eventos" className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <span className="text-sm text-muted-foreground">
+            Mostrando {pageStart + 1}-{Math.min(pageStart + pageSize, sortedEvents.length)} de {sortedEvents.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="outline" size="icon" disabled={currentPage === 1} aria-label="Página anterior">
+              <Link href={currentPage > 1 ? pageHref(currentPage - 1) : pageHref(1)} aria-disabled={currentPage === 1} tabIndex={currentPage === 1 ? -1 : undefined}>
+                <ChevronLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <Button key={pageNumber} asChild variant={pageNumber === currentPage ? "default" : "outline"} size="icon" aria-current={pageNumber === currentPage ? "page" : undefined}>
+                <Link href={pageHref(pageNumber)}>{pageNumber}</Link>
+              </Button>
+            ))}
+            <Button asChild variant="outline" size="icon" disabled={currentPage === totalPages} aria-label="Página siguiente">
+              <Link href={currentPage < totalPages ? pageHref(currentPage + 1) : pageHref(totalPages)} aria-disabled={currentPage === totalPages} tabIndex={currentPage === totalPages ? -1 : undefined}>
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   )
 }
