@@ -7,6 +7,7 @@ import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Calendar, Ticket, DollarSign, Plus, Clock, XCircle, Banknote, CreditCard, DoorOpen } from "lucide-react"
 import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
+import { LiveEventSearch } from "@/components/admin/live-event-search"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
 import { ContactSuperadmin } from "@/components/admin/contact-superadmin"
@@ -40,11 +41,11 @@ type EventSettlementSummary = { door_paid_count: number | null; door_paid_unit_p
 type DoorSaleSummary = { event_id: string; quantity: number; unit_price: number | string }
 
 type AdminPageProps = {
-  searchParams: Promise<{ tab?: string; activePage?: string; archivedPage?: string }>
+  searchParams: Promise<{ tab?: string; q?: string }>
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const { tab, activePage, archivedPage } = await searchParams
+  const { tab, q } = await searchParams
   const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
 
   if (!authorized || !user) {
@@ -193,9 +194,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       net: eventTickets.reduce((sum, ticket) => sum + Number(ticket.net_amount ?? ticket.final_price ?? 0), 0),
     }
   })
-  const parsePage = (value?: string) => Math.max(1, Number.parseInt(value || "1", 10) || 1)
-  const activeEventsPage = parsePage(activePage)
-  const archivedEventsPage = parsePage(archivedPage)
   const selectedEventsTab = tab === "archived" ? "archived" : "active"
 
   return (
@@ -238,9 +236,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <p className="text-sm text-muted-foreground">Revisa el estado y desempeño de tus eventos</p>
           </div>
           <Tabs defaultValue={selectedEventsTab} className="w-full">
-            <div className="flex items-center justify-between mb-6"><TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList></div>
-            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} page={activeEventsPage} pageParam="activePage" tab="active" /></TabsContent>
-            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} page={archivedEventsPage} pageParam="archivedPage" tab="archived" /></TabsContent>
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList>
+              <LiveEventSearch initialValue={q || ""} />
+            </div>
+            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} search={q} /></TabsContent>
+            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} search={q} /></TabsContent>
           </Tabs>
         </section>
 

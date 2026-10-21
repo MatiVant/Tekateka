@@ -35,11 +35,12 @@ export async function createTicket(data: CreateTicketData) {
     if (!buyerEmail) throw new Error("El email del comprador es obligatorio")
 
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
-    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, sales_start_at, sales_end_at").eq("id", data.event_id).single()
+    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, sales_start_at, sales_end_at").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
     const now = Date.now()
     if (event.sales_start_at && now < new Date(event.sales_start_at).getTime()) throw new Error(`La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`)
-    if (event.sales_end_at && now >= new Date(event.sales_end_at).getTime()) throw new Error("La venta para este evento ya finalizó")
+    if (event.sales_end_at && now >= new Date(event.sales_end_at).getTime()) throw new Error("La venta anticipada ya finalizó. Acercate a la puerta del lugar.")
+    if (event.event_date && now >= new Date(event.event_date).getTime()) throw new Error("La venta anticipada ya finalizó. Acercate a la puerta del lugar.")
 
     const requestedQuantity = Math.max(1, data.ticketQuantity ?? 1)
     const { count: activeTicketCount, error: capacityError } = await supabase
@@ -191,13 +192,33 @@ export async function createTicket(data: CreateTicketData) {
     // se debe enviar un único email consolidado (controlado por data.sendEmail).
     try {
       if (data.sendEmail !== false) {
+        // La restricción única en purchase_notifications hace idempotente el envío:
+        // recargar la pantalla o reintentar la compra no vuelve a notificar.
+        let shouldSendEmail = true
+        if (data.purchaseGroupId) {
+          const { data: notification, error: notificationError } = await supabase
+            .from("purchase_notifications")
+            .upsert({
+              purchase_group_id: data.purchaseGroupId,
+              event_id: data.event_id,
+              notification_type: "preliminary_purchase",
+              recipient_email: buyerEmail,
+              status: "sending",
+            }, { onConflict: "purchase_group_id,notification_type", ignoreDuplicates: true })
+            .select("id")
+            .maybeSingle()
+
+          if (notificationError) throw notificationError
+          shouldSendEmail = Boolean(notification?.id)
+        }
+
         const { data: event } = await supabase
           .from("events")
           .select("id, title, mercado_pago_link, transfer_alias, transfer_account_holder")
           .eq("id", data.event_id)
           .single()
 
-        if (resend && event) {
+        if (shouldSendEmail && resend && event) {
           const quantity = data.ticketQuantity ?? 1
           const totalAmount = data.final_price * quantity
           const entradasLabel = quantity === 1 ? "entrada" : `${quantity} entradas`
@@ -212,6 +233,9 @@ export async function createTicket(data: CreateTicketData) {
             subject: `Compra recibida: ${event.title}`,
             html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong> por un total de ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${normalizedPaymentMethod === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${normalizedPaymentMethod === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${normalizedPaymentMethod === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p><p>Después, podés consultar el estado y tus entradas en <a href="${siteUrl.replace(/\/$/, "")}/my-tickets">Mis entradas</a> con la cuenta asociada a esta compra.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
           })
+          if (data.purchaseGroupId) {
+            await supabase.from("purchase_notifications").update({ status: "sent", sent_at: new Date().toISOString() }).eq("purchase_group_id", data.purchaseGroupId).eq("notification_type", "preliminary_purchase")
+          }
         }
       }
     } catch (emailError) {

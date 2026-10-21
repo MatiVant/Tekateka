@@ -73,7 +73,9 @@ export default async function EventDetailPage({
   const beforeSalesStart = event.sales_start_at && now < new Date(event.sales_start_at).getTime()
   const afterSalesEnd = event.sales_end_at && now >= new Date(event.sales_end_at).getTime()
   const eventHasStarted = now >= eventDate.getTime()
-  const isAvailable = event.status === "active" && realAvailableTickets > 0 && !beforeSalesStart && !afterSalesEnd && !eventHasStarted
+  const noTicketsAvailable = realAvailableTickets <= 0 || event.status === "sold_out"
+  const advanceSalesClosed = Boolean(afterSalesEnd || eventHasStarted)
+  const isAvailable = event.status === "active" && !noTicketsAvailable && !beforeSalesStart && !advanceSalesClosed
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
@@ -165,7 +167,7 @@ export default async function EventDetailPage({
               <CardHeader>
                 <CardTitle className="text-2xl">Comprar Entrada</CardTitle>
                 <CardDescription>
-                  {isAvailable ? "Solo necesitas tu email y nombre completo" : "Este evento no está disponible"}
+                  {isAvailable ? "Solo necesitas tu email y nombre completo" : noTicketsAvailable ? "Entradas agotadas" : advanceSalesClosed ? "Venta anticipada cerrada" : "Este evento no está disponible"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -196,15 +198,15 @@ export default async function EventDetailPage({
                     isPwyw={isPwyw}
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <div className={`rounded-lg border p-4 text-sm ${noTicketsAvailable ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-primary/30 bg-primary/5 text-foreground"}`}>
                     {beforeSalesStart
                       ? `La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}.`
-                      : afterSalesEnd
-                        ? "La venta para este evento ya finalizó."
-                        : event.status === "sold_out"
-                          ? "Las entradas para este evento están agotadas."
+                      : noTicketsAvailable
+                        ? "Entradas agotadas."
+                        : advanceSalesClosed
+                          ? "La venta anticipada ya finalizó, pero todavía hay entradas disponibles. Acercate a la puerta del lugar para consultar y comprar tu entrada."
                           : "Este evento ya no está disponible para compra."}
-                  </p>
+                  </div>
                 )}
               </CardContent>
             </Card>

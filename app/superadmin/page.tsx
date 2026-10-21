@@ -8,8 +8,10 @@ import { MovementsReportButton } from "@/components/admin/movements-report-butto
 import { AudienceInsights } from "@/components/superadmin/audience-insights"
 import { AudienceTagManager } from "@/components/superadmin/audience-tag-manager"
 import { getAudienceTags } from "@/app/actions/audience-tags"
+import { getSalesSummarySettings } from "@/app/actions/sales-summary-settings"
 import { SuperAdminModuleCard } from "@/components/superadmin/superadmin-module-card"
-import { CalendarDays, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
+import { SalesSummarySettings } from "@/components/superadmin/sales-summary-settings"
+import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
   const { authorized, user, profile } = await requireAuth(["superadmin"])
@@ -20,6 +22,7 @@ export default async function SuperAdminPage() {
 
   const supabase = createAdminClient()
   const audienceTagOptions = await getAudienceTags()
+  const salesSummarySettings = await getSalesSummarySettings()
 
   // Obtener estadísticas de organizadores
   const { data: organizers } = await supabase.from("profiles").select("*").eq("role", "organizer")
@@ -127,6 +130,15 @@ export default async function SuperAdminPage() {
 
 
         <section aria-label="Herramientas de administración" className="mt-10 grid gap-4">
+          <SuperAdminModuleCard
+            id="sales-summary"
+            title="Resúmenes por correo"
+            description="Frecuencia y envío de informes a organizadores"
+            icon={Mail}
+          >
+            <SalesSummarySettings initialFrequency={salesSummarySettings.frequency} />
+          </SuperAdminModuleCard>
+
           <SuperAdminModuleCard
             id="movements"
             title="Movimientos"

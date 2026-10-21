@@ -1292,12 +1292,46 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-semibold">Ventas en puerta</p>
-                <p className="text-sm text-muted-foreground">Sin identificación del comprador ni código QR.</p>
+                <p className="text-sm text-muted-foreground">Detalle de cada operación registrada durante el evento.</p>
               </div>
               <div className="text-right">
                 <p className="font-semibold">{doorTicketCount} {doorTicketCount === 1 ? "entrada" : "entradas"} en puerta</p>
                 <p className="text-sm text-muted-foreground">{formatCurrency(doorSalesAmount)}</p>
               </div>
+            </div>
+            <div className="mt-4 overflow-x-auto rounded-md border bg-background">
+              <table className="w-full min-w-[680px] text-sm">
+                <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Fecha y hora</th>
+                    <th className="px-3 py-2 font-medium">Comprador</th>
+                    <th className="px-3 py-2 text-right font-medium">Cantidad</th>
+                    <th className="px-3 py-2 text-right font-medium">Valor unitario</th>
+                    <th className="px-3 py-2 text-right font-medium">Total</th>
+                    <th className="px-3 py-2 font-medium">Observación</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {doorSales.map((sale) => {
+                    const quantity = Number(sale.quantity) || 0
+                    const unitPrice = Number(sale.unit_price) || 0
+                    const saleDate = new Date(sale.created_at)
+                    const formattedDate = Number.isNaN(saleDate.getTime())
+                      ? "—"
+                      : new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(saleDate)
+                    return (
+                      <tr key={sale.id}>
+                        <td className="whitespace-nowrap px-3 py-2">{formattedDate}</td>
+                        <td className="px-3 py-2">{sale.buyer_name || "Sin nombre"}</td>
+                        <td className="px-3 py-2 text-right">{quantity}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(unitPrice)}</td>
+                        <td className="px-3 py-2 text-right font-medium">{formatCurrency(quantity * unitPrice)}</td>
+                        <td className="max-w-[220px] truncate px-3 py-2 text-muted-foreground" title={sale.buyer_note || undefined}>{sale.buyer_note || "—"}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </section>
         )}

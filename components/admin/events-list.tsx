@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar, MapPin, Ticket, Eye, Edit, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { formatPrice } from "@/lib/format"
 import { ArchiveEventButton } from "@/components/admin/archive-event-button"
@@ -13,12 +13,10 @@ import { EventVisibilityToggle } from "@/components/admin/event-visibility-toggl
 interface EventsListProps {
   userId: string
   showArchived?: boolean
-  page?: number
-  pageParam?: string
-  tab?: string
+  search?: string
 }
 
-export async function EventsList({ userId, showArchived = false, page = 1, pageParam = "activePage", tab = "active" }: EventsListProps) {
+export async function EventsList({ userId, showArchived = false, search = "" }: EventsListProps) {
   const supabase = await createClient()
 
   const query = supabase.from("events").select("*").eq("organizer_id", userId)
@@ -28,11 +26,20 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
   }
 
   const { data: queriedEvents } = await query
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const events = showArchived
-    ? (queriedEvents || []).filter((event) => new Date(event.event_date) < yesterday)
-    : (queriedEvents || []).filter((event) => event.status !== "finished" || new Date(event.event_date) >= yesterday)
+  const dateKey = (value: Date) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value)
+  const todayKey = dateKey(new Date())
+  const normalizedSearch = search.trim().toLocaleLowerCase("es-AR")
+  const events = (queriedEvents || []).filter((event) => {
+    const eventDateKey = dateKey(new Date(event.event_date))
+    const matchesTab = showArchived ? eventDateKey < todayKey : event.status !== "finished" || eventDateKey >= todayKey
+    const matchesSearch = normalizedSearch.length < 3 || [event.title, event.venue].some((value) => String(value || "").toLocaleLowerCase("es-AR").includes(normalizedSearch))
+    return matchesTab && matchesSearch
+  })
   const { data: eventTickets } = await supabase.from("tickets").select("event_id, status, payment_status")
   const eventIds = events.map((event) => event.id)
   const adminSupabase = createAdminClient()
@@ -51,27 +58,21 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
     current.confirmed += Number(sale.quantity) || 0
     salesByEvent[sale.event_id] = current
   }
-  const now = new Date().getTime()
   const sortedEvents = [...(events || [])].sort((a, b) => {
     const aTime = new Date(a.event_date).getTime()
     const bTime = new Date(b.event_date).getTime()
-    const aFuture = aTime >= now
-    const bFuture = bTime >= now
-    if (aFuture !== bFuture) return aFuture ? -1 : 1
-    return aFuture ? aTime - bTime : bTime - aTime
+    const aTodayOrFuture = dateKey(new Date(a.event_date)) >= todayKey
+    const bTodayOrFuture = dateKey(new Date(b.event_date)) >= todayKey
+    if (aTodayOrFuture !== bTodayOrFuture) return aTodayOrFuture ? -1 : 1
+    return aTodayOrFuture ? aTime - bTime : bTime - aTime
   })
-  const pageSize = 4
-  const totalPages = Math.ceil(sortedEvents.length / pageSize)
-  const currentPage = Math.min(Math.max(1, page), Math.max(1, totalPages))
-  const pageStart = (currentPage - 1) * pageSize
-  const visibleEvents = sortedEvents.slice(pageStart, pageStart + pageSize)
-  const pageHref = (targetPage: number) => `?tab=${tab}&${pageParam}=${targetPage}#event-list`
+  const visibleEvents = sortedEvents
 
   if (!events || events.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">
-          {showArchived ? "No tienes eventos archivados" : "No has creado ningún evento aún"}
+          {search ? "No encontramos eventos con ese texto." : showArchived ? "No tienes eventos archivados" : "No has creado ningún evento aún"}
         </p>
         {!showArchived && (
           <Button asChild>
@@ -83,9 +84,8 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
   }
 
   return (
-    <div id="event-list" className="space-y-4">
+    <div id="event-list" className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {visibleEvents.map((event) => {
-        const isPastEvent = new Date(event.event_date) < new Date()
         const sales = salesByEvent[event.id] || { confirmed: 0, pending: 0 }
         const available = Math.max(0, event.total_tickets - sales.confirmed)
         const salesPercentage = event.total_tickets > 0 ? Math.round((sales.confirmed / event.total_tickets) * 100) : 0
@@ -93,9 +93,11 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
         return (
           <div
             key={event.id}
-            className="relative flex min-w-0 flex-col items-stretch gap-4 overflow-hidden rounded-xl border p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:p-4"
+            className="relative flex h-full min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 transition-colors hover:bg-muted/50"
+            data-event-card
+            data-event-search={`${String(event.title || "").toLocaleLowerCase("es-AR")} ${String(event.venue || "").toLocaleLowerCase("es-AR")}`}
           >
-            <div className="h-44 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-24">
+            <div className="h-48 w-full shrink-0 overflow-hidden rounded-lg bg-muted">
               <img
                 src={
                   event.image_url || `/placeholder.svg?height=100&width=100&query=${encodeURIComponent(event.title)}`
@@ -109,7 +111,7 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
               <EventVisibilityToggle eventId={event.id} isPublic={event.is_public !== false} />
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex min-w-0 flex-1 flex-col">
               <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
                 <h3 className="min-w-0 flex-1 font-semibold text-lg text-pretty line-clamp-2">{event.title}</h3>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pr-10 sm:pr-12">
@@ -172,7 +174,7 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
                 {sales.pending > 0 && <p className="mt-1 text-xs text-muted-foreground">{sales.pending} pendiente{sales.pending === 1 ? "" : "s"} de confirmación</p>}
               </div>
 
-              <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <div className="mt-auto grid min-w-0 grid-cols-2 gap-2 pt-1 sm:flex sm:flex-wrap">
                 <Button variant="outline" size="sm" className="min-w-0" asChild>
                   <Link href={`/events/${event.slug || event.id}`}>
                     <Eye className="mr-1 h-3 w-3" />
@@ -203,30 +205,6 @@ export async function EventsList({ userId, showArchived = false, page = 1, pageP
           </div>
         )
       })}
-      {totalPages > 1 && (
-        <nav aria-label="Paginación de eventos" className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <span className="text-sm text-muted-foreground">
-            Mostrando {pageStart + 1}-{Math.min(pageStart + pageSize, sortedEvents.length)} de {sortedEvents.length}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button asChild variant="outline" size="icon" disabled={currentPage === 1} aria-label="Página anterior">
-              <Link href={currentPage > 1 ? pageHref(currentPage - 1) : pageHref(1)} aria-disabled={currentPage === 1} tabIndex={currentPage === 1 ? -1 : undefined}>
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-              <Button key={pageNumber} asChild variant={pageNumber === currentPage ? "default" : "outline"} size="icon" aria-current={pageNumber === currentPage ? "page" : undefined}>
-                <Link href={pageHref(pageNumber)}>{pageNumber}</Link>
-              </Button>
-            ))}
-            <Button asChild variant="outline" size="icon" disabled={currentPage === totalPages} aria-label="Página siguiente">
-              <Link href={currentPage < totalPages ? pageHref(currentPage + 1) : pageHref(totalPages)} aria-disabled={currentPage === totalPages} tabIndex={currentPage === totalPages ? -1 : undefined}>
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </nav>
-      )}
     </div>
   )
 }

@@ -11,7 +11,13 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Banknote, Check, Plus, ReceiptText, Trash2 } from 'lucide-react'
 
-type Ticket = { final_price?: number | string | null; payment_status?: string | null }
+type Ticket = {
+  final_price?: number | string | null
+  charged_amount?: number | string | null
+  payment_method?: string | null
+  status?: string | null
+  payment_status?: string | null
+}
 type DoorSale = { quantity: number; unit_price: number | string }
 type Expense = { name: string; amount: number }
 type Settlement = {
@@ -38,14 +44,23 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
   const [closed, setClosed] = useState(Boolean(initialSettlement?.closed_at))
   const [isPending, startTransition] = useTransition()
 
-  const onlineRevenue = tickets.reduce((sum, ticket) => sum + (['approved', 'confirmed'].includes(String(ticket.payment_status)) ? Number(ticket.final_price || 0) : 0), 0)
+  const confirmedTickets = tickets.filter((ticket) => ticket.status !== 'cancelled' && (['approved', 'confirmed'].includes(String(ticket.payment_status)) || ['confirmed', 'used'].includes(String(ticket.status))))
+  const onlineTicketCount = confirmedTickets.length
+  const onlineFreeCount = confirmedTickets.filter((ticket) => ticket.payment_method === 'free' || Number(ticket.final_price ?? 0) === 0).length
+  // Ventas online es el valor de las entradas; recaudado online es lo efectivamente cobrado.
+  const onlineSales = confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.final_price ?? 0), 0)
+  const onlineCollected = confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0)
+  const recordedDoorCount = doorSales.reduce((sum, sale) => sum + (Number(sale.quantity) || 0), 0)
   const recordedDoorRevenue = doorSales.reduce((sum, sale) => sum + (Number(sale.quantity) || 0) * (Number(sale.unit_price) || 0), 0)
+  const doorTicketCount = doorSales.length > 0 ? recordedDoorCount : doorPaid
   const doorRevenue = doorSales.length > 0 ? recordedDoorRevenue : doorPaid * doorPrice
-  const totalRevenue = onlineRevenue + doorRevenue
+  const totalTicketCount = onlineTicketCount + doorTicketCount + doorFree
+  const totalFreeCount = onlineFreeCount + doorFree
+  const totalRevenue = onlineCollected + doorRevenue
   const totalExpenses = expenses.reduce((sum, expense) => sum + Math.max(0, Number(expense.amount) || 0), 0)
   const artistAmount = Math.max(0, (basis === 'net' ? totalRevenue - totalExpenses : totalRevenue) * (percentage / 100))
   const organizerAmount = totalRevenue - totalExpenses - artistAmount
-  const summary = useMemo(() => ({ onlineRevenue, doorRevenue, totalRevenue, totalExpenses, artistAmount, organizerAmount }), [onlineRevenue, doorRevenue, totalRevenue, totalExpenses, artistAmount, organizerAmount])
+  const summary = useMemo(() => ({ onlineSales, onlineCollected, onlineTicketCount, onlineFreeCount, doorRevenue, doorTicketCount, doorFree, totalTicketCount, totalFreeCount, totalRevenue, totalExpenses, artistAmount, organizerAmount }), [onlineSales, onlineCollected, onlineTicketCount, onlineFreeCount, doorRevenue, doorTicketCount, doorFree, totalTicketCount, totalFreeCount, totalRevenue, totalExpenses, artistAmount, organizerAmount])
 
   const save = () => startTransition(async () => {
     try {
@@ -85,10 +100,12 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
 
       <div className="space-y-8 p-5 sm:p-7">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen de liquidación">
-          <SummaryCard label="Ventas online" value={money(summary.onlineRevenue)} />
-          <SummaryCard label="Recaudado en puerta" value={money(summary.doorRevenue)} />
+          <SummaryCard label="Entradas vendidas" value={String(summary.totalTicketCount)} detail={`${summary.onlineTicketCount} online · ${summary.doorTicketCount} en puerta`} />
+          <SummaryCard label="Ventas online" value={money(summary.onlineSales)} detail={`Recaudado online: ${money(summary.onlineCollected)}`} />
+          <SummaryCard label="Recaudado en puerta" value={money(summary.doorRevenue)} detail={`${summary.doorTicketCount} pagas`} />
+          <SummaryCard label="Entradas gratis" value={String(summary.totalFreeCount)} detail={`${summary.onlineFreeCount ?? 0} online · ${summary.doorFree} en puerta`} />
           <SummaryCard label="Gastos cargados" value={money(summary.totalExpenses)} />
-          <SummaryCard label="Total recaudado" value={money(summary.totalRevenue)} emphasis />
+          <SummaryCard label="Total recaudado" value={money(summary.totalRevenue)} detail="Online + puerta, sin descontar gastos" emphasis />
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -212,11 +229,12 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
   )
 }
 
-function SummaryCard({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+function SummaryCard({ label, value, detail, emphasis = false }: { label: string; value: string; detail?: string; emphasis?: boolean }) {
   return (
     <div className={`rounded-2xl border p-4 ${emphasis ? 'border-primary/20 bg-primary/5' : 'bg-card'}`}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className={`mt-2 text-xl font-semibold tracking-tight ${emphasis ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+      {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
     </div>
   )
 }
