@@ -421,6 +421,9 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+        <p className="text-xs text-muted-foreground">
+          Podés usar Markdown: <code>**negrita**</code>, <code>*cursiva*</code>, listas y enlaces.
+        </p>
       </div>
 
       <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">

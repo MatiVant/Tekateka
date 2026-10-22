@@ -9,6 +9,7 @@ import Image from "next/image"
 import { notFound } from "next/navigation"
 import { PurchaseFlow } from "@/components/purchase-flow"
 import { formatCurrency } from "@/lib/format"
+import ReactMarkdown from "react-markdown"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -157,7 +158,16 @@ export default async function EventDetailPage({
             {event.description && (
               <div className="prose prose-lg max-w-none">
                 <h2 className="text-2xl font-semibold mb-3">Descripción</h2>
-                <p className="text-muted-foreground text-pretty leading-relaxed">{event.description}</p>
+                <div className="text-muted-foreground text-pretty leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-bold">
+                  <ReactMarkdown
+                    skipHtml
+                    components={{
+                      a: (props) => <a {...props} target="_blank" rel="noreferrer" />,
+                    }}
+                  >
+                    {event.description}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
