@@ -75,6 +75,7 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
     .from("events")
     .select("*")
     .eq("is_public", true)
+    .eq("status", "active")
     .gte("event_date", new Date().toISOString())
     .in("organizer_id", organizer.organizerIds)
     .order("event_date", { ascending: true })

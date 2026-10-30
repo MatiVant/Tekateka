@@ -20,12 +20,29 @@ export async function deleteEvent(eventId: string) {
       .single()
 
     if (eventLookupError || !event) return { success: false, error: "Evento no encontrado" }
-    if (event.status !== "finished" && !isSuperadmin) return { success: false, error: "Solo se pueden eliminar eventos archivados" }
     if (event.organizer_id !== user.id && !isSuperadmin) {
       return { success: false, error: "No autorizado" }
     }
 
     const adminSupabase = createAdminClient()
+    const { data: eventTickets, error: ticketLookupError } = await adminSupabase
+      .from("tickets")
+      .select("status, payment_status")
+      .eq("event_id", eventId)
+
+    if (ticketLookupError) {
+      console.error("[v0] Error checking event tickets before deletion:", ticketLookupError)
+      return { success: false, error: "No se pudo verificar si el evento tiene entradas cobradas" }
+    }
+
+    const hasCollectedTickets = (eventTickets || []).some((ticket) =>
+      ticket.status !== "cancelled" &&
+      (ticket.status === "confirmed" || ticket.status === "used" || ticket.payment_status === "approved"),
+    )
+
+    if (hasCollectedTickets) {
+      return { success: false, error: "No se puede eliminar un evento con entradas cobradas o confirmadas" }
+    }
 
     // El superadmin necesita borrar con service role para no quedar bloqueado por RLS.
     const { error: ticketsError } = await adminSupabase.from("tickets").delete().eq("event_id", eventId)

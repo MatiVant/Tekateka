@@ -197,9 +197,7 @@ export async function EventsList({ userId, showArchived = false, search = "" }: 
                   </Link>
                 </Button>
                 <ArchiveEventButton eventId={event.id} isArchived={event.status === "finished"} />
-                {showArchived && event.status === "finished" && (
-                  <DeleteEventButton eventId={event.id} eventTitle={event.title} />
-                )}
+                <DeleteEventButton eventId={event.id} eventTitle={event.title} />
               </div>
             </div>
           </div>
