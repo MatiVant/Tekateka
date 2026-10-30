@@ -45,32 +45,23 @@ export async function deleteEvent(eventId: string) {
     }
 
     // El superadmin necesita borrar con service role para no quedar bloqueado por RLS.
-    const { error: ticketsError } = await adminSupabase.from("tickets").delete().eq("event_id", eventId)
+    // Estas tablas son independientes entre sí, por lo que se pueden limpiar en paralelo.
+    const [ticketsResult, shareLinksResult, ownershipResult, tiersResult, promoResult] = await Promise.all([
+      adminSupabase.from("tickets").delete().eq("event_id", eventId),
+      adminSupabase.from("artist_share_links").delete().eq("event_id", eventId),
+      adminSupabase.from("event_ownership_transfers").delete().eq("event_id", eventId),
+      adminSupabase.from("ticket_tiers").delete().eq("event_id", eventId),
+      adminSupabase.from("promotion_codes").delete().eq("event_id", eventId),
+    ])
 
-    if (ticketsError) {
-      console.error("[v0] Error deleting tickets:", ticketsError)
+    if (ticketsResult.error) {
+      console.error("[v0] Error deleting tickets:", ticketsResult.error)
       return { success: false, error: "Error al eliminar tickets asociados" }
     }
-
-    // Eliminar ticket_tiers asociados
-    const { error: shareLinksError } = await adminSupabase.from("artist_share_links").delete().eq("event_id", eventId)
-    if (shareLinksError) console.error("[v0] Error deleting artist share links:", shareLinksError)
-
-    const { error: ownershipError } = await adminSupabase.from("event_ownership_transfers").delete().eq("event_id", eventId)
-    if (ownershipError) console.error("[v0] Error deleting ownership transfers:", ownershipError)
-
-    const { error: tiersError } = await adminSupabase.from("ticket_tiers").delete().eq("event_id", eventId)
-
-    if (tiersError) {
-      console.error("[v0] Error deleting tiers:", tiersError)
-    }
-
-    // Eliminar promotion_codes asociados
-    const { error: promoError } = await adminSupabase.from("promotion_codes").delete().eq("event_id", eventId)
-
-    if (promoError) {
-      console.error("[v0] Error deleting promotion codes:", promoError)
-    }
+    if (shareLinksResult.error) console.error("[v0] Error deleting artist share links:", shareLinksResult.error)
+    if (ownershipResult.error) console.error("[v0] Error deleting ownership transfers:", ownershipResult.error)
+    if (tiersResult.error) console.error("[v0] Error deleting tiers:", tiersResult.error)
+    if (promoResult.error) console.error("[v0] Error deleting promotion codes:", promoResult.error)
 
     // Finalmente eliminar el evento
     const { error: eventError } = await adminSupabase.from("events").delete().eq("id", eventId)

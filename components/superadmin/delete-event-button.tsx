@@ -30,6 +30,10 @@ export function DeleteEventButton({ eventId, eventTitle }: DeleteEventButtonProp
 
   const handleDelete = async () => {
     setIsDeleting(true)
+    toast({
+      title: "Eliminando evento…",
+      description: "Estamos borrando el evento y sus datos asociados.",
+    })
 
     try {
       const result = await deleteEvent(eventId)
