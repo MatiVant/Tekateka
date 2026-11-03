@@ -577,11 +577,10 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
           required
           value={totalTickets}
           onChange={(e) => setTotalTickets(e.target.value)}
-          disabled={!!event}
         />
         {event && (
           <p className="text-xs text-muted-foreground">
-            No se puede modificar el total de entradas de un evento existente
+            Podés aumentarlo o reducirlo hasta la cantidad de entradas todavía disponibles.
           </p>
         )}
       </div>

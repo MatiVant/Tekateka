@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@/lib/supabase/admin';
 import { AllTicketsTable } from '@/components/admin/all-tickets-table';
-import { getEventSettlement } from '@/app/actions/event-settlement';
+import { getEventReconciliations, getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
 import { CheckerLinkButton } from '@/components/admin/checker-link-button';
 
@@ -37,7 +37,7 @@ export default async function EventTicketsPage({
   }
 
   // Obtener tickets del evento
-  const initialSettlement = await getEventSettlement(id);
+  const [initialSettlement, reconciliations] = await Promise.all([getEventSettlement(id), getEventReconciliations(id)]);
 
   const { data: tickets } = await supabase
     .from('tickets')
@@ -111,7 +111,7 @@ export default async function EventTicketsPage({
                 canRestoreUsedTickets={profile?.role === 'superadmin'}
               />
             </section>
-            <EventSettlement eventId={id} tickets={tickets || []} doorSales={doorSales || []} initialSettlement={initialSettlement} />
+            <EventSettlement eventId={id} tickets={tickets || []} doorSales={doorSales || []} initialSettlement={initialSettlement} initialReconciliations={reconciliations} />
           </CardContent>
         </Card>
       </main>

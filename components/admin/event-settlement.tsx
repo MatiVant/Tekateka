@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { saveEventSettlement } from '@/app/actions/event-settlement'
+import { saveEventReconciliation, saveEventSettlement, type EventReconciliation } from '@/app/actions/event-settlement'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,13 +12,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Banknote, Check, Plus, ReceiptText, Trash2 } from 'lucide-react'
 
 type Ticket = {
+  id: string
+  buyer_name?: string | null
   final_price?: number | string | null
   charged_amount?: number | string | null
   payment_method?: string | null
   status?: string | null
   payment_status?: string | null
 }
-type DoorSale = { quantity: number; unit_price: number | string }
+type DoorSale = { id: string; quantity: number; unit_price: number | string; buyer_name?: string | null; buyer_note?: string | null }
 type Expense = { name: string; amount: number }
 type Settlement = {
   door_paid_count?: number
@@ -33,7 +35,8 @@ type Settlement = {
 
 const money = (value: number) => value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
 
-export function EventSettlement({ eventId, tickets, doorSales, initialSettlement }: { eventId: string; tickets: Ticket[]; doorSales: DoorSale[]; initialSettlement: Settlement }) {
+export function EventSettlement({ eventId, tickets, doorSales, initialSettlement, initialReconciliations }: { eventId: string; tickets: Ticket[]; doorSales: DoorSale[]; initialSettlement: Settlement; initialReconciliations: EventReconciliation[] }) {
+  const [reconciliations, setReconciliations] = useState<Record<string, EventReconciliation>>(() => Object.fromEntries(initialReconciliations.map((item) => [`${item.source_type}:${item.source_id}`, item])))
   const [doorPaid, setDoorPaid] = useState(initialSettlement?.door_paid_count ?? 0)
   const [doorPrice, setDoorPrice] = useState(initialSettlement?.door_paid_unit_price ?? 0)
   const [doorFree, setDoorFree] = useState(initialSettlement?.door_free_count ?? 0)
@@ -44,14 +47,19 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
   const [closed, setClosed] = useState(Boolean(initialSettlement?.closed_at))
   const [isPending, startTransition] = useTransition()
 
-  const confirmedTickets = tickets.filter((ticket) => ticket.status !== 'cancelled' && (['approved', 'confirmed'].includes(String(ticket.payment_status)) || ['confirmed', 'used'].includes(String(ticket.status))))
+  const reconciliationFor = (sourceType: EventReconciliation['source_type'], sourceId: string) => reconciliations[`${sourceType}:${sourceId}`]
+  const confirmedTickets = tickets.filter((ticket) => ticket.status !== 'cancelled' && (['approved', 'confirmed'].includes(String(ticket.payment_status)) || ['confirmed', 'used'].includes(String(ticket.status))) && reconciliationFor('ticket', ticket.id)?.status !== 'cancelled')
   const onlineTicketCount = confirmedTickets.length
   const onlineFreeCount = confirmedTickets.filter((ticket) => ticket.payment_method === 'free' || Number(ticket.final_price ?? 0) === 0).length
   // Ventas online es el valor de las entradas; recaudado online es lo efectivamente cobrado.
-  const onlineSales = confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.final_price ?? 0), 0)
-  const onlineCollected = confirmedTickets.reduce((sum, ticket) => sum + Number(ticket.charged_amount ?? ticket.final_price ?? 0), 0)
-  const recordedDoorCount = doorSales.reduce((sum, sale) => sum + (Number(sale.quantity) || 0), 0)
-  const recordedDoorRevenue = doorSales.reduce((sum, sale) => sum + (Number(sale.quantity) || 0) * (Number(sale.unit_price) || 0), 0)
+  const onlineSales = confirmedTickets.reduce((sum, ticket) => sum + Number(reconciliationFor('ticket', ticket.id)?.adjusted_amount ?? ticket.final_price ?? 0), 0)
+  const onlineCollected = confirmedTickets.reduce((sum, ticket) => sum + Number(reconciliationFor('ticket', ticket.id)?.adjusted_amount ?? ticket.charged_amount ?? ticket.final_price ?? 0), 0)
+  const activeDoorSales = doorSales.filter((sale) => reconciliationFor('door_sale', sale.id)?.status !== 'cancelled')
+  const recordedDoorCount = activeDoorSales.reduce((sum, sale) => sum + Number(reconciliationFor('door_sale', sale.id)?.adjusted_quantity ?? sale.quantity) || 0, 0)
+  const recordedDoorRevenue = activeDoorSales.reduce((sum, sale) => {
+    const reconciliation = reconciliationFor('door_sale', sale.id)
+    return sum + Number(reconciliation?.adjusted_quantity ?? sale.quantity) * Number(reconciliation?.adjusted_unit_price ?? sale.unit_price)
+  }, 0)
   const doorTicketCount = doorSales.length > 0 ? recordedDoorCount : doorPaid
   const doorRevenue = doorSales.length > 0 ? recordedDoorRevenue : doorPaid * doorPrice
   const totalTicketCount = onlineTicketCount + doorTicketCount + doorFree
@@ -159,6 +167,45 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
           </div>
         </section>
 
+        <section className="rounded-2xl border p-5 sm:p-6" aria-labelledby="settlement-reconciliation-title">
+          <div className="mb-5">
+            <h3 id="settlement-reconciliation-title" className="font-semibold">Conciliación de entradas</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Revisá entradas anticipadas y ventas de puerta. Las correcciones solo afectan esta rendición; no eliminan entradas ni bajan el evento.</p>
+          </div>
+          <div className="space-y-3">
+            {tickets.map((ticket) => (
+              <ReconciliationRow
+                key={`ticket-${ticket.id}`}
+                eventId={eventId}
+                sourceType="ticket"
+                sourceId={ticket.id}
+                title={ticket.buyer_name || 'Entrada anticipada'}
+                detail={`Importe: ${money(Number(ticket.charged_amount ?? ticket.final_price ?? 0))}`}
+                originalAmount={Number(ticket.charged_amount ?? ticket.final_price ?? 0)}
+                originalBuyerName={ticket.buyer_name ?? ''}
+                existing={reconciliationFor('ticket', ticket.id)}
+                onSaved={(item) => setReconciliations((current) => ({ ...current, [`ticket:${ticket.id}`]: item }))}
+              />
+            ))}
+            {doorSales.map((sale) => (
+              <ReconciliationRow
+                key={`door-${sale.id}`}
+                eventId={eventId}
+                sourceType="door_sale"
+                sourceId={sale.id}
+                title={sale.buyer_name || 'Venta en puerta'}
+                detail={`${sale.quantity} × ${money(Number(sale.unit_price))}`}
+                originalQuantity={Number(sale.quantity)}
+                originalUnitPrice={Number(sale.unit_price)}
+                originalBuyerName={sale.buyer_name ?? ''}
+                existing={reconciliationFor('door_sale', sale.id)}
+                onSaved={(item) => setReconciliations((current) => ({ ...current, [`door_sale:${sale.id}`]: item }))}
+              />
+            ))}
+            {tickets.length === 0 && doorSales.length === 0 && <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No hay entradas para conciliar.</p>}
+          </div>
+        </section>
+
         <section className="rounded-2xl border p-5 sm:p-6" aria-labelledby="settlement-expenses-title">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -226,6 +273,91 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
         </footer>
       </div>
     </section>
+  )
+}
+
+function ReconciliationRow({ eventId, sourceType, sourceId, title, detail, originalAmount, originalQuantity, originalUnitPrice, originalBuyerName, existing, onSaved }: {
+  eventId: string
+  sourceType: 'ticket' | 'door_sale'
+  sourceId: string
+  title: string
+  detail: string
+  originalAmount?: number
+  originalQuantity?: number
+  originalUnitPrice?: number
+  originalBuyerName: string
+  existing?: EventReconciliation
+  onSaved: (item: EventReconciliation) => void
+}) {
+  const [observation, setObservation] = useState(existing?.observation ?? '')
+  const [reason, setReason] = useState(existing?.action_reason ?? '')
+  const [amount, setAmount] = useState(String(existing?.adjusted_amount ?? originalAmount ?? ''))
+  const [quantity, setQuantity] = useState(String(existing?.adjusted_quantity ?? originalQuantity ?? ''))
+  const [unitPrice, setUnitPrice] = useState(String(existing?.adjusted_unit_price ?? originalUnitPrice ?? ''))
+  const [buyerName, setBuyerName] = useState(existing?.adjusted_buyer_name ?? originalBuyerName)
+  const [isPending, startTransition] = useTransition()
+
+  const save = (status: 'reviewed' | 'modified' | 'cancelled') => startTransition(async () => {
+    try {
+      if ((status === 'modified' || status === 'cancelled') && !reason.trim()) {
+        toast.error(`Ingresá el motivo de ${status === 'modified' ? 'la modificación' : 'la cancelación'}.`)
+        return
+      }
+      await saveEventReconciliation(eventId, {
+        sourceType,
+        sourceId,
+        status,
+        observation,
+        actionReason: reason,
+        adjustedAmount: sourceType === 'ticket' && amount.trim() ? Number(amount) : null,
+        adjustedQuantity: sourceType === 'door_sale' && quantity.trim() ? Number(quantity) : null,
+        adjustedUnitPrice: sourceType === 'door_sale' && unitPrice.trim() ? Number(unitPrice) : null,
+        adjustedBuyerName: buyerName,
+      })
+      const updated: EventReconciliation = {
+        id: existing?.id ?? sourceId,
+        event_id: eventId,
+        source_type: sourceType,
+        source_id: sourceId,
+        status,
+        observation: observation.trim() || null,
+        action_reason: reason.trim() || null,
+        adjusted_quantity: sourceType === 'door_sale' && quantity.trim() ? Number(quantity) : null,
+        adjusted_unit_price: sourceType === 'door_sale' && unitPrice.trim() ? Number(unitPrice) : null,
+        adjusted_amount: sourceType === 'ticket' && amount.trim() ? Number(amount) : null,
+        adjusted_buyer_name: buyerName.trim() || null,
+        updated_at: new Date().toISOString(),
+      }
+      onSaved(updated)
+      toast.success(status === 'cancelled' ? 'Entrada excluida de la rendición' : status === 'modified' ? 'Corrección guardada' : 'Observación guardada')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar la conciliación.')
+    }
+  })
+
+  const statusLabel = existing?.status === 'cancelled' ? 'Cancelada en conciliación' : existing?.status === 'modified' ? 'Modificada' : existing ? 'Revisada' : 'Sin revisar'
+  return (
+    <article className={`rounded-xl border p-4 ${existing?.status === 'cancelled' ? 'border-destructive/30 bg-destructive/5' : existing?.status === 'modified' ? 'border-amber-300 bg-amber-50/50' : 'bg-muted/20'}`}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2"><p className="font-medium">{title}</p><Badge variant={existing?.status === 'cancelled' ? 'destructive' : 'outline'}>{statusLabel}</Badge></div>
+          <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
+          {sourceType === 'ticket' ? <div className="grid gap-1"><Label htmlFor={`reconciliation-amount-${sourceId}`}>Importe conciliado</Label><Input id={`reconciliation-amount-${sourceId}`} type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></div> : <><div className="grid gap-1"><Label htmlFor={`reconciliation-quantity-${sourceId}`}>Cantidad</Label><Input id={`reconciliation-quantity-${sourceId}`} type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></div><div className="grid gap-1"><Label htmlFor={`reconciliation-price-${sourceId}`}>Precio unitario</Label><Input id={`reconciliation-price-${sourceId}`} type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></div></>}
+          <div className="grid gap-1 sm:col-span-2"><Label htmlFor={`reconciliation-name-${sourceId}`}>Nombre corregido (opcional)</Label><Input id={`reconciliation-name-${sourceId}`} value={buyerName} onChange={(event) => setBuyerName(event.target.value)} placeholder={originalBuyerName || 'Sin nombre'} /></div>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-1"><Label htmlFor={`reconciliation-observation-${sourceId}`}>Observación</Label><Textarea id={`reconciliation-observation-${sourceId}`} value={observation} onChange={(event) => setObservation(event.target.value)} rows={2} placeholder="Anotá una aclaración…" /></div>
+        <div className="grid gap-1"><Label htmlFor={`reconciliation-reason-${sourceId}`}>Motivo de modificación o cancelación</Label><Textarea id={`reconciliation-reason-${sourceId}`} value={reason} onChange={(event) => setReason(event.target.value)} rows={2} placeholder="Obligatorio para modificar o cancelar" /></div>
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => save('reviewed')} disabled={isPending}>Guardar observación</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => save('modified')} disabled={isPending}>Guardar modificación</Button>
+        <Button type="button" variant="destructive" size="sm" onClick={() => save('cancelled')} disabled={isPending}>{existing?.status === 'cancelled' ? 'Actualizar cancelación' : 'Cancelar en rendición'}</Button>
+      </div>
+    </article>
   )
 }
 

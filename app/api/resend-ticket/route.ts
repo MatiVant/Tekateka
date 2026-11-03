@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { requireAuth } from "@/lib/auth"
+import { formatArgentinaDateTime } from "@/lib/date"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     const venue = ticket.events.venue || "Ubicación del evento"
     const mapUrl = ticket.events.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
     const mapLabel = ticket.events.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
-    const eventDate = new Date(ticket.events.event_date).toLocaleString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })
+    const eventDate = formatArgentinaDateTime(ticket.events.event_date)
     const ticketCards = tickets.map((item) => {
       const itemUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(item.qr_code)}`
       const itemQrUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(itemUrl)}`

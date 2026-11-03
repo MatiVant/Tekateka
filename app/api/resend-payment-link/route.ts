@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
+import { formatArgentinaDateTime } from "@/lib/date"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     if (!resend) return NextResponse.json({ error: "Servicio de email no configurado" }, { status: 500 })
 
     const supabase = createClient()
-    const { data: ticket, error } = await supabase.from("tickets").select("id, buyer_name, buyer_email, status, payment_status, payment_resume_expires_at, events(organizer_id, title)").eq("id", ticketId).single()
+    const { data: ticket, error } = await supabase.from("tickets").select("id, buyer_name, buyer_email, status, payment_status, payment_resume_expires_at, events(organizer_id, title, event_date)").eq("id", ticketId).single()
     if (error || !ticket) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
     const linkedEvent = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
     if (profile?.role !== "superadmin" && linkedEvent?.organizer_id !== user.id) return NextResponse.json({ error: "No tenés permiso para reenviar este enlace" }, { status: 403 })
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
       to: ticket.buyer_email,
       subject: `Enlace para continuar tu compra: ${event?.title || "tu evento"}`,
-      html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>:</p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
+      html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>.</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event?.event_date)}</strong></p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
     })
     if (result.error) return NextResponse.json({ error: "No se pudo enviar el email" }, { status: 502 })
     return NextResponse.json({ sent: true })

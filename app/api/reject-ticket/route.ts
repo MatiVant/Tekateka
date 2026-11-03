@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
+import { formatArgentinaDateTime } from "@/lib/date"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
                 </div>
                 <div class="content">
                   <p>Hola <strong>${ticket.buyer_name}</strong>,</p>
-                  <p>Lamentablemente, no pudimos verificar tu pago para el evento <strong>${ticket.events.title}</strong>.</p>
+                  <p>Lamentablemente, no pudimos verificar tu pago para el evento <strong>${ticket.events.title}</strong>.</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event.event_date)}</strong></p>
                   
                   <div class="reason-box">
                     <h3 style="margin-top: 0; color: #dc2626;">Motivo del rechazo:</h3>

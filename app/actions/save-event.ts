@@ -93,12 +93,25 @@ export async function saveEvent(
         .single()
       if (existingEventError || !existingEvent) throw new Error('No tenés permiso para editar este evento')
 
+      const [{ count: reservedTickets, error: ticketsError }, { data: doorSales, error: doorSalesError }] = await Promise.all([
+        supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', eventId).in('status', ['pending', 'confirmed', 'used']),
+        supabase.from('door_sales').select('quantity').eq('event_id', eventId),
+      ])
+      if (ticketsError || doorSalesError) throw ticketsError || doorSalesError
+      const doorTicketCount = (doorSales ?? []).reduce((total, sale) => total + Number(sale.quantity ?? 0), 0)
+      const occupiedTickets = Number(reservedTickets ?? 0) + doorTicketCount
+      const requestedTotal = Math.floor(Number(eventData.total_tickets))
+      if (!Number.isInteger(requestedTotal) || requestedTotal < 1) throw new Error('La cantidad total de entradas no es válida')
+      if (requestedTotal < occupiedTickets) {
+        throw new Error(`No podés establecer menos de ${occupiedTickets} entradas: ya hay esa cantidad reservada o vendida.`)
+      }
+
       const { error: updateError } = await supabase
         .from('events')
         .update({
           ...eventData,
-          total_tickets: existingEvent.total_tickets,
-          available_tickets: existingEvent.available_tickets,
+          total_tickets: requestedTotal,
+          available_tickets: requestedTotal - occupiedTickets,
           slug,
         })
         .eq('id', eventId)
