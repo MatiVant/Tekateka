@@ -17,7 +17,30 @@ interface TicketTier {
   quantity: number;
   available_quantity: number;
   tier_order: number;
+  sales_start_at: string | null;
+  sales_end_at: string | null;
   promotion_type: "standard" | "2x1";
+}
+
+function formatDateTimeLocal(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce<Record<string, string>>((result, part) => {
+    result[part.type] = part.value;
+    return result;
+  }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
 interface TicketTiersManagerProps {
@@ -34,6 +57,8 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
     description: '',
     base_price: '',
     quantity: '',
+    sales_start_at: '',
+    sales_end_at: '',
     promotion_type: 'standard' as 'standard' | '2x1',
   });
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +66,7 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
   const supabase = createClient();
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', base_price: '', quantity: '', promotion_type: 'standard' });
+    setFormData({ name: '', description: '', base_price: '', quantity: '', sales_start_at: '', sales_end_at: '', promotion_type: 'standard' });
     setEditingTierId(null);
     setShowForm(false);
   };
@@ -53,6 +78,8 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
       description: tier.description || '',
       base_price: String(tier.base_price),
       quantity: String(tier.quantity),
+      sales_start_at: formatDateTimeLocal(tier.sales_start_at),
+      sales_end_at: formatDateTimeLocal(tier.sales_end_at),
       promotion_type: tier.promotion_type,
     });
     setShowForm(true);
@@ -87,6 +114,9 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
     try {
       const quantity = parseInt(formData.quantity);
       const basePrice = parseFloat(formData.base_price);
+      if (formData.sales_start_at && formData.sales_end_at && new Date(formData.sales_end_at) <= new Date(formData.sales_start_at)) {
+        throw new Error('La fecha de fin debe ser posterior a la fecha de inicio');
+      }
       let saveError;
 
       if (editingTierId) {
@@ -104,6 +134,8 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
             base_price: basePrice,
             quantity,
             available_quantity: quantity - soldQuantity,
+            sales_start_at: formData.sales_start_at ? new Date(formData.sales_start_at).toISOString() : null,
+            sales_end_at: formData.sales_end_at ? new Date(formData.sales_end_at).toISOString() : null,
             promotion_type: formData.promotion_type,
           })
           .eq('id', editingTierId);
@@ -119,6 +151,8 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
             quantity,
             available_quantity: quantity,
             tier_order: tiers.length,
+            sales_start_at: formData.sales_start_at ? new Date(formData.sales_start_at).toISOString() : null,
+            sales_end_at: formData.sales_end_at ? new Date(formData.sales_end_at).toISOString() : null,
             promotion_type: formData.promotion_type,
           });
         saveError = result.error;
@@ -243,6 +277,27 @@ export function TicketTiersManager({ eventId }: TicketTiersManagerProps) {
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                   required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="tier-sales-start">Venta desde</Label>
+                <Input
+                  id="tier-sales-start"
+                  type="datetime-local"
+                  value={formData.sales_start_at}
+                  onChange={(e) => setFormData({ ...formData, sales_start_at: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tier-sales-end">Venta hasta</Label>
+                <Input
+                  id="tier-sales-end"
+                  type="datetime-local"
+                  value={formData.sales_end_at}
+                  onChange={(e) => setFormData({ ...formData, sales_end_at: e.target.value })}
                 />
               </div>
             </div>
