@@ -1023,7 +1023,9 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
               group.tickets.some(isTwoForOneTicket) ||
               group.tickets.every((ticket) => Math.abs(Number(ticket.final_price ?? 0) * 2 - Number(ticket.events.price ?? 0)) < 0.01)
             )
-            const compactTickets = isTwoForOneGroup ? group.tickets : group.tickets.slice(0, 1)
+            // Una compra 2x1 ocupa dos lugares, pero se muestra como una sola operación.
+            // Los dos tickets siguen disponibles al expandir el detalle y al seleccionar la compra.
+            const compactTickets = group.tickets.slice(0, 1)
             return (
               <div key={group.key} className="space-y-2">
                 {!isExpanded && compactTickets.map((ticket) => {
@@ -1032,16 +1034,21 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                   const ticketIsConfirmed = isConfirmedTicket(ticket)
                   return (
                     <article key={ticket.id} className="rounded-xl border bg-card px-3 py-2.5 shadow-sm">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
                         <Checkbox
-                          checked={isTwoForOneGroup ? selectedIds.has(ticket.id) : isGroupSelected}
-                          onCheckedChange={(checked) => isTwoForOneGroup ? toggleSelected(ticket.id, Boolean(checked)) : togglePurchaseSelection(group, Boolean(checked))}
-                          aria-label={`Seleccionar entrada de ${ticket.buyer_name}`}
+                          checked={isGroupSelected}
+                          onCheckedChange={(checked) => togglePurchaseSelection(group, Boolean(checked))}
+                          aria-label={`Seleccionar compra de ${ticket.buyer_name}`}
+                          className="mt-0.5"
                         />
-                        <h3 className="min-w-0 flex-1 break-words text-sm font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
-                        {isTwoForOneGroup && <span className="shrink-0 text-xs font-medium text-muted-foreground">1 · {formatCurrency(ticket.final_price ?? ticket.events.price)}</span>}
-                        <div className="shrink-0">
-                          {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center justify-between gap-2">
+                            <h3 className="min-w-0 break-words text-sm font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
+                            {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
+                          </div>
+                          {isTwoForOneGroup && (
+                            <p className="mt-1 text-xs font-medium text-muted-foreground">2x1 · 2 personas · {formatCurrency(ticket.final_price ?? ticket.events.price)}</p>
+                          )}
                         </div>
                         {ticketReceiptUrl ? (
                           <Button type="button" variant="ghost" size="icon-sm" className="shrink-0" onClick={() => viewReceipt(ticketReceiptUrl)} title="Ver comprobante" aria-label={`Ver comprobante de ${ticket.buyer_name}`}>
