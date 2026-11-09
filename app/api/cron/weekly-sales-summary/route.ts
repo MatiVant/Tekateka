@@ -20,19 +20,20 @@ export async function GET(request: Request) {
   const supabase = createAdminClient()
   const { data: setting } = await supabase.from("platform_settings").select("value").eq("key", "sales_summary").maybeSingle()
   const rawFrequency = setting?.value && typeof setting.value === "object" && "frequency" in setting.value ? setting.value.frequency : "monthly"
-  const frequency: SalesSummaryFrequency = rawFrequency === "weekly" || rawFrequency === "off" ? rawFrequency : "monthly"
+  const frequency: SalesSummaryFrequency = rawFrequency === "weekly" || rawFrequency === "biweekly" || rawFrequency === "off" ? rawFrequency : "monthly"
   const now = new Date()
 
   if (frequency === "off") return Response.json({ success: true, sent: 0, skipped: true, reason: "disabled" })
   if (frequency === "monthly" && argentinaDayOfMonth(now) !== 1) return Response.json({ success: true, sent: 0, skipped: true, reason: "monthly_schedule" })
   if (frequency === "weekly" && argentinaWeekday(now) !== "Mon") return Response.json({ success: true, sent: 0, skipped: true, reason: "weekly_schedule" })
+  if (frequency === "biweekly" && ![1, 16].includes(argentinaDayOfMonth(now))) return Response.json({ success: true, sent: 0, skipped: true, reason: "biweekly_schedule" })
 
   const organizers = await getOrganizerRecipients()
   const range = getScheduledSummaryRange(frequency, now)
   let sent = 0
   for (const organizer of organizers) {
     try {
-      await sendOrganizerSalesSummary(organizer, frequency === "weekly" ? "week" : "month", `sales-summary/${frequency}/${organizer.id}/${range.start.toISOString()}`, range)
+      await sendOrganizerSalesSummary(organizer, frequency === "weekly" ? "week" : frequency === "biweekly" ? "fortnight" : "month", `sales-summary/${frequency}/${organizer.id}/${range.start.toISOString()}`, range)
       sent += 1
     } catch (error) {
       console.error(`[sales-summary] No se pudo enviar a ${organizer.email}`, error)

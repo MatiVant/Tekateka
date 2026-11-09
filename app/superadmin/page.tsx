@@ -137,7 +137,10 @@ export default async function SuperAdminPage() {
             description="Frecuencia y envío de informes a organizadores"
             icon={Mail}
           >
-            <SalesSummarySettings initialFrequency={salesSummarySettings.frequency} />
+            <SalesSummarySettings
+              initialFrequency={salesSummarySettings.frequency}
+              organizers={(organizers || []).map((organizer) => ({ id: organizer.id, full_name: organizer.full_name, email: organizer.email }))}
+            />
           </SuperAdminModuleCard>
 
           <SuperAdminModuleCard
