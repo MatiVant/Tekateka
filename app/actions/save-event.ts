@@ -82,6 +82,11 @@ export async function saveEvent(
       throw new Error('La imagen del evento es obligatoria y debe haberse subido correctamente')
     }
 
+    const audienceTags = Array.from(new Set((eventData.audience_tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)))
+    if (!eventId && audienceTags.length < 3) {
+      throw new Error('Cada evento nuevo debe tener al menos 3 estilos seleccionados')
+    }
+
     const slug = await createUniqueEventSlug(supabase, eventData.title, eventId)
 
     if (eventId) {

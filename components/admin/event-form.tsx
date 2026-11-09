@@ -272,6 +272,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
     if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) missingFields.push("Total de entradas")
     if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) missingFields.push("Precio")
     if (!imageUrl.trim()) missingFields.push("Imagen del evento")
+    if (!event && audienceTags.length < 3) missingFields.push("Al menos 3 estilos del evento")
 
     if (missingFields.length > 0) {
       const message = `Completá: ${missingFields.join(", ")}.`
@@ -428,8 +429,8 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
 
       <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
         <div>
-          <Label>Estilo del evento <span className="font-normal text-muted-foreground">(opcional, hasta 3)</span></Label>
-          <p className="mt-1 text-xs text-muted-foreground">Elegí los estilos que mejor describen el espectáculo.</p>
+          <Label>Estilo del evento <span className="font-normal text-muted-foreground">(obligatorio: elegí al menos 3, hasta 3)</span></Label>
+          <p className="mt-1 text-xs text-muted-foreground">Elegí los tres estilos que mejor describen el espectáculo{!event && ` (${audienceTags.length}/3 seleccionados)`}.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {audienceTagOptions.map((tag) => {

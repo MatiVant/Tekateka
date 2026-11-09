@@ -16,6 +16,13 @@ export type AudienceReportRow = {
   tags: string[]
 }
 
+export type AudienceAnticipationMetric = {
+  label: string
+  tickets: number
+  averageDays: number
+  medianDays: number
+}
+
 type TicketRecord = {
   buyer_name: string | null
   buyer_email: string
@@ -26,6 +33,8 @@ type TicketRecord = {
   payment_status: string | null
   events: {
     title: string
+    venue: string | null
+    event_date: string
     audience_tags: string[] | null
     audience_keywords: string | null
   } | null
@@ -39,10 +48,12 @@ export default async function AudiencePage() {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from("tickets")
-    .select("buyer_name, buyer_email, buyer_phone, marketing_consent, purchased_at, status, payment_status, events!inner(title, audience_tags, audience_keywords, organizer_id)")
+    .select("buyer_name, buyer_email, buyer_phone, marketing_consent, purchased_at, status, payment_status, events!inner(title, venue, event_date, audience_tags, audience_keywords, organizer_id)")
     .order("purchased_at", { ascending: false })
 
   const buyers = new Map<string, AudienceReportRow>()
+  const anticipationByEvent = new Map<string, number[]>()
+  const anticipationByVenue = new Map<string, number[]>()
   for (const raw of (data ?? []) as unknown as TicketRecord[]) {
     const isConfirmed = raw.status === "confirmed" || raw.status === "used" || raw.payment_status === "approved"
     if (raw.status === "cancelled" || !isConfirmed) continue
@@ -50,6 +61,12 @@ export default async function AudiencePage() {
     const email = raw.buyer_email.trim().toLowerCase()
     if (!email) continue
     const event = raw.events
+    if (event?.event_date && raw.purchased_at) {
+      const anticipationDays = Math.max(0, (new Date(event.event_date).getTime() - new Date(raw.purchased_at).getTime()) / 86_400_000)
+      if (event.title) anticipationByEvent.set(event.title, [...(anticipationByEvent.get(event.title) ?? []), anticipationDays])
+      const venue = event.venue?.trim() || "Sin espacio informado"
+      anticipationByVenue.set(venue, [...(anticipationByVenue.get(venue) ?? []), anticipationDays])
+    }
     const tags = [
       ...(event?.audience_tags ?? []),
       ...(event?.audience_keywords ?? "").split(",").map((tag) => tag.trim()).filter(Boolean),
@@ -83,5 +100,19 @@ export default async function AudiencePage() {
     new Date(b.lastPurchase ?? 0).getTime() - new Date(a.lastPurchase ?? 0).getTime(),
   )
 
-  return <AudienceReport rows={rows} />
+  const buildMetrics = (source: Map<string, number[]>): AudienceAnticipationMetric[] => Array.from(source.entries())
+    .map(([label, values]) => {
+      const sorted = [...values].sort((a, b) => a - b)
+      const middle = Math.floor(sorted.length / 2)
+      const medianDays = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+      return {
+        label,
+        tickets: values.length,
+        averageDays: values.reduce((sum, value) => sum + value, 0) / values.length,
+        medianDays,
+      }
+    })
+    .sort((a, b) => b.tickets - a.tickets || a.label.localeCompare(b.label))
+
+  return <AudienceReport rows={rows} eventMetrics={buildMetrics(anticipationByEvent)} venueMetrics={buildMetrics(anticipationByVenue)} />
 }

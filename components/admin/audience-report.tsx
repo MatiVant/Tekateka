@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { Download, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { AudienceReportRow } from "@/app/admin/audience/page"
+import type { AudienceAnticipationMetric, AudienceReportRow } from "@/app/admin/audience/page"
 
 function csvCell(value: string | number | boolean) {
   return `"${String(value).replace(/"/g, '""')}"`
@@ -14,7 +14,28 @@ function formatDate(value: string | null) {
   return value ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(value)) : "—"
 }
 
-export function AudienceReport({ rows }: { rows: AudienceReportRow[] }) {
+function formatDays(value: number) {
+  return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(value)
+}
+
+function MetricTable({ title, metrics, empty }: { title: string; metrics: AudienceAnticipationMetric[]; empty: string }) {
+  return (
+    <div>
+      <h3 className="mb-3 font-semibold">{title}</h3>
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left"><tr><th className="p-3">{title === "Por evento" ? "Evento" : "Espacio"}</th><th className="p-3 text-right">Entradas</th><th className="p-3 text-right">Promedio</th><th className="p-3 text-right">Mediana</th></tr></thead>
+          <tbody>
+            {metrics.map((metric) => <tr key={metric.label} className="border-t"><td className="p-3 font-medium">{metric.label}</td><td className="p-3 text-right">{metric.tickets}</td><td className="p-3 text-right">{formatDays(metric.averageDays)} días</td><td className="p-3 text-right">{formatDays(metric.medianDays)} días</td></tr>)}
+            {metrics.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">{empty}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export function AudienceReport({ rows, eventMetrics, venueMetrics }: { rows: AudienceReportRow[]; eventMetrics: AudienceAnticipationMetric[]; venueMetrics: AudienceAnticipationMetric[] }) {
   const [onlyConsent, setOnlyConsent] = useState(false)
   const visibleRows = useMemo(
     () => onlyConsent ? rows.filter((row) => row.marketingConsent) : rows,
@@ -81,6 +102,17 @@ export function AudienceReport({ rows }: { rows: AudienceReportRow[] }) {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Anticipación de compra</CardTitle>
+            <CardDescription>Cuántos días antes del evento se compró cada entrada. El promedio sirve para planificar; la mediana evita que compras muy anticipadas distorsionen el dato.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-6 lg:grid-cols-2">
+            <MetricTable title="Por evento" metrics={eventMetrics} empty="No hay datos por evento." />
+            <MetricTable title="Por espacio" metrics={venueMetrics} empty="No hay espacios informados." />
           </CardContent>
         </Card>
       </div>
