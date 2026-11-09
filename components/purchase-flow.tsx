@@ -64,7 +64,7 @@ export function PurchaseFlow({
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
-  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(true)
   const [promotionCode, setPromotionCode] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState<number | null>(null)
