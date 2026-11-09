@@ -54,6 +54,7 @@ export default async function AudiencePage() {
   const buyers = new Map<string, AudienceReportRow>()
   const anticipationByEvent = new Map<string, number[]>()
   const anticipationByVenue = new Map<string, number[]>()
+  const venueLabels = new Map<string, string>()
   for (const raw of (data ?? []) as unknown as TicketRecord[]) {
     const isConfirmed = raw.status === "confirmed" || raw.status === "used" || raw.payment_status === "approved"
     if (raw.status === "cancelled" || !isConfirmed) continue
@@ -65,7 +66,9 @@ export default async function AudiencePage() {
       const anticipationDays = Math.max(0, (new Date(event.event_date).getTime() - new Date(raw.purchased_at).getTime()) / 86_400_000)
       if (event.title) anticipationByEvent.set(event.title, [...(anticipationByEvent.get(event.title) ?? []), anticipationDays])
       const venue = event.venue?.trim() || "Sin espacio informado"
-      anticipationByVenue.set(venue, [...(anticipationByVenue.get(venue) ?? []), anticipationDays])
+      const venueKey = venue.toLocaleLowerCase("es-AR")
+      venueLabels.set(venueKey, venueLabels.get(venueKey) || venue)
+      anticipationByVenue.set(venueKey, [...(anticipationByVenue.get(venueKey) ?? []), anticipationDays])
     }
     const tags = [
       ...(event?.audience_tags ?? []),
@@ -114,5 +117,10 @@ export default async function AudiencePage() {
     })
     .sort((a, b) => b.tickets - a.tickets || a.label.localeCompare(b.label))
 
-  return <AudienceReport rows={rows} eventMetrics={buildMetrics(anticipationByEvent)} venueMetrics={buildMetrics(anticipationByVenue)} />
+  const venueMetrics = buildMetrics(anticipationByVenue).map((metric) => ({
+    ...metric,
+    label: venueLabels.get(metric.label) || metric.label,
+  }))
+
+  return <AudienceReport rows={rows} eventMetrics={buildMetrics(anticipationByEvent)} venueMetrics={venueMetrics} />
 }
