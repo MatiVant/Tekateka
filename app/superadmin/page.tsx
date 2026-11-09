@@ -11,6 +11,7 @@ import { getAudienceTags } from "@/app/actions/audience-tags"
 import { getSalesSummarySettings } from "@/app/actions/sales-summary-settings"
 import { SuperAdminModuleCard } from "@/components/superadmin/superadmin-module-card"
 import { SalesSummarySettings } from "@/components/superadmin/sales-summary-settings"
+import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
@@ -137,6 +138,15 @@ export default async function SuperAdminPage() {
             icon={Mail}
           >
             <SalesSummarySettings initialFrequency={salesSummarySettings.frequency} />
+          </SuperAdminModuleCard>
+
+          <SuperAdminModuleCard
+            id="marketing-campaign"
+            title="Campañas de email"
+            description="Enviar novedades a compradores con consentimiento"
+            icon={Mail}
+          >
+            <MarketingCampaign />
           </SuperAdminModuleCard>
 
           <SuperAdminModuleCard

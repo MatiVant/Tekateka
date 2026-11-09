@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
 import { getCurrentUser } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { TICKET_TERMS_VERSION } from "@/lib/legal"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -20,6 +21,8 @@ interface CreateTicketData {
   final_price: number
   payment_method?: "mercado_pago" | "external_link" | "transfer" | "free"
   marketing_consent?: boolean
+  terms_accepted?: boolean
+  terms_version?: string
   sendEmail?: boolean
   ticketQuantity?: number
   paymentResumeToken?: string
@@ -34,6 +37,7 @@ export async function createTicket(data: CreateTicketData) {
     const buyer = await getCurrentUser()
     const buyerEmail = data.buyer_email.trim().toLowerCase()
     if (!buyerEmail) throw new Error("El email del comprador es obligatorio")
+    if (data.terms_accepted !== true) throw new Error("Tenés que aceptar los términos y condiciones para continuar")
 
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
     const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, sales_start_at, sales_end_at").eq("id", data.event_id).single()
@@ -142,7 +146,7 @@ export async function createTicket(data: CreateTicketData) {
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
-    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: data.purchaseGroupId ?? null }).eq("id", createdTicket.id)
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: data.purchaseGroupId ?? null }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
     const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")

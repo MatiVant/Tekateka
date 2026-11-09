@@ -17,6 +17,7 @@ import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { compressReceipt, isPdf } from "@/lib/compress-image"
+import { TICKET_TERMS_VERSION } from "@/lib/legal"
 
 interface TicketTier {
   id: string
@@ -63,7 +64,7 @@ export function PurchaseFlow({
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
-  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [promotionCode, setPromotionCode] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState<number | null>(null)
@@ -192,6 +193,10 @@ export function PurchaseFlow({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!termsAccepted) {
+      setError("Tenés que aceptar los términos y condiciones para continuar")
+      return
+    }
     setError(null)
     setStep("review")
   }
@@ -232,7 +237,9 @@ export function PurchaseFlow({
             | "external_link"
             | "transfer"
             | "free",
-          marketing_consent: marketingConsent,
+          marketing_consent: true,
+          terms_accepted: termsAccepted,
+          terms_version: TICKET_TERMS_VERSION,
           // Solo se envía un único email consolidado por compra, no uno por entrada.
           sendEmail: i === quantity - 1,
           ticketQuantity: quantity,
@@ -393,14 +400,15 @@ export function PurchaseFlow({
 
         <div className="flex items-start gap-3 rounded-lg border border-border p-3">
           <input
-            id="marketing-consent"
+            id="ticket-terms"
             type="checkbox"
-            checked={marketingConsent}
-            onChange={(event) => setMarketingConsent(event.target.checked)}
+            required
+            checked={termsAccepted}
+            onChange={(event) => setTermsAccepted(event.target.checked)}
             className="mt-1 h-4 w-4 accent-primary"
           />
-          <Label htmlFor="marketing-consent" className="text-sm font-normal leading-relaxed">
-            Quiero guardar mis datos para comprar más rápido en futuros eventos y recibir novedades.
+          <Label htmlFor="ticket-terms" className="text-sm font-normal leading-relaxed">
+            Acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-medium underline">términos y condiciones de compra</Link>, incluyendo recibir novedades y promociones de TekaTeka. Puedo desuscribirme en cualquier momento desde los emails.
           </Label>
         </div>
 

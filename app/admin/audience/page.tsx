@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/auth"
-import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { AudienceReport } from "@/components/admin/audience-report"
 
 export type AudienceReportRow = {
@@ -36,7 +36,7 @@ export default async function AudiencePage() {
   if (!authorized || !user) redirect("/auth/login")
   if (profile?.role !== "superadmin") redirect("/admin")
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from("tickets")
     .select("buyer_name, buyer_email, buyer_phone, marketing_consent, purchased_at, status, payment_status, events!inner(title, audience_tags, audience_keywords, organizer_id)")
