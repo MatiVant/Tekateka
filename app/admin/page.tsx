@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { MovementsReportButton } from "@/components/admin/movements-report-button"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
-import { Calendar, Ticket, DollarSign, Plus, Clock, XCircle, Banknote, CreditCard, DoorOpen } from "lucide-react"
+import { Calendar, Ticket, DollarSign, Plus, Clock, XCircle, Banknote, CreditCard, DoorOpen, Users } from "lucide-react"
 import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
 import { LiveEventSearch } from "@/components/admin/live-event-search"
@@ -366,7 +366,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </section>
         )}
 
-        <section className="mb-12 flex justify-end">
+        <section className="mb-12 flex flex-wrap justify-end gap-3">
+          {profile?.role === "superadmin" && (
+            <Button asChild variant="outline">
+              <Link href="/admin/audience"><Users className="mr-2 h-4 w-4" />Informe de audiencia</Link>
+            </Button>
+          )}
           <MovementsReportButton movements={movements || []} />
         </section>
 
