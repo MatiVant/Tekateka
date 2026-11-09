@@ -398,17 +398,17 @@ export function PurchaseFlow({
           />
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+        <div className="flex items-center gap-2">
           <input
             id="ticket-terms"
             type="checkbox"
             required
             checked={termsAccepted}
             onChange={(event) => setTermsAccepted(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-primary"
+            className="h-4 w-4 shrink-0 accent-primary"
           />
-          <Label htmlFor="ticket-terms" className="text-sm font-normal leading-relaxed">
-            Acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-medium underline">términos y condiciones de compra</Link>, incluyendo recibir novedades y promociones de TekaTeka. Puedo desuscribirme en cualquier momento desde los emails.
+          <Label htmlFor="ticket-terms" className="text-xs font-normal leading-5">
+            Acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-medium underline">términos y condiciones</Link> y recibir novedades y promociones.
           </Label>
         </div>
 

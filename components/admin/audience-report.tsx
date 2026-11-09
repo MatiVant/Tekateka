@@ -64,6 +64,22 @@ export function AudienceReport({ rows, eventMetrics, venueMetrics }: { rows: Aud
     URL.revokeObjectURL(url)
   }
 
+  const downloadAnticipationCsv = () => {
+    const header = ["Nivel", "Evento / espacio", "Entradas", "Promedio de anticipación (días)", "Mediana de anticipación (días)"]
+    const body = [
+      ...eventMetrics.map((metric) => ["Evento", metric.label, metric.tickets, metric.averageDays, metric.medianDays]),
+      ...venueMetrics.map((metric) => ["Espacio", metric.label, metric.tickets, metric.averageDays, metric.medianDays]),
+    ]
+    const csv = [header, ...body].map((line) => line.map(csvCell).join(",")).join("\n")
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "anticipacion-de-compra-tekateka.csv"
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <main className="min-h-screen bg-muted/30">
       <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -107,8 +123,13 @@ export function AudienceReport({ rows, eventMetrics, venueMetrics }: { rows: Aud
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Anticipación de compra</CardTitle>
-            <CardDescription>Cuántos días antes del evento se compró cada entrada. El promedio sirve para planificar; la mediana evita que compras muy anticipadas distorsionen el dato.</CardDescription>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>Anticipación de compra</CardTitle>
+                <CardDescription>Cuántos días antes del evento se compró cada entrada. El promedio sirve para planificar; la mediana evita que compras muy anticipadas distorsionen el dato.</CardDescription>
+              </div>
+              <Button variant="outline" onClick={downloadAnticipationCsv} className="gap-2"><Download className="h-4 w-4" />Exportar promedios</Button>
+            </div>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
             <MetricTable title="Por evento" metrics={eventMetrics} empty="No hay datos por evento." />
