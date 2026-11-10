@@ -120,6 +120,16 @@ export default async function HomePage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-border/60 bg-muted/30">
+        <div className="container mx-auto grid gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+          <div className="sm:col-span-2 lg:col-span-1"><p className="text-2xl font-black tracking-[-.05em]">teka<span className="text-primary">teka</span></p><p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">Una plataforma para descubrir, compartir y vivir eventos independientes.</p></div>
+          <div><h2 className="font-bold">Explorá</h2><div className="mt-3 grid gap-2 text-sm text-muted-foreground"><Link href="/eventos" className="transition hover:text-primary">Ver eventos</Link><Link href="#eventos" className="transition hover:text-primary">Próximos encuentros</Link></div></div>
+          <div><h2 className="font-bold">Para organizadores</h2><div className="mt-3 grid gap-2 text-sm text-muted-foreground"><Link href="/auth/login" className="transition hover:text-primary">Ingresar</Link><Link href="/auth/sign-up" className="transition hover:text-primary">Crear cuenta</Link></div></div>
+          <div><h2 className="font-bold">Información</h2><div className="mt-3 grid gap-2 text-sm text-muted-foreground"><Link href="/terminos-y-condiciones" className="transition hover:text-primary">Términos y condiciones</Link><a href="mailto:hola@tekateka.com.ar" className="transition hover:text-primary">hola@tekateka.com.ar</a></div></div>
+        </div>
+        <div className="container mx-auto border-t border-border/60 px-4 py-5 text-xs text-muted-foreground sm:px-6 lg:px-8">© {new Date().getFullYear()} TekaTeka. Más cultura. Más encuentros.</div>
+      </footer>
     </div>
   )
 }

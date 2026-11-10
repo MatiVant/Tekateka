@@ -11,6 +11,7 @@ interface EventData {
   audience_keywords: string
   event_date: string
   venue: string
+  venue_id: string | null
   location_url: string | null
   price: number
   door_ticket_price: number | null

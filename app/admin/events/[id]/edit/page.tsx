@@ -27,7 +27,10 @@ export default async function EditEventPage({
   const currentTransfer = await getPendingTransfersForEvent(id)
   const audienceTags = await getAudienceTags()
 
-  const { data: event } = await supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single()
+  const [{ data: event }, { data: venues }] = await Promise.all([
+    supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single(),
+    supabase.from("venues").select("id, name").eq("active", true).order("name"),
+  ])
 
   if (!event) {
     notFound()
@@ -67,7 +70,7 @@ export default async function EditEventPage({
             <CardDescription>Actualiza la información del evento</CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} event={event} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
+            <EventForm userId={user.id} event={event} venues={venues ?? []} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
           </CardContent>
         </Card>
 

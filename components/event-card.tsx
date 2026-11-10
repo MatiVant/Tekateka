@@ -69,7 +69,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
 
   return (
     <Card
-      className={`group overflow-hidden rounded-2xl border-foreground/10 bg-card/80 transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${featured ? "h-full" : ""}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border-foreground/10 bg-card/80 transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${featured ? "h-full" : ""}`}
     >
       <Link
         href={`/events/${event.slug || event.id}`}
@@ -116,7 +116,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         )}
       </Link>
 
-      <CardContent className={`${featured ? "p-6" : "p-5"}`}>
+      <CardContent className={`flex-1 ${featured ? "p-6" : "p-5"}`}>
         <div className="mb-4 flex min-w-0 items-start justify-between gap-3 sm:gap-4">
           <div className="shrink-0 rounded-md bg-primary/10 px-2.5 py-1.5 text-center text-primary">
             <span className="block text-xs font-semibold uppercase">{eventDate.toLocaleDateString("es-AR", { month: "short", timeZone: "America/Argentina/Buenos_Aires" })}</span>
@@ -166,7 +166,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className={`min-w-0 border-t border-border/50 ${featured ? "p-5 sm:p-6" : "p-4 sm:p-5"} pt-4`}>
+      <CardFooter className={`mt-auto flex min-h-[76px] min-w-0 items-center border-t border-border/50 ${featured ? "p-5 sm:p-6" : "p-4 sm:p-5"} pt-4`}>
         <Button asChild disabled={!isAvailable} className="min-w-0 w-full rounded-full px-3 font-bold group/btn" size={featured ? "lg" : "default"}>
           <Link href={`/events/${event.slug || event.id}`} className="flex min-w-0 items-center justify-center gap-2 text-center">
             <span className="min-w-0 truncate">{isAvailable ? "Comprar entradas" : "Ver detalles"}</span>

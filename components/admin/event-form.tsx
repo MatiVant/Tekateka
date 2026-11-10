@@ -18,14 +18,21 @@ import { saveEvent } from "@/app/actions/save-event"
 import { EventCreatedShareCard } from "@/components/admin/event-created-share-card"
 import { compressEventImage } from "@/lib/compress-image"
 
+interface VenueOption {
+  id: string
+  name: string
+}
+
 interface EventFormProps {
   userId: string
+  venues?: VenueOption[]
   event?: {
     id: string
     title: string
     description: string | null
     event_date: string
     venue: string
+    venue_id?: string | null
     price: number
     total_tickets: number
     image_url: string | null
@@ -64,7 +71,7 @@ function formatArgentinaDateTimeLocal(value?: string | null) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
+export function EventForm({ userId, event, venues = [], audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
@@ -94,6 +101,7 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   const [salesStartAt, setSalesStartAt] = useState(formatArgentinaDateTimeLocal(event?.sales_start_at))
   const [salesEndAt, setSalesEndAt] = useState(formatArgentinaDateTimeLocal(event?.sales_end_at))
 
+  const [venueId, setVenueId] = useState(event?.venue_id || "")
   const [venue, setVenue] = useState(event?.venue || "")
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
   const [price, setPrice] = useState(event?.price.toString() || "")
@@ -268,7 +276,8 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
     if (!title.trim()) missingFields.push("Título del evento")
     if (!eventDate) missingFields.push("Fecha del evento")
     if (!eventTime) missingFields.push("Hora de inicio")
-    if (!venue.trim()) missingFields.push("Lugar")
+    if (!venueId && !venue.trim()) missingFields.push("Lugar")
+    if (venues.length > 0 && !venueId) missingFields.push("Espacio del catálogo")
     if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) missingFields.push("Total de entradas")
     if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) missingFields.push("Precio")
     if (!imageUrl.trim()) missingFields.push("Imagen del evento")
@@ -303,7 +312,8 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
         audience_tags: audienceTags.slice(0, 3).map((tag) => tag.toLowerCase()),
         audience_keywords: audienceKeywords.trim(),
         event_date: combinedDateTime,
-        venue,
+        venue: venues.find((option) => option.id === venueId)?.name || venue,
+        venue_id: venueId || null,
         location_url: locationUrl || null,
         price: basePrice,
         door_ticket_price: doorTicketPrice.trim() ? Number.parseFloat(doorTicketPrice) : null,
@@ -480,9 +490,17 @@ export function EventForm({ userId, event, audienceTagOptions = [] }: EventFormP
   </div>
   
   <div className="space-y-2">
-  <Label htmlFor="venue">Lugar *</Label>
-          <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />
-        </div>
+    <Label htmlFor="venue">Espacio *</Label>
+    {venues.length > 0 ? (
+      <>
+        <select id="venue" required value={venueId} onChange={(e) => { const nextId = e.target.value; setVenueId(nextId); setVenue(venues.find((option) => option.id === nextId)?.name || "") }} className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
+          <option value="">Elegí un espacio del catálogo</option>
+          {venues.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+        </select>
+        <p className="text-xs text-muted-foreground">Usá siempre el espacio existente para mantener unificados los informes y las portadas.</p>
+      </>
+    ) : <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />}
+  </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
