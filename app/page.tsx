@@ -23,7 +23,7 @@ export default async function HomePage() {
 
   const eventIds = (events || []).map((event) => event.id)
   const { data: confirmedTickets } = eventIds.length
-    ? await supabase
+    ? await createAdminClient()
         .from("tickets")
         .select("event_id")
         .in("status", ["pending", "confirmed", "used"])

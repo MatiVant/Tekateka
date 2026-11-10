@@ -26,7 +26,7 @@ export default async function EventsPage() {
 
   const eventIds = (events ?? []).map((event) => event.id)
   const { data: confirmedTickets } = eventIds.length > 0
-    ? await supabase.from("tickets").select("event_id").in("event_id", eventIds).in("status", ["pending", "confirmed", "used"])
+    ? await createAdminClient().from("tickets").select("event_id").in("event_id", eventIds).in("status", ["pending", "confirmed", "used"])
     : { data: [] }
 
   const confirmedByEvent = (confirmedTickets ?? []).reduce<Record<string, number>>((counts, ticket) => {

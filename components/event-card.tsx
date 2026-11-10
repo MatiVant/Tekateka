@@ -71,7 +71,11 @@ export function EventCard({ event, featured = false }: EventCardProps) {
     <Card
       className={`group overflow-hidden rounded-2xl border-foreground/10 bg-card/80 transition-all duration-500 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${featured ? "h-full" : ""}`}
     >
-      <div className={`relative overflow-hidden bg-muted ${featured ? "aspect-[16/10]" : "aspect-video"}`}>
+      <Link
+        href={`/events/${event.slug || event.id}`}
+        aria-label={`Ver detalles de ${event.title}`}
+        className={`relative block overflow-hidden bg-muted ${featured ? "aspect-[16/10]" : "aspect-video"}`}
+      >
         <Image
           src={imageUrl}
           alt={event.title}
@@ -110,7 +114,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
             </div>
           </div>
         )}
-      </div>
+      </Link>
 
       <CardContent className={`${featured ? "p-6" : "p-5"}`}>
         <div className="mb-4 flex min-w-0 items-start justify-between gap-3 sm:gap-4">
