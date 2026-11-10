@@ -61,7 +61,7 @@ export default async function EventDetailPage({
     notFound()
   }
 
-  const { count: activeTickets } = await supabase
+  const { count: activeTickets } = await createAdminClient()
     .from("tickets")
     .select("id", { count: "exact", head: true })
     .eq("event_id", event.id)
