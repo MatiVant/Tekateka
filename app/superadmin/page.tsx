@@ -11,6 +11,7 @@ import { getAudienceTags } from "@/app/actions/audience-tags"
 import { getSalesSummarySettings } from "@/app/actions/sales-summary-settings"
 import { SuperAdminModuleCard } from "@/components/superadmin/superadmin-module-card"
 import { SalesSummarySettings } from "@/components/superadmin/sales-summary-settings"
+import { TicketCancellationRequests } from "@/components/superadmin/ticket-cancellation-requests"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
@@ -114,6 +115,21 @@ export default async function SuperAdminPage() {
     }
   })
 
+  const { data: rawCancellationRequests } = await supabase
+    .from("tickets")
+    .select("id, buyer_name, buyer_email, cancellation_request_reason, cancellation_requested_at, cancellation_requested_by, events(title)")
+    .eq("cancellation_request_status", "pending")
+    .order("cancellation_requested_at", { ascending: true })
+  const cancellationOrganizerIds = [...new Set((rawCancellationRequests || []).map((ticket) => ticket.cancellation_requested_by).filter(Boolean))]
+  const { data: cancellationOrganizers } = cancellationOrganizerIds.length
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", cancellationOrganizerIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
+  const cancellationOrganizerMap = new Map((cancellationOrganizers || []).map((organizer) => [organizer.id, organizer]))
+  const cancellationRequests = (rawCancellationRequests || []).map((ticket) => ({
+    ...ticket,
+    organizer: cancellationOrganizerMap.get(ticket.cancellation_requested_by as string) || null,
+  }))
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -131,6 +147,8 @@ export default async function SuperAdminPage() {
 
 
         <section aria-label="Herramientas de administración" className="mt-10 grid gap-4">
+          <TicketCancellationRequests requests={cancellationRequests} />
+
           <SuperAdminModuleCard
             id="sales-summary"
             title="Resúmenes por correo"

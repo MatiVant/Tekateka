@@ -48,6 +48,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Solo se pueden rechazar entradas pendientes o confirmadas" }, { status: 409 })
     }
 
+    if (ticket.status === "confirmed" && profile?.role !== "superadmin") {
+      if (ticket.cancellation_request_status === "pending") {
+        return NextResponse.json({ error: "Ya existe una solicitud de reversión pendiente para esta entrada" }, { status: 409 })
+      }
+
+      const { error: requestError } = await supabase
+        .from("tickets")
+        .update({
+          cancellation_request_status: "pending",
+          cancellation_request_reason: reason.trim(),
+          cancellation_requested_by: user.id,
+          cancellation_requested_at: new Date().toISOString(),
+          cancellation_reviewed_by: null,
+          cancellation_reviewed_at: null,
+        })
+        .eq("id", ticketId)
+        .eq("status", "confirmed")
+        .select("id")
+        .maybeSingle()
+
+      if (requestError) {
+        console.error("[v0] Error al solicitar reversión:", requestError)
+        return NextResponse.json({ error: "No se pudo enviar la solicitud de reversión" }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        approvalRequired: true,
+        message: "Solicitud enviada. El superadmin debe aprobar la reversión.",
+      })
+    }
+
     const { data: ticketPromotion } = await supabase
       .from("ticket_promotions")
       .select("promotion_code_id")

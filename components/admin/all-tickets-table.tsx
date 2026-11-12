@@ -82,6 +82,8 @@ interface Ticket {
   purchase_group_id?: string | null
   payment_id?: string | null
   mercado_pago_reference?: string | null
+  cancellation_request_status?: "pending" | "approved" | "rejected" | null
+  cancellation_request_reason?: string | null
   events: {
     id: string
     title: string
@@ -852,8 +854,13 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
         throw err
       })
 
-      if (!response.ok) throw new Error("Error al rechazar ticket")
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.error || "Error al rechazar ticket")
 
+      toast({
+        title: result?.approvalRequired ? "Solicitud enviada" : "Entrada rechazada",
+        description: result?.message || "La operación se completó correctamente.",
+      })
       setIsRejectDialogOpen(false)
       setIsDialogOpen(false)
       setRejectionReason("")
@@ -1637,9 +1644,11 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rechazar Entrada</DialogTitle>
+            <DialogTitle>{selectedTicket?.status === "confirmed" ? "Solicitar reversión" : "Rechazar Entrada"}</DialogTitle>
             <DialogDescription>
-              Ingresa el motivo del rechazo. El comprador recibirá un email con esta información.
+              {selectedTicket?.status === "confirmed"
+                ? "La entrada no se cancelará ahora. El motivo será enviado al superadmin para su aprobación."
+                : "Ingresa el motivo del rechazo. El comprador recibirá un email con esta información."}
             </DialogDescription>
           </DialogHeader>
 
