@@ -1637,6 +1637,16 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                 </Button>
               </>
             )}
+            {selectedTicket?.status === "confirmed" && (
+              <Button
+                variant="destructive"
+                onClick={() => setIsRejectDialogOpen(true)}
+                disabled={loadingId === selectedTicket.id || selectedTicket.cancellation_request_status === "pending"}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                {selectedTicket.cancellation_request_status === "pending" ? "Reversión pendiente" : "Solicitar reversión"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1681,7 +1691,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
               disabled={!rejectionReason.trim() || loadingId === selectedTicket?.id}
             >
               <XCircle className="mr-2 h-4 w-4" />
-              Rechazar Entrada
+              {selectedTicket?.status === "confirmed" ? "Enviar solicitud" : "Rechazar Entrada"}
             </Button>
           </DialogFooter>
         </DialogContent>
