@@ -116,7 +116,8 @@ export async function createTicket(data: CreateTicketData) {
 
     if (pendingError) throw new Error("No se pudo verificar una compra pendiente")
     const existingGroupId = pendingTickets?.[0]?.purchase_group_id
-    const existingGroup = existingGroupId
+    const isSamePurchaseAttempt = Boolean(existingGroupId && data.purchaseGroupId && existingGroupId === data.purchaseGroupId)
+    const existingGroup = isSamePurchaseAttempt && existingGroupId
       ? pendingTickets.filter((ticket) => ticket.purchase_group_id === existingGroupId)
       : []
     const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")

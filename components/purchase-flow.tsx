@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
 import { validatePromotion as validatePromotionServer } from "@/app/actions/validate-promotion"
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
+import { findPendingPurchase, type PendingPurchase } from "@/app/actions/find-pending-purchase"
 import { formatCurrency } from "@/lib/format"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { compressReceipt, isPdf } from "@/lib/compress-image"
@@ -79,6 +80,7 @@ export function PurchaseFlow({
   const [promotionType, setPromotionType] = useState<string | null>(null)
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
+  const [pendingPurchase, setPendingPurchase] = useState<PendingPurchase | null>(null)
   const [copiedAlias, setCopiedAlias] = useState(false)
   const availablePaymentMethods = paymentMethods?.length ? paymentMethods : [mercadoPagoLink ? "external_link" : "mercado_pago"]
   const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : mercadoPagoLink ? "external_link" : "mercado_pago"
@@ -201,11 +203,19 @@ export function PurchaseFlow({
     setStep("review")
   }
 
-  const handlePurchaseSubmit = async () => {
+  const handlePurchaseSubmit = async (forceNew = false) => {
     setIsLoading(true)
     setError(null)
 
     try {
+      if (!forceNew) {
+        const existingPurchase = await findPendingPurchase(eventId, email)
+        if (existingPurchase) {
+          setPendingPurchase(existingPurchase)
+          return
+        }
+      }
+
       let priceToUse = 0
 
       if (isFree || (discountApplied && finalPrice === 0)) {
@@ -285,6 +295,46 @@ export function PurchaseFlow({
     }
   }
 
+  const handleContinuePendingPurchase = async () => {
+    if (!pendingPurchase) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      setTicketIds(pendingPurchase.ticketIds)
+      setTicketId(pendingPurchase.ticketIds[0] || null)
+      setPaymentMethod(pendingPurchase.paymentMethod as PaymentMethod)
+      setFinalPrice(pendingPurchase.total / Math.max(1, pendingPurchase.quantity))
+      setPendingPurchase(null)
+
+      if (pendingPurchase.paymentMethod === "transfer") {
+        setStep("receipt")
+        return
+      }
+      if (pendingPurchase.paymentMethod === "external_link") {
+        setCheckoutUrl(null)
+        setStep("payment")
+        return
+      }
+      if (pendingPurchase.paymentMethod === "mercado_pago") {
+        const response = await fetch("/api/mercadopago/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticketIds: pendingPurchase.ticketIds }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "No se pudo continuar el pago")
+        setCheckoutUrl(result.initPoint)
+        setStep("payment")
+        return
+      }
+      setStep("success")
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo recuperar la compra pendiente")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleReceiptUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     const idsToUpdate = ticketIds.length > 0 ? ticketIds : ticketId ? [ticketId] : []
@@ -327,6 +377,28 @@ export function PurchaseFlow({
     } finally {
       setUploading(false)
     }
+  }
+
+  if (pendingPurchase) {
+    return (
+      <div className="space-y-4 rounded-lg border bg-muted/30 p-5">
+        <div>
+          <h3 className="font-semibold">Tenés una compra pendiente</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Encontramos {pendingPurchase.quantity === 1 ? "una entrada pendiente" : `${pendingPurchase.quantity} entradas pendientes`} para este evento con este email. ¿Querés continuarla o iniciar una compra nueva?
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="button" onClick={handleContinuePendingPurchase} disabled={isLoading}>
+            {isLoading ? "Cargando..." : "Continuar compra pendiente"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => { setPendingPurchase(null); void handlePurchaseSubmit(true) }} disabled={isLoading}>
+            Iniciar compra nueva
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">La compra pendiente seguirá disponible desde el enlace que recibiste por email.</p>
+      </div>
+    )
   }
 
   if (step === "tiers" && tiers.length > 0) {
@@ -612,7 +684,7 @@ export function PurchaseFlow({
 
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>Volver atrás</Button>
-          <Button type="button" className="flex-1" onClick={handlePurchaseSubmit} disabled={isLoading}>
+          <Button type="button" className="flex-1" onClick={() => void handlePurchaseSubmit()} disabled={isLoading}>
             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree || finalPrice === 0 ? "Obtener entrada gratis" : "Continuar al pago"}
           </Button>
         </div>
