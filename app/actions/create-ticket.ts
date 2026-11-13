@@ -119,11 +119,25 @@ export async function createTicket(data: CreateTicketData) {
     const existingGroup = existingGroupId
       ? pendingTickets.filter((ticket) => ticket.purchase_group_id === existingGroupId)
       : []
+    const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")
+    const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
+    const resumeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+    let effectivePurchaseGroupId = data.purchaseGroupId
 
-    if (existingGroup.length >= requestedQuantity) {
+    if (existingGroup.length > 0) {
+      effectivePurchaseGroupId = existingGroupId ?? data.purchaseGroupId
+      if (existingGroupId) {
+        const { error: resumeError } = await supabase
+          .from("tickets")
+          .update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt })
+          .eq("purchase_group_id", existingGroupId)
+          .eq("status", "pending")
+        if (resumeError) throw new Error("No se pudo recuperar la compra pendiente")
+      }
+
       const existingTicket = existingGroup[data.purchaseItemIndex ?? 0]
-      if (!existingTicket) throw new Error("No se pudo recuperar la compra pendiente")
-      return existingTicket
+      if (existingTicket) return existingTicket
+      if (existingGroup.length >= requestedQuantity) throw new Error("No se pudo recuperar la compra pendiente")
     }
 
     const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
@@ -146,12 +160,9 @@ export async function createTicket(data: CreateTicketData) {
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
-    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: data.purchaseGroupId ?? null }).eq("id", createdTicket.id)
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: effectivePurchaseGroupId ?? null }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
-    const resumeToken = data.paymentResumeToken || randomBytes(32).toString("hex")
-    const resumeTokenHash = createHash("sha256").update(resumeToken).digest("hex")
-    const resumeExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)
     if (tokenError) throw new Error("No se pudo preparar el enlace de pago")
 
@@ -200,11 +211,11 @@ export async function createTicket(data: CreateTicketData) {
         // La restricción única en purchase_notifications hace idempotente el envío:
         // recargar la pantalla o reintentar la compra no vuelve a notificar.
         let shouldSendEmail = true
-        if (data.purchaseGroupId) {
+        if (effectivePurchaseGroupId) {
           const { data: notification, error: notificationError } = await supabase
             .from("purchase_notifications")
             .upsert({
-              purchase_group_id: data.purchaseGroupId,
+              purchase_group_id: effectivePurchaseGroupId,
               event_id: data.event_id,
               notification_type: "preliminary_purchase",
               recipient_email: buyerEmail,
@@ -238,8 +249,8 @@ export async function createTicket(data: CreateTicketData) {
             subject: `Compra recibida: ${event.title}`,
             html: `<p>Hola ${data.buyer_name},</p><p>Recibimos tu reserva de ${entradasLabel} para <strong>${event.title}</strong>.</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event.event_date)}</strong></p><p>Total: ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${normalizedPaymentMethod === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${normalizedPaymentMethod === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${normalizedPaymentMethod === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p><p>Después, podés consultar el estado y tus entradas en <a href="${siteUrl.replace(/\/$/, "")}/my-tickets">Mis entradas</a> con la cuenta asociada a esta compra.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
           })
-          if (data.purchaseGroupId) {
-            await supabase.from("purchase_notifications").update({ status: "sent", sent_at: new Date().toISOString() }).eq("purchase_group_id", data.purchaseGroupId).eq("notification_type", "preliminary_purchase")
+          if (effectivePurchaseGroupId) {
+            await supabase.from("purchase_notifications").update({ status: "sent", sent_at: new Date().toISOString() }).eq("purchase_group_id", effectivePurchaseGroupId).eq("notification_type", "preliminary_purchase")
           }
         }
       }

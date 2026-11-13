@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
 
 export async function POST(request: Request) {
   try {
@@ -79,9 +80,14 @@ export async function POST(request: Request) {
       }
     }
 
+    const emailResult = await sendConfirmedTicketEmail(groupedTickets.map((item) => item.id))
+
     return NextResponse.json({
       success: true,
-      message: "Entradas confirmadas. El comprador puede consultar el estado y los códigos QR en Mis entradas.",
+      message: emailResult.sent
+        ? "Entradas confirmadas y email con los códigos QR enviado."
+        : "Entradas confirmadas. El comprador puede consultar el estado y los códigos QR en Mis entradas.",
+      emailWarning: emailResult.sent ? undefined : "No se pudo enviar automáticamente el email con los códigos QR.",
     })
   } catch (error: unknown) {
     console.error("[v0] Error al confirmar ticket:", error)

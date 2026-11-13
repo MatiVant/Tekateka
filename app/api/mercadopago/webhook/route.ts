@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createHmac, timingSafeEqual } from "crypto"
 import { createClient } from "@/lib/supabase/admin"
 import { getProducerAccessToken } from "@/lib/mercadopago"
+import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null)
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
 
   const { data: matchingTickets } = await supabase
     .from("tickets")
-    .select("id, event_id, events!inner(organizer_id)")
+    .select("id, event_id, status, payment_status, events!inner(organizer_id)")
     .in("id", ticketIds)
   if (!matchingTickets?.length || matchingTickets.length !== ticketIds.length) return NextResponse.json({ received: true })
   const eventIds = new Set(matchingTickets.map((ticket) => ticket.event_id))
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
   }))
   if (organizerIds.size !== 1 || !organizerIds.has(connection.producer_id)) return NextResponse.json({ received: true })
 
+  const shouldSendConfirmedEmail = payment.status === "approved" && matchingTickets.some((ticket) => ticket.status !== "confirmed" || ticket.payment_status !== "approved")
   const status = payment.status === "approved"
     ? "approved"
     : payment.status === "rejected" || payment.status === "cancelled"
@@ -154,6 +156,10 @@ export async function POST(request: Request) {
     } else {
       console.log("[v0] Movimiento payment_approved procesado", { paymentId: String(paymentId), eventId, ticketId: matchingTickets[0].id, duplicate: movementError?.code === "23505" })
     }
+  }
+
+  if (shouldSendConfirmedEmail) {
+    await sendConfirmedTicketEmail(ticketIds)
   }
 
   return NextResponse.json({ received: true })
