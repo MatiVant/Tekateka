@@ -33,6 +33,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     .eq("is_public", true)
     .eq("status", "active")
     .gte("event_date", now.toISOString())
+    .order("priority", { ascending: false })
     .order("event_date", { ascending: true })
 
   const eventIds = (events ?? []).map((event) => event.id)

@@ -6,6 +6,7 @@ import { Calendar, MapPin, Ticket, DollarSign, Users } from "lucide-react"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/format"
 import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
+import { EventPrioritySelect } from "@/components/superadmin/event-priority-select"
 
 export default async function SuperAdminEventsPage() {
   await requireAuth(["superadmin"])
@@ -22,6 +23,7 @@ export default async function SuperAdminEventsPage() {
       profiles!events_organizer_id_fkey(email, full_name)
     `,
     )
+    .order("priority", { ascending: false })
     .order("event_date", { ascending: false })
 
   if (error) {
@@ -193,7 +195,8 @@ export default async function SuperAdminEventsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      <div className="mt-4 space-y-3">
+                        <EventPrioritySelect eventId={event.id} value={event.priority} />
                         <DeleteEventButton eventId={event.id} eventTitle={event.title} />
                       </div>
                     </div>

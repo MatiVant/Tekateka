@@ -19,6 +19,7 @@ export default async function HomePage() {
     .eq("is_public", true)
     .gte("event_date", new Date().toISOString())
     .in("status", ["active", "inactive", "sold_out"])
+    .order("priority", { ascending: false })
     .order("event_date", { ascending: true })
 
   const eventIds = (events || []).map((event) => event.id)

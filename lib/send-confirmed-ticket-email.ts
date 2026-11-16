@@ -2,14 +2,14 @@ import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { formatArgentinaDateTime } from "@/lib/date"
 
-export async function sendConfirmedTicketEmail(ticketIds: string[]) {
+export async function sendConfirmedTicketEmail(ticketIds: string[], force = false) {
   if (!process.env.RESEND_API_KEY) return { sent: false, reason: "missing_api_key" as const }
   if (ticketIds.length === 0) return { sent: false, reason: "no_tickets" as const }
 
   const supabase = createClient()
   const { data: tickets, error } = await supabase
     .from("tickets")
-    .select("id, qr_code, buyer_name, buyer_email, status, payment_status, event_id, events(id, title, event_date, venue, organizer_id)")
+    .select("id, qr_code, buyer_name, buyer_email, status, payment_status, event_id, purchase_group_id, events(id, title, event_date, venue, organizer_id)")
     .in("id", ticketIds)
 
   if (error || !tickets?.length) {
@@ -28,6 +28,24 @@ export async function sendConfirmedTicketEmail(ticketIds: string[]) {
     return { sent: false, reason: "invalid_purchase" as const }
   }
 
+  let deliveryId: string | null = null
+  try {
+    const purchaseGroupId = firstTicket.purchase_group_id
+    if (purchaseGroupId) {
+      const { data: existingDelivery } = await supabase.from("ticket_email_deliveries").select("id, status").eq("purchase_group_id", purchaseGroupId).maybeSingle()
+      if (existingDelivery?.status === "sent" && !force) return { sent: true, emailId: null, alreadySent: true }
+      if (existingDelivery) {
+        deliveryId = existingDelivery.id
+        await supabase.from("ticket_email_deliveries").update({ status: "sending", error_message: null, attempts: 1, updated_at: new Date().toISOString() }).eq("id", deliveryId)
+      } else {
+        const { data: createdDelivery } = await supabase.from("ticket_email_deliveries").insert({ purchase_group_id: purchaseGroupId, event_id: firstTicket.event_id, buyer_email: firstTicket.buyer_email, ticket_ids: ticketIds, status: "sending", attempts: 1 }).select("id").single()
+        deliveryId = createdDelivery?.id ?? null
+      }
+    }
+  } catch (trackingError) {
+    console.error("[email] No se pudo registrar el estado del envío:", trackingError)
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
   const ticketCards = tickets.map((ticket) => {
     const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(ticket.qr_code)}`
@@ -44,10 +62,12 @@ export async function sendConfirmedTicketEmail(ticketIds: string[]) {
   })
 
   if (emailError) {
+    if (deliveryId) await supabase.from("ticket_email_deliveries").update({ status: "failed", error_message: emailError.message, updated_at: new Date().toISOString() }).eq("id", deliveryId)
     console.error("[email] Error de Resend al enviar entrada confirmada:", emailError)
     return { sent: false, reason: "resend_error" as const, error: emailError.message }
   }
 
+  if (deliveryId) await supabase.from("ticket_email_deliveries").update({ status: "sent", resend_id: emailData?.id ?? null, sent_at: new Date().toISOString(), error_message: null, updated_at: new Date().toISOString() }).eq("id", deliveryId)
   console.log("[email] Entrada confirmada enviada", { emailId: emailData?.id, ticketIds, recipient: firstTicket.buyer_email })
   return { sent: true, emailId: emailData?.id }
 }

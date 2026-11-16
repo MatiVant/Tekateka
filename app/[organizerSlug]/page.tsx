@@ -78,7 +78,8 @@ export default async function OrganizerPublicPage({ params }: OrganizerPageProps
     .eq("status", "active")
     .gte("event_date", new Date().toISOString())
     .in("organizer_id", organizer.organizerIds)
-    .order("event_date", { ascending: true })
+    .order("priority", { ascending: false })
+     .order("event_date", { ascending: true })
 
   if (error) throw error
 
