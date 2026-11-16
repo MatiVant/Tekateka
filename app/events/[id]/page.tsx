@@ -8,7 +8,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { PurchaseFlow } from "@/components/purchase-flow"
+import { SupportForm } from "@/components/support-form"
 import { formatCurrency } from "@/lib/format"
+import { getPlatformFeePercent } from "@/lib/platform-fees"
 import ReactMarkdown from "react-markdown"
 
 export const dynamic = "force-dynamic"
@@ -80,6 +82,13 @@ export default async function EventDetailPage({
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
+  const [{ data: organizerProfile }, platformFeePercent] = await Promise.all([
+    createAdminClient().from("profiles").select("role").eq("id", event.organizer_id).maybeSingle(),
+    getPlatformFeePercent(createAdminClient(), event.venue_id),
+  ])
+  const mercadoPagoEnabled = organizerProfile?.role === "superadmin"
+  const configuredPaymentMethods = event.payment_methods?.length ? event.payment_methods : mercadoPagoEnabled ? ["mercado_pago"] : ["transfer"]
+  const availablePaymentMethods = configuredPaymentMethods.filter((method: string) => mercadoPagoEnabled || !["mercado_pago", "external_link"].includes(method))
 
   const { data: minPriceTier } = await supabase
     .from("ticket_tiers")
@@ -200,10 +209,12 @@ export default async function EventDetailPage({
                     eventTitle={event.title}
                     eventPrice={Number(event.price)}
   paymentInstructions={event.payment_instructions || undefined}
-  paymentMethods={event.payment_methods}
+  paymentMethods={availablePaymentMethods}
   transferAlias={event.transfer_alias}
   transferAccountHolder={event.transfer_account_holder}
-  mercadoPagoLink={event.mercado_pago_link}
+  mercadoPagoLink={mercadoPagoEnabled ? event.mercado_pago_link : null}
+  platformFeePercent={platformFeePercent}
+  mercadoPagoEnabled={mercadoPagoEnabled}
                     isFree={isFree}
                     isPwyw={isPwyw}
                   />
@@ -218,6 +229,7 @@ export default async function EventDetailPage({
                           : "Este evento ya no está disponible para compra."}
                   </div>
                 )}
+                <div className="mt-6"><SupportForm eventId={event.id} eventTitle={event.title} /></div>
               </CardContent>
             </Card>
           </div>

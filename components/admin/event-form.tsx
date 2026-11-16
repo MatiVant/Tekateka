@@ -25,6 +25,7 @@ interface VenueOption {
 
 interface EventFormProps {
   userId: string
+  isSuperadmin?: boolean
   venues?: VenueOption[]
   event?: {
     id: string
@@ -71,7 +72,7 @@ function formatArgentinaDateTimeLocal(value?: string | null) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function EventForm({ userId, event, venues = [], audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
+export function EventForm({ userId, isSuperadmin = false, event, venues = [], audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
@@ -120,7 +121,7 @@ export function EventForm({ userId, event, venues = [], audienceTagOptions = [] 
   )
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState(event?.max_tickets_per_person?.toString() || "")
   const [mercadoPagoLink, setMercadoPagoLink] = useState(event?.mercado_pago_link || "")
-  const [paymentMethods, setPaymentMethods] = useState<string[]>(event?.payment_methods?.length ? event.payment_methods : ["transfer"])
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(isSuperadmin && event?.payment_methods?.length ? event.payment_methods : ["transfer"])
   const [transferAlias, setTransferAlias] = useState(event?.transfer_alias || "")
   const [transferAccountHolder, setTransferAccountHolder] = useState(event?.transfer_account_holder || "")
   const [ticketTiers, setTicketTiers] = useState<
@@ -621,7 +622,7 @@ export function EventForm({ userId, event, venues = [], audienceTagOptions = [] 
 
       <div className="space-y-3 rounded-lg border p-4">
         <div><Label>Métodos de pago habilitados</Label><p className="text-xs text-muted-foreground">Elegí cómo pueden pagar las entradas.</p></div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paymentMethods.includes("mercado_pago")} onChange={(e) => setPaymentMethods((current) => e.target.checked ? [...new Set([...current, "mercado_pago"])] : current.filter((method) => method !== "mercado_pago"))} /> Mercado Pago</label>
+        <label className={`flex items-center gap-2 text-sm ${!isSuperadmin ? "cursor-not-allowed text-muted-foreground" : ""}`}><input type="checkbox" disabled={!isSuperadmin} checked={isSuperadmin && paymentMethods.includes("mercado_pago")} onChange={(e) => setPaymentMethods((current) => e.target.checked ? [...new Set([...current, "mercado_pago"])] : current.filter((method) => method !== "mercado_pago"))} /> Mercado Pago {!isSuperadmin && <span className="text-xs">(en pruebas)</span>}</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paymentMethods.includes("transfer")} onChange={(e) => setPaymentMethods((current) => e.target.checked ? [...new Set([...current, "transfer"])] : current.filter((method) => method !== "transfer"))} /> Transferencia bancaria</label>
         {paymentMethods.includes("transfer") && <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="transferAlias">Alias</Label><Input id="transferAlias" value={transferAlias} onChange={(e) => setTransferAlias(e.target.value)} placeholder="mi.alias" /></div><div className="space-y-2"><Label htmlFor="transferAccountHolder">Cuenta a nombre de</Label><Input id="transferAccountHolder" value={transferAccountHolder} onChange={(e) => setTransferAccountHolder(e.target.value)} placeholder="Nombre y apellido" /></div></div>}
       </div>

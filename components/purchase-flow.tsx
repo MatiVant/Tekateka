@@ -37,6 +37,8 @@ interface PurchaseFlowProps {
   transferAccountHolder?: string | null
   paymentMethods?: string[] | null
   mercadoPagoLink?: string | null
+  platformFeePercent?: number
+  mercadoPagoEnabled?: boolean
   isFree?: boolean
   isPwyw?: boolean
 }
@@ -53,6 +55,8 @@ export function PurchaseFlow({
   transferAccountHolder,
   paymentMethods,
   mercadoPagoLink,
+  platformFeePercent = 8,
+  mercadoPagoEnabled = false,
   isFree = false,
   isPwyw = false,
 }: PurchaseFlowProps) {
@@ -82,8 +86,9 @@ export function PurchaseFlow({
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
   const [pendingPurchase, setPendingPurchase] = useState<PendingPurchase | null>(null)
   const [copiedAlias, setCopiedAlias] = useState(false)
-  const availablePaymentMethods = paymentMethods?.length ? paymentMethods : [mercadoPagoLink ? "external_link" : "mercado_pago"]
-  const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : mercadoPagoLink ? "external_link" : "mercado_pago"
+  const configuredPaymentMethods = paymentMethods?.length ? paymentMethods : [mercadoPagoLink ? "external_link" : "mercado_pago"]
+  const availablePaymentMethods = configuredPaymentMethods.filter((method) => mercadoPagoEnabled || !["mercado_pago", "external_link"].includes(method))
+  const defaultPaymentMethod: PaymentMethod = availablePaymentMethods.includes("transfer") ? "transfer" : (availablePaymentMethods[0] as PaymentMethod) || "transfer"
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(defaultPaymentMethod)
   const [customPrice, setCustomPrice] = useState(eventPrice.toString())
   const [supabase] = useState(() => createClient())
@@ -646,8 +651,9 @@ export function PurchaseFlow({
 
   if (step === "review") {
     const reviewBaseTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
-    const reviewFee = paymentMethod === "mercado_pago" ? Math.round(reviewBaseTotal * 0.10 * 100) / 100 : 0
-    const reviewTotal = reviewBaseTotal + reviewFee
+    const platformFee = reviewBaseTotal > 0 ? Math.round(reviewBaseTotal * platformFeePercent) / 100 : 0
+    const reviewMpFee = paymentMethod === "mercado_pago" ? Math.round((reviewBaseTotal + platformFee) * 0.10 * 100) / 100 : 0
+    const reviewTotal = reviewBaseTotal + platformFee + reviewMpFee
 
     return (
       <div className="space-y-5">
@@ -665,7 +671,8 @@ export function PurchaseFlow({
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Nombre</span><span className="text-right font-medium">{name}</span></div>
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Email</span><span className="break-all text-right font-medium">{email}</span></div>
             <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Entradas</span><span className="font-medium">{quantity} {quantity === 1 ? "entrada" : "entradas"}</span></div>
-            {reviewFee > 0 && <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Cargo de Mercado Pago (10%)</span><span>{formatCurrency(reviewFee)}</span></div>}
+            {platformFee > 0 && <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Cargo de servicio TekaTeka ({platformFeePercent}%)</span><span>{formatCurrency(platformFee)}</span></div>}
+            {reviewMpFee > 0 && <div className="flex items-center justify-between gap-4 p-3 text-sm"><span className="text-muted-foreground">Cargo de Mercado Pago (10%)</span><span>{formatCurrency(reviewMpFee)}</span></div>}
             <div className="flex items-center justify-between gap-4 bg-muted/40 p-3"><span className="font-medium">Total a pagar</span><span className="text-xl font-bold text-primary">{isFree || finalPrice === 0 ? "Gratis" : formatCurrency(reviewTotal)}</span></div>
           </div>
         </div>
@@ -693,6 +700,10 @@ export function PurchaseFlow({
   }
 
   if (step === "payment") {
+    const paymentBaseTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
+    const paymentPlatformFee = paymentBaseTotal > 0 ? Math.round(paymentBaseTotal * platformFeePercent) / 100 : 0
+    const paymentMpFee = paymentMethod === "mercado_pago" ? Math.round((paymentBaseTotal + paymentPlatformFee) * 0.10 * 100) / 100 : 0
+    const paymentTotal = paymentBaseTotal + paymentPlatformFee + paymentMpFee
     return (
       <div className="space-y-6">
         {paymentNotice && <Alert variant={paymentNotice.includes("no se completó") ? "destructive" : "default"}><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
@@ -743,7 +754,7 @@ export function PurchaseFlow({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total a pagar:</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(finalPrice * quantity)}</span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(paymentTotal)}</span>
           </div>
         </div>
 
@@ -770,6 +781,9 @@ export function PurchaseFlow({
   }
 
   if (step === "receipt") {
+    const receiptBaseTotal = isFree ? 0 : isPwyw ? (Number.parseFloat(customPrice) || 0) * quantity : finalPrice * quantity
+    const receiptPlatformFee = receiptBaseTotal > 0 ? Math.round(receiptBaseTotal * platformFeePercent) / 100 : 0
+    const receiptTotal = receiptBaseTotal + receiptPlatformFee
     return (
       <form onSubmit={handleReceiptUpload} className="space-y-4">
         <Alert className="border-primary/20 bg-primary/5"><CheckCircle2 className="h-4 w-4 text-primary" /><AlertDescription><strong>Reserva guardada.</strong> Podés abrir la app de tu banco sin perder esta compra. Al volver, cargá el comprobante acá o usá el enlace que enviamos a {email}.</AlertDescription></Alert>
@@ -782,7 +796,7 @@ export function PurchaseFlow({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total a pagar:</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(finalPrice * quantity)}</span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(receiptTotal)}</span>
           </div>
         </div>
   {paymentMethod === "transfer" && (transferAlias || transferAccountHolder) && <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">

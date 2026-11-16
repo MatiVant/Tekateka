@@ -7,6 +7,7 @@ import { headers } from "next/headers"
 import { getCurrentUser } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
 import { TICKET_TERMS_VERSION } from "@/lib/legal"
+import { calculatePlatformFee, getPlatformFeePercent } from "@/lib/platform-fees"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -40,7 +41,7 @@ export async function createTicket(data: CreateTicketData) {
     if (data.terms_accepted !== true) throw new Error("Tenés que aceptar los términos y condiciones para continuar")
 
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
-    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, sales_start_at, sales_end_at").eq("id", data.event_id).single()
+    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, sales_start_at, sales_end_at, venue_id, organizer_id").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
     const now = Date.now()
     if (event.sales_start_at && now < new Date(event.sales_start_at).getTime()) throw new Error(`La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`)
@@ -160,8 +161,17 @@ export async function createTicket(data: CreateTicketData) {
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
+    const platformFeePercent = isFreeTicket ? 0 : await getPlatformFeePercent(supabase, event.venue_id)
+    const platformFeeAmount = calculatePlatformFee(Math.max(0, serverPrice), platformFeePercent)
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
-    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 1.10 * 100) / 100 : data.final_price, payment_fee_amount: isFreeTicket ? 0 : data.payment_method === "mercado_pago" ? Math.round(data.final_price * 0.10 * 100) / 100 : 0, net_amount: isFreeTicket ? 0 : data.final_price, purchase_group_id: effectivePurchaseGroupId ?? null }).eq("id", createdTicket.id)
+    if (normalizedPaymentMethod === "mercado_pago") {
+      const { data: organizer } = await supabase.from("profiles").select("role").eq("id", event.organizer_id).maybeSingle()
+      if (organizer?.role !== "superadmin") throw new Error("Mercado Pago está temporalmente disponible solo para superadmin")
+    }
+    const baseWithPlatformFee = isFreeTicket ? 0 : Math.round((Math.max(0, serverPrice) + platformFeeAmount) * 100) / 100
+    const mercadoPagoFee = normalizedPaymentMethod === "mercado_pago" ? Math.round(baseWithPlatformFee * 0.10 * 100) / 100 : 0
+    const chargedAmount = baseWithPlatformFee
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: chargedAmount, payment_fee_amount: mercadoPagoFee, platform_fee_percent: platformFeePercent, platform_fee_amount: platformFeeAmount, net_amount: isFreeTicket ? 0 : Math.max(0, serverPrice), purchase_group_id: effectivePurchaseGroupId ?? null }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
     const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)
@@ -237,7 +247,7 @@ export async function createTicket(data: CreateTicketData) {
 
         if (shouldSendEmail && resend && event) {
           const quantity = data.ticketQuantity ?? 1
-          const totalAmount = data.final_price * quantity
+          const totalAmount = baseWithPlatformFee * quantity
           const entradasLabel = quantity === 1 ? "entrada" : `${quantity} entradas`
           const requestHeaders = await headers()
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")

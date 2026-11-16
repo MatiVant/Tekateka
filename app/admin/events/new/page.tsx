@@ -38,7 +38,7 @@ export default async function NewEventPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} venues={venues ?? []} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
+            <EventForm userId={user.id} isSuperadmin={profile?.role === "superadmin"} venues={venues ?? []} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
           </CardContent>
         </Card>
       </main>

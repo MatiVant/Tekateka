@@ -12,6 +12,7 @@ import { getSalesSummarySettings } from "@/app/actions/sales-summary-settings"
 import { SuperAdminModuleCard } from "@/components/superadmin/superadmin-module-card"
 import { SalesSummarySettings } from "@/components/superadmin/sales-summary-settings"
 import { TicketCancellationRequests } from "@/components/superadmin/ticket-cancellation-requests"
+import { PlatformFeeSettings } from "@/components/superadmin/platform-fee-settings"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
@@ -25,6 +26,10 @@ export default async function SuperAdminPage() {
   const supabase = createAdminClient()
   const audienceTagOptions = await getAudienceTags()
   const salesSummarySettings = await getSalesSummarySettings()
+  const [{ data: platformSettings }, { data: venues }] = await Promise.all([
+    supabase.from("platform_settings").select("platform_fee_percent").eq("id", true).maybeSingle(),
+    supabase.from("venues").select("id, name, platform_fee_percent").eq("active", true).order("name"),
+  ])
 
   // Obtener estadísticas de organizadores
   const { data: organizers } = await supabase.from("profiles").select("*").eq("role", "organizer")
@@ -133,6 +138,7 @@ export default async function SuperAdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <PlatformFeeSettings globalPercent={Number(platformSettings?.platform_fee_percent ?? 8)} venues={venues ?? []} />
         <SuperAdminDashboard
           metrics={{
             events: eventCount || 0,

@@ -12,7 +12,7 @@ export function MercadoPagoConnect({ connected = false, isSuperadmin = false }: 
           <p className="text-sm text-muted-foreground">{isSuperadmin ? "Conectá tu cuenta para recibir pagos de tus propios eventos." : "Conectá tu cuenta para recibir pagos de tus eventos."}</p>
         </div>
       </div>
-      {connected ? <span className="inline-flex items-center gap-2 text-sm text-primary"><CheckCircle2 className="h-4 w-4" />Cuenta conectada</span> : <Button asChild><Link href="/api/mercadopago/oauth/connect">Conectar Mercado Pago</Link></Button>}
+      {isSuperadmin ? (connected ? <span className="inline-flex items-center gap-2 text-sm text-primary"><CheckCircle2 className="h-4 w-4" />Cuenta conectada</span> : <Button asChild><Link href="/api/mercadopago/oauth/connect">Conectar Mercado Pago</Link></Button>) : <span className="inline-flex cursor-not-allowed items-center rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">Disponible próximamente</span>}
     </section>
   )
 }
