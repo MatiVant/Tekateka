@@ -1,13 +1,14 @@
 -- Comisión configurable de TekaTeka y consultas de compradores.
+-- platform_settings ya existe desde 038 como key/value; reutilizamos esa estructura.
 create table if not exists public.platform_settings (
-  id boolean primary key default true check (id),
-  platform_fee_percent numeric(5,2) not null default 8.00 check (platform_fee_percent >= 0 and platform_fee_percent <= 100),
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
-insert into public.platform_settings (id, platform_fee_percent)
-values (true, 8.00)
-on conflict (id) do nothing;
+insert into public.platform_settings (key, value)
+values ('platform_fee_percent', '{"percent": 8}'::jsonb)
+on conflict (key) do nothing;
 
 alter table public.venues
   add column if not exists platform_fee_percent numeric(5,2) check (platform_fee_percent is null or (platform_fee_percent >= 0 and platform_fee_percent <= 100));
@@ -32,10 +33,15 @@ create index if not exists support_requests_created_at_idx on public.support_req
 create index if not exists support_requests_status_idx on public.support_requests(status);
 
 alter table public.platform_settings enable row level security;
+drop policy if exists "platform_settings_select_authenticated" on public.platform_settings;
 create policy "platform_settings_select_authenticated" on public.platform_settings for select using (auth.uid() is not null);
+drop policy if exists "platform_settings_update_superadmin" on public.platform_settings;
 create policy "platform_settings_update_superadmin" on public.platform_settings for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
 
 alter table public.support_requests enable row level security;
+drop policy if exists "support_requests_insert_public" on public.support_requests;
 create policy "support_requests_insert_public" on public.support_requests for insert with check (true);
+drop policy if exists "support_requests_select_superadmin" on public.support_requests;
 create policy "support_requests_select_superadmin" on public.support_requests for select using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+drop policy if exists "support_requests_update_superadmin" on public.support_requests;
 create policy "support_requests_update_superadmin" on public.support_requests for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));

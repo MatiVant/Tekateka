@@ -18,7 +18,7 @@ export async function updatePlatformFee(formData: FormData) {
   const supabase = createClient()
   const result = venueId
     ? await supabase.from("venues").update({ platform_fee_percent: percent }).eq("id", venueId)
-    : await supabase.from("platform_settings").update({ platform_fee_percent: percent, updated_at: new Date().toISOString() }).eq("id", true)
+    : await supabase.from("platform_settings").upsert({ key: "platform_fee_percent", value: { percent }, updated_at: new Date().toISOString() }, { onConflict: "key" })
   if (result.error) throw new Error("No se pudo guardar la comisión")
   revalidatePath("/superadmin")
   revalidatePath("/events", "page")
