@@ -33,15 +33,24 @@ create index if not exists support_requests_created_at_idx on public.support_req
 create index if not exists support_requests_status_idx on public.support_requests(status);
 
 alter table public.platform_settings enable row level security;
-drop policy if exists "platform_settings_select_authenticated" on public.platform_settings;
-create policy "platform_settings_select_authenticated" on public.platform_settings for select using (auth.uid() is not null);
-drop policy if exists "platform_settings_update_superadmin" on public.platform_settings;
-create policy "platform_settings_update_superadmin" on public.platform_settings for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'platform_settings' and policyname = 'platform_settings_select_authenticated') then
+    create policy "platform_settings_select_authenticated" on public.platform_settings for select using (auth.uid() is not null);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'platform_settings' and policyname = 'platform_settings_update_superadmin') then
+    create policy "platform_settings_update_superadmin" on public.platform_settings for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+  end if;
+end $$;
 
 alter table public.support_requests enable row level security;
-drop policy if exists "support_requests_insert_public" on public.support_requests;
-create policy "support_requests_insert_public" on public.support_requests for insert with check (true);
-drop policy if exists "support_requests_select_superadmin" on public.support_requests;
-create policy "support_requests_select_superadmin" on public.support_requests for select using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
-drop policy if exists "support_requests_update_superadmin" on public.support_requests;
-create policy "support_requests_update_superadmin" on public.support_requests for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'support_requests' and policyname = 'support_requests_insert_public') then
+    create policy "support_requests_insert_public" on public.support_requests for insert with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'support_requests' and policyname = 'support_requests_select_superadmin') then
+    create policy "support_requests_select_superadmin" on public.support_requests for select using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'support_requests' and policyname = 'support_requests_update_superadmin') then
+    create policy "support_requests_update_superadmin" on public.support_requests for update using (exists (select 1 from public.profiles where id = auth.uid() and role = 'superadmin'));
+  end if;
+end $$;
