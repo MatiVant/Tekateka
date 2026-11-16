@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { EventCard } from "@/components/event-card"
-import { Sparkles, Calendar, TrendingUp } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { ArrowUpRight, Calendar } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { formatCurrency } from "@/lib/format"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -80,19 +80,35 @@ export default async function HomePage() {
 
       <main id="eventos" className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {featuredEvents.length > 0 && (
-          <section className="mb-20">
-            <div className="flex items-center justify-between mb-8">
+          <section className="mb-20 overflow-hidden rounded-[2rem] bg-[#25211d] px-4 py-8 text-[#fbf8f2] sm:px-8 sm:py-10">
+            <div className="mb-7 flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-black tracking-[-0.04em] md:text-5xl">Qué está pasando <span className="text-primary">↓</span></h2>
-                <p className="mt-3 text-muted-foreground">Elegí tu próximo encuentro.</p>
+                <p className="text-xs font-bold uppercase tracking-[.2em] text-[#f9ce68]">Selección TekaTeka</p>
+                <h2 className="mt-2 text-3xl font-black tracking-[-.05em] sm:text-5xl">Qué está pasando</h2>
               </div>
+              <p className="hidden max-w-xs text-right text-sm text-white/55 sm:block">Una selección para encontrar tu próximo encuentro.</p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {featuredEvents.map((event, index) => (
-                <div key={event.id} className={index === 0 ? "lg:col-span-2 lg:row-span-2" : ""}>
-                  <EventCard event={event} featured={index === 0} />
-                </div>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-3">
+              {featuredEvents.map((event, index) => {
+                const eventDate = new Date(event.event_date)
+                const imageUrl = event.image_url || `/placeholder.svg?height=600&width=800&query=evento+${encodeURIComponent(event.title)}`
+                const date = eventDate.toLocaleDateString("es-AR", { day: "numeric", month: "short", timeZone: "America/Argentina/Buenos_Aires" })
+                return (
+                  <Link key={event.id} href={`/events/${event.slug || event.id}`} className="group relative isolate min-h-[360px] overflow-hidden rounded-[1.5rem] bg-[#554b42] sm:min-h-[430px]">
+                    <Image src={imageUrl} alt={event.title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition duration-700 group-hover:scale-105" style={{ objectPosition: `${event.image_position_x ?? 50}% ${event.image_position_y ?? 50}%` }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171310] via-[#171310]/30 to-black/5" />
+                    <span className="absolute left-4 top-4 rounded-full bg-[#f9ce68] px-3 py-1 text-[10px] font-black uppercase tracking-[.16em] text-[#25211d]">{index === 0 ? "Imperdible" : "Selección"}</span>
+                    <div className="absolute inset-x-5 bottom-5">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-[.12em] text-[#f9ce68]">{event.venue || "TekaTeka"} · {date}</p>
+                      <h3 className="text-2xl font-black leading-[.95] tracking-[-.04em] text-white sm:text-3xl">{event.title}</h3>
+                      <div className="mt-4 flex items-center justify-between gap-3 text-sm font-semibold text-white/75">
+                        <span>Desde {formatCurrency(event.min_price ?? event.price)}</span>
+                        <span className="flex items-center gap-1 text-[#f9ce68]">Ver evento <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </section>
         )}

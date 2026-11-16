@@ -133,7 +133,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
-            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Eventos</Link></Button>
+            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Espacios</Link></Button>
             {!user && <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>}
             {user ? (
               <>
@@ -188,7 +188,7 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
         </div>
         {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
           <div className="flex w-full flex-col gap-2">
-          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Eventos disponibles</Link></Button>
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Espacios</Link></Button>
           <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/ayuda" onClick={() => setIsMenuOpen(false)}><CircleHelp className="mr-2 size-4" />Ayuda</Link></Button>
           {user ? <>
             <Button variant="ghost" className="justify-start rounded-xl" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
