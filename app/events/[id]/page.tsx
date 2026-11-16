@@ -84,7 +84,7 @@ export default async function EventDetailPage({
   const isPwyw = event.is_pay_what_you_want === true
   const [{ data: organizerProfile }, platformFeePercent] = await Promise.all([
     createAdminClient().from("profiles").select("role").eq("id", event.organizer_id).maybeSingle(),
-    getPlatformFeePercent(createAdminClient(), event.venue_id),
+    getPlatformFeePercent(createAdminClient(), event.venue_id, event.created_at),
   ])
   const mercadoPagoEnabled = organizerProfile?.role === "superadmin"
   const configuredPaymentMethods = event.payment_methods?.length ? event.payment_methods : mercadoPagoEnabled ? ["mercado_pago"] : ["transfer"]

@@ -14,11 +14,12 @@ export async function updatePlatformFee(formData: FormData) {
   const { authorized } = await requireAuth(["superadmin"])
   if (!authorized) throw new Error("No autorizado")
   const percent = normalizePercent(formData.get("percent"))
+  const startsAt = String(formData.get("startsAt") || "").trim() || null
   const venueId = String(formData.get("venueId") || "")
   const supabase = createClient()
   const result = venueId
     ? await supabase.from("venues").update({ platform_fee_percent: percent }).eq("id", venueId)
-    : await supabase.from("platform_settings").upsert({ key: "platform_fee_percent", value: { percent }, updated_at: new Date().toISOString() }, { onConflict: "key" })
+    : await supabase.from("platform_settings").upsert({ key: "platform_fee_percent", value: { percent, starts_at: startsAt }, updated_at: new Date().toISOString() }, { onConflict: "key" })
   if (result.error) throw new Error("No se pudo guardar la comisión")
   revalidatePath("/superadmin")
   revalidatePath("/events", "page")

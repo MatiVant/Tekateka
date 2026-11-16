@@ -7,8 +7,13 @@ create table if not exists public.platform_settings (
 );
 
 insert into public.platform_settings (key, value)
-values ('platform_fee_percent', '{"percent": 8}'::jsonb)
+values ('platform_fee_percent', '{"percent": 8, "starts_at": null}'::jsonb)
 on conflict (key) do nothing;
+
+-- Primera activación: mañana. Si ya se configuró una fecha, no la pisa.
+update public.platform_settings
+set value = value || jsonb_build_object('starts_at', (current_date + 1)::text), updated_at = now()
+where key = 'platform_fee_percent' and (not (value ? 'starts_at') or value->>'starts_at' is null);
 
 alter table public.venues
   add column if not exists platform_fee_percent numeric(5,2) check (platform_fee_percent is null or (platform_fee_percent >= 0 and platform_fee_percent <= 100));

@@ -138,7 +138,7 @@ export default async function SuperAdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <PlatformFeeSettings globalPercent={Number((platformSettings?.value as { percent?: number } | null)?.percent ?? 8)} venues={venues ?? []} />
+        <PlatformFeeSettings globalPercent={Number((platformSettings?.value as { percent?: number } | null)?.percent ?? 8)} startsAt={(platformSettings?.value as { starts_at?: string | null } | null)?.starts_at ?? null} venues={venues ?? []} />
         <SuperAdminDashboard
           metrics={{
             events: eventCount || 0,

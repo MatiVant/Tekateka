@@ -41,7 +41,7 @@ export async function createTicket(data: CreateTicketData) {
     if (data.terms_accepted !== true) throw new Error("Tenés que aceptar los términos y condiciones para continuar")
 
     if (!Number.isFinite(data.final_price) || data.final_price < 0) throw new Error("Precio inválido")
-    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, sales_start_at, sales_end_at, venue_id, organizer_id").eq("id", data.event_id).single()
+    const { data: event, error: eventError } = await supabase.from("events").select("price, status, total_tickets, available_tickets, is_pay_what_you_want, event_date, created_at, sales_start_at, sales_end_at, venue_id, organizer_id").eq("id", data.event_id).single()
     if (eventError || !event || event.status !== "active") throw new Error("Evento no disponible")
     const now = Date.now()
     if (event.sales_start_at && now < new Date(event.sales_start_at).getTime()) throw new Error(`La venta comienza el ${new Date(event.sales_start_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`)
@@ -161,7 +161,7 @@ export async function createTicket(data: CreateTicketData) {
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
-    const platformFeePercent = isFreeTicket ? 0 : await getPlatformFeePercent(supabase, event.venue_id)
+    const platformFeePercent = isFreeTicket ? 0 : await getPlatformFeePercent(supabase, event.venue_id, event.created_at)
     const platformFeeAmount = calculatePlatformFee(Math.max(0, serverPrice), platformFeePercent)
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
     if (normalizedPaymentMethod === "mercado_pago") {

@@ -7,12 +7,16 @@ export function calculatePlatformFee(amount: number, percent: number) {
   return Math.round(amount * percent) / 100
 }
 
-export async function getPlatformFeePercent(supabase: SupabaseClient, venueId?: string | null) {
+export async function getPlatformFeePercent(supabase: SupabaseClient, venueId?: string | null, eventCreatedAt?: string | null) {
   const [{ data: settings }, venueResult] = await Promise.all([
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").maybeSingle(),
     venueId ? supabase.from("venues").select("platform_fee_percent").eq("id", venueId).maybeSingle() : Promise.resolve({ data: null }),
   ])
+  const value = settings?.value && typeof settings.value === "object" ? settings.value as { percent?: number; starts_at?: string | null } : {}
+  if (value.starts_at && eventCreatedAt) {
+    const createdDate = new Date(eventCreatedAt).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+    if (createdDate < value.starts_at) return 0
+  }
   const venuePercent = venueResult.data?.platform_fee_percent
-  const configuredPercent = settings?.value && typeof settings.value === "object" && "percent" in settings.value ? Number(settings.value.percent) : null
-  return Number(venuePercent ?? configuredPercent ?? DEFAULT_PLATFORM_FEE_PERCENT)
+  return Number(venuePercent ?? value.percent ?? DEFAULT_PLATFORM_FEE_PERCENT)
 }
