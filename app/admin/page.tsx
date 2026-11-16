@@ -108,8 +108,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     }
   }
 
-  const canCreateEvent =
-    profile?.role === "superadmin" || profile?.subscription_active === true || (profile?.events_created || 0) < 1
+  // La limitación por suscripción queda desactivada temporalmente.
+  const canCreateEvent = true
 
   const { data: events } = await supabase
     .from("events")
@@ -244,9 +244,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} search={q} /></TabsContent>
           </Tabs>
         </section>
-
-        {profile?.role !== "superadmin" && !profile?.subscription_active && <div className="mb-8 rounded-lg border border-border bg-card p-4"><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Plan Gratis:</span> {1 - (profile?.events_created || 0)} evento disponible</p></div>}
-        {profile?.subscription_active && profile?.role !== "superadmin" && <div className="mb-8 rounded-lg border border-primary/20 bg-card p-4"><p className="text-sm"><span className="font-medium text-primary">Suscripción Activa</span> - Eventos ilimitados</p></div>}
 
         {/* Resumen compacto */}
         <section className="mb-3 flex flex-wrap items-end justify-between gap-3">
