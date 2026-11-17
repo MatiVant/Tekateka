@@ -26,6 +26,8 @@ interface TicketTier {
   base_price: number
   available_quantity: number
   promotion_type?: "standard" | "2x1"
+  sales_start_at?: string | null
+  sales_end_at?: string | null
 }
 
 interface PurchaseFlowProps {
@@ -64,6 +66,7 @@ export function PurchaseFlow({
   const [ticketId, setTicketId] = useState<string | null>(null)
   const [ticketIds, setTicketIds] = useState<string[]>([])
   const [tiers, setTiers] = useState<TicketTier[]>([])
+  const [tierSalesNotStarted, setTierSalesNotStarted] = useState(false)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
 
   const [name, setName] = useState("")
@@ -97,22 +100,30 @@ export function PurchaseFlow({
     try {
       const { data, error: fetchError } = await supabase
         .from("ticket_tiers")
-        .select("id, name, base_price, available_quantity, promotion_type")
+        .select("id, name, base_price, available_quantity, promotion_type, sales_start_at, sales_end_at")
         .eq("event_id", eventId)
         .order("tier_order", { ascending: true })
 
       if (fetchError) throw fetchError
-      setTiers(data || [])
-      if (data && data.length > 0) {
+      const now = Date.now()
+      const availableTiers = (data || []).filter((tier) => {
+        const startsAt = tier.sales_start_at ? new Date(tier.sales_start_at).getTime() : null
+        const endsAt = tier.sales_end_at ? new Date(tier.sales_end_at).getTime() : null
+        return (!startsAt || now >= startsAt) && (!endsAt || now < endsAt)
+      })
+      setTiers(availableTiers)
+      setTierSalesNotStarted(Boolean(data?.length && availableTiers.length === 0))
+      if (availableTiers.length > 0) {
         setStep("tiers")
-        setSelectedTierId(data[0].id)
-        setFinalPrice(data[0].base_price)
-      } else {
+        setSelectedTierId(availableTiers[0].id)
+        setFinalPrice(availableTiers[0].base_price)
+      } else if (!data?.length) {
         setFinalPrice(eventPrice)
       }
     } catch (error) {
       console.error("[v0] Error fetching tiers:", error)
       setTiers([])
+      setTierSalesNotStarted(false)
       setFinalPrice(eventPrice)
     }
   }, [eventId, eventPrice, supabase])
@@ -406,12 +417,12 @@ export function PurchaseFlow({
     )
   }
 
-  if (step === "tiers" && tiers.length > 0) {
+  if (step === "tiers" && (tiers.length > 0 || tierSalesNotStarted)) {
     return (
       <div className="space-y-4">
         <div>
           <h3 className="font-semibold mb-3">Selecciona el tipo de entrada</h3>
-          <div className="grid gap-3">
+          {tierSalesNotStarted ? <p className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">La venta de los tipos de entrada todavía no comenzó.</p> : <div className="grid gap-3">
             {tiers.map((tier) => (
               <Button
                 key={tier.id}
@@ -427,7 +438,7 @@ export function PurchaseFlow({
                 <div className="font-semibold">{formatCurrency(tier.base_price)}</div>
               </Button>
             ))}
-          </div>
+          </div>}
         </div>
       </div>
     )
