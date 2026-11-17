@@ -125,13 +125,14 @@ export default async function MyTicketsPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>
-                        {new Date(ticket.events.event_date).toLocaleDateString("es-ES", {
+                        {new Date(ticket.events.event_date).toLocaleString("es-AR", {
                           weekday: "long",
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
+                          timeZone: "America/Argentina/Buenos_Aires",
                         })}
                       </span>
                     </div>

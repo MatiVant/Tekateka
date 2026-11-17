@@ -10,6 +10,7 @@ import { AllTicketsTable } from '@/components/admin/all-tickets-table';
 import { getEventReconciliations, getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
 import { CheckerLinkButton } from '@/components/admin/checker-link-button';
+import { EventBuyerNotice } from '@/components/admin/event-buyer-notice';
 
 export default async function EventTicketsPage({
   params,
@@ -92,6 +93,7 @@ export default async function EventTicketsPage({
             </div>
           </div>
         </div>
+        <EventBuyerNotice eventId={id} eventTitle={event.title} />
 
         <Card>
           <CardHeader>
