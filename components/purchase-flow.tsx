@@ -412,7 +412,7 @@ export function PurchaseFlow({
             Iniciar compra nueva
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">La compra pendiente seguirá disponible desde el enlace que recibiste por email.</p>
+        <p className="text-xs text-muted-foreground">La compra pendiente seguirá disponible desde el enlace que recibiste por email. Si iniciás una compra nueva, recibirás otro correo con un enlace y una reserva diferente.</p>
       </div>
     )
   }
