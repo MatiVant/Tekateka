@@ -934,6 +934,20 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
   return (
     <>
       <div className="admin-ticket-screen space-y-4">
+        <div className="grid gap-3 sm:grid-cols-3" aria-label="Resumen de entradas">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950">
+            <p className="text-sm font-medium">Pendientes de revisión</p>
+            <p className="mt-1 text-3xl font-bold leading-none">{ticketCounts.pending}</p>
+          </div>
+          <div className="rounded-xl border bg-card px-4 py-3">
+            <p className="text-sm font-medium text-muted-foreground">Confirmadas</p>
+            <p className="mt-1 text-2xl font-bold leading-none">{ticketCounts.confirmed}</p>
+          </div>
+          <div className="rounded-xl border bg-card px-4 py-3">
+            <p className="text-sm font-medium text-muted-foreground">Canceladas</p>
+            <p className="mt-1 text-2xl font-bold leading-none">{ticketCounts.cancelled}</p>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex items-center gap-2 flex-1">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

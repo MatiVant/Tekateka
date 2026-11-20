@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, CircleHelp, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
+import { Bell, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -21,9 +21,10 @@ import { slugify } from "@/lib/slugify"
 interface NavbarProps {
   user?: { email?: string } | null
   profile?: { role: string; full_name: string | null; organization_name?: string | null } | null
+  pendingTicketCount?: number
 }
 
-export function Navbar({ user: initialUser, profile: initialProfile }: NavbarProps) {
+export function Navbar({ user: initialUser, profile: initialProfile, pendingTicketCount = 0 }: NavbarProps) {
   const router = useRouter()
   const [user, setUser] = useState(initialUser)
   const [profile, setProfile] = useState(initialProfile)
@@ -134,6 +135,15 @@ export function Navbar({ user: initialUser, profile: initialProfile }: NavbarPro
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
             <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Espacios</Link></Button>
+            {user && pendingTicketCount > 0 && (profile?.role === "organizer" || profile?.role === "superadmin") && (
+              <Button variant="outline" className="relative gap-2 rounded-full border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100" asChild>
+                <Link href="/admin/tickets?view=pending" aria-label={`${pendingTicketCount} entradas pendientes de revisión`}>
+                  <Bell className="size-4" />
+                  <span className="hidden sm:inline">Pendientes</span>
+                  <span className="flex size-5 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">{pendingTicketCount > 99 ? "99+" : pendingTicketCount}</span>
+                </Link>
+              </Button>
+            )}
             {!user && <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>}
             {user ? (
               <>

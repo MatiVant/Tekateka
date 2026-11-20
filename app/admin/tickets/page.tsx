@@ -13,7 +13,7 @@ export default async function AllTicketsPage({
   searchParams: Promise<{ view?: string }>
 }) {
   const { view } = await searchParams
-  const initialView = view === "pending" || view === "cancelled" ? view : "confirmed"
+  const initialView = view === "confirmed" || view === "cancelled" ? view : "pending"
   const { authorized, user, profile } = await requireAuth(['organizer']);
 
   if (!authorized || !user) {
@@ -57,7 +57,7 @@ export default async function AllTicketsPage({
           <CardHeader>
             <CardTitle>Entradas</CardTitle>
             <CardDescription>
-              La lista abre en confirmadas. Usa los filtros para revisar pendientes y canceladas.
+              La lista abre en pendientes para que puedas revisar y aprobar las entradas que todavía requieren atención.
             </CardDescription>
           </CardHeader>
           <CardContent>

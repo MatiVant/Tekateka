@@ -10,7 +10,6 @@ import { AllTicketsTable } from '@/components/admin/all-tickets-table';
 import { getEventReconciliations, getEventSettlement } from '@/app/actions/event-settlement';
 import { EventSettlement } from '@/components/admin/event-settlement';
 import { CheckerLinkButton } from '@/components/admin/checker-link-button';
-import { EventBuyerNotice } from '@/components/admin/event-buyer-notice';
 
 export default async function EventTicketsPage({
   params,
@@ -75,25 +74,22 @@ export default async function EventTicketsPage({
               Volver al Panel
             </Link>
           </Button>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="grid gap-3 rounded-2xl border border-[#e7dcc8] bg-card p-3 sm:grid-cols-3">
             <CheckerLinkButton eventId={id} />
-            <div className="grid gap-2 sm:grid-cols-2 lg:w-fit">
-              <Button asChild size="lg" className="w-full gap-2 font-bold sm:w-auto">
-                <Link href={`/verify?event=${encodeURIComponent(id)}`}>
-                  <ScanLine className="h-5 w-5" />
-                  Escanear QR de entradas
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
-                <Link href={`/admin/events/${id}/tickets/links`}>
-                  <Link2 className="h-4 w-4" />
-                  Accesos para colaboradores
-                </Link>
-              </Button>
-            </div>
+            <Button asChild variant="outline" size="lg" className="h-auto min-h-16 w-full justify-center gap-2 rounded-xl border-[#d8c9b4] bg-background px-4 py-3 text-center whitespace-normal hover:bg-muted/50">
+              <Link href={`/verify?event=${encodeURIComponent(id)}`}>
+                <ScanLine className="h-5 w-5 shrink-0" />
+                <span>Escanear QR</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-auto min-h-16 w-full justify-center gap-2 rounded-xl border-[#d8c9b4] bg-background px-4 py-3 text-center whitespace-normal hover:bg-muted/50">
+              <Link href={`/admin/events/${id}/tickets/links`}>
+                <Link2 className="h-5 w-5 shrink-0" />
+                <span>Accesos para colaboradores</span>
+              </Link>
+            </Button>
           </div>
         </div>
-        <EventBuyerNotice eventId={id} eventTitle={event.title} />
 
         <Card>
           <CardHeader>
@@ -104,12 +100,13 @@ export default async function EventTicketsPage({
           </CardHeader>
           <CardContent>
             <section aria-labelledby="sold-tickets-title" className="mb-8">
-              <h2 id="sold-tickets-title" className="mb-1 text-lg font-semibold">Entradas confirmadas</h2>
-              <p className="mb-4 text-sm text-muted-foreground">Las confirmadas aparecen primero; podés cambiar a pendientes o canceladas en los filtros.</p>
+              <h2 id="sold-tickets-title" className="mb-1 text-lg font-semibold">Entradas pendientes</h2>
+              <p className="mb-4 text-sm text-muted-foreground">Las pendientes aparecen primero para que puedas revisarlas y aprobarlas.</p>
               <AllTicketsTable
                 tickets={tickets || []}
                 doorSales={doorSales || []}
                 fixedEventId={id}
+                initialView="pending"
                 canRestoreUsedTickets={profile?.role === 'superadmin'}
               />
             </section>
