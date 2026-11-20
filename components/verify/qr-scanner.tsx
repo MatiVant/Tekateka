@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, Search, UserRoundCheck } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, Loader2, Search, UserRoundCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { TicketDetails } from './ticket-details';
 import { Badge } from '@/components/ui/badge';
@@ -379,7 +379,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             </p>
           </div>
           <Button type="submit" className="w-full" disabled={isScanning || !manualCode.trim()}>
-            {isScanning ? 'Verificando...' : 'Verificar entrada'}
+            {isScanning ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Verificando...</> : 'Verificar entrada'}
           </Button>
         </form>
       )}
@@ -393,7 +393,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                 <p className="text-sm text-muted-foreground">Entradas habilitadas para ingresar y registro de quienes ya entraron.</p>
               </div>
               <Button type="button" variant="outline" onClick={loadAllTickets} disabled={isLoadingAllTickets}>
-                {isLoadingAllTickets ? 'Cargando…' : allTickets.length || doorSales.length ? 'Actualizar lista' : 'Ver todas las entradas'}
+                {isLoadingAllTickets ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Cargando…</> : allTickets.length || doorSales.length ? 'Actualizar lista' : 'Ver todas las entradas'}
               </Button>
             </div>
             {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
@@ -135,7 +136,7 @@ export default function ResetPasswordPage() {
             {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
             {message && <p className="text-sm text-primary" role="status">{message}</p>}
             <Button type="submit" className="w-full" disabled={isFormDisabled}>
-              {isLoading ? "Guardando..." : "Guardar contraseña"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : "Guardar contraseña"}
             </Button>
             {message && <Link href="/auth/login" className="block text-center text-sm underline">Ir a iniciar sesión</Link>}
             {error && !hasValidRecoverySession && !isCheckingLink && (

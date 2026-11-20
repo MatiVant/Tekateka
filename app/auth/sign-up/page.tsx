@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("");
@@ -145,7 +146,7 @@ export default function SignUpPage() {
                   <p className="text-sm text-destructive">{error}</p>
                 )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando cuenta...</> : "Crear Cuenta"}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm text-muted-foreground">

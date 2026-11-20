@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Archive, ArchiveRestore } from "lucide-react"
+import { Archive, ArchiveRestore, Loader2 } from "lucide-react"
 import { archiveEvent, unarchiveEvent } from "@/app/actions/archive-event"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
@@ -40,7 +40,12 @@ export function ArchiveEventButton({ eventId, isArchived }: ArchiveEventButtonPr
 
   return (
     <Button variant="outline" size="sm" onClick={handleToggleArchive} disabled={isLoading}>
-      {isArchived ? (
+      {isLoading ? (
+        <>
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          Procesando...
+        </>
+      ) : isArchived ? (
         <>
           <ArchiveRestore className="mr-1 h-3 w-3" />
           Reactivar

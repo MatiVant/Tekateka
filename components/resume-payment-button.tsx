@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 export function ResumePaymentButton({ token }: { token: string }) {
   const [loading, setLoading] = useState(false)
@@ -21,5 +22,5 @@ export function ResumePaymentButton({ token }: { token: string }) {
       void resume()
     }
   }, [])
-  return <div className="mt-6"><Button onClick={resume} disabled={loading}>{loading ? "Preparando pago..." : "Continuar con Mercado Pago"}</Button>{error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}</div>
+  return <div className="mt-6"><Button onClick={resume} disabled={loading}>{loading ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Preparando pago...</> : "Continuar con Mercado Pago"}</Button>{error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}</div>
 }

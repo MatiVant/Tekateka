@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, FileDown, Share2, FileSpreadsheet, ChevronDown, ChevronRight, ChevronUp, RotateCcw } from "lucide-react"
+import { CheckCircle, XCircle, Clock, Search, Eye, ExternalLink, FileText, Mail, Filter, MessageCircle, Send, FileDown, Share2, FileSpreadsheet, ChevronDown, ChevronRight, ChevronUp, RotateCcw, Loader2 } from "lucide-react"
 import { restoreUsedTicket } from "@/app/actions/restore-used-ticket"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -551,7 +551,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
 
   const handleBulkApprove = async () => {
     const ids = Array.from(selectedIds)
-    if (ids.length === 0) return
+    if (ids.length === 0 || isBulkLoading || loadingId) return
     setIsBulkLoading(true)
     try {
       const results: Array<{ ticketId: string; error?: string }> = []
@@ -650,6 +650,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
   }
 
   const handleResendPaymentLink = async (ticketId: string) => {
+    if (loadingId || isBulkLoading) return
     setLoadingId(ticketId)
     try {
       const response = await fetch("/api/resend-payment-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }) })
@@ -665,7 +666,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
 
   const handleBulkResendTickets = async () => {
     const ids = Array.from(selectedIds)
-    if (ids.length === 0) return
+    if (ids.length === 0 || isBulkLoading || loadingId) return
     const selected = (tickets ?? []).filter((ticket) => selectedIds.has(ticket.id))
     const sameBuyer = selected.every((ticket) => ticket.buyer_email === selected[0]?.buyer_email && ticket.events?.id === selected[0]?.events?.id)
     if (!sameBuyer) { toast({ title: "No se pueden agrupar", description: "Seleccioná entradas del mismo comprador y evento.", variant: "destructive" }); return }
@@ -680,6 +681,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
   }
 
   const handleResendTicket = async (ticketId: string) => {
+  if (loadingId || isBulkLoading) return
   setLoadingId(ticketId)
   try {
   const response = await fetch("/api/resend-ticket", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }) })
@@ -799,6 +801,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
   }
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    if (loadingId || isBulkLoading) return
     setLoadingId(ticketId)
     try {
       if (newStatus === "confirmed") {
@@ -819,6 +822,10 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
         if (error) throw error
       }
 
+      if (newStatus === "confirmed") {
+        toast({ title: "Entrada confirmada", description: "La entrada quedó confirmada correctamente." })
+        setIsDialogOpen(false)
+      }
       router.refresh()
     } catch (error) {
       console.error("[v0] Error al actualizar ticket:", error)
@@ -994,9 +1001,9 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
             <span className="text-sm font-medium">{selectedIds.size} entrada(s) seleccionada(s)</span>
             {listView === "pending" && (
               <>
-                <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Aprobar seleccionadas
+                <Button size="sm" onClick={handleBulkApprove} disabled={isBulkLoading || Boolean(loadingId)}>
+                  {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                  {isBulkLoading ? "Procesando..." : "Aprobar seleccionadas"}
                 </Button>
                 <Button
                   size="sm"
@@ -1010,9 +1017,9 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
               </>
             )}
             {listView === "confirmed" && (
-              <Button size="sm" variant="outline" onClick={handleBulkResendTickets} disabled={isBulkLoading}>
-                <Send className="mr-2 h-4 w-4" />
-                Reenviar juntas
+              <Button size="sm" variant="outline" onClick={handleBulkResendTickets} disabled={isBulkLoading || Boolean(loadingId)}>
+                {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {isBulkLoading ? "Enviando..." : "Reenviar juntas"}
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={isBulkLoading}>
@@ -1602,8 +1609,8 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
 
           <DialogFooter className="gap-2">
           {selectedTicket?.status === "confirmed" && <Button variant="outline" onClick={() => handleResendTicket(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
-          <Mail className="mr-2 h-4 w-4" />
-          Reenviar entrada con QR
+          {loadingId === selectedTicket.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+          {loadingId === selectedTicket.id ? "Enviando..." : "Reenviar entrada con QR"}
           </Button>}
           {selectedTicket && (selectedTicket.payment_method === "mercado_pago" || selectedTicket.payment_method === "external_link" || selectedTicket.payment_provider === "mercadopago") && <Button variant="outline" onClick={() => handleVerifyPayment(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
   <ExternalLink className="mr-2 h-4 w-4" />
@@ -1612,18 +1619,15 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
   {selectedTicket?.status === "pending" && (
   <>
   <Button variant="outline" onClick={() => handleResendPaymentLink(selectedTicket.id)} disabled={loadingId === selectedTicket.id}>
-  <Mail className="mr-2 h-4 w-4" />
-  Reenviar enlace de pago
+  {loadingId === selectedTicket.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+  {loadingId === selectedTicket.id ? "Enviando..." : "Reenviar enlace de pago"}
   </Button>
                 <Button
-                  onClick={() => {
-                    handleStatusChange(selectedTicket.id, "confirmed")
-                    setIsDialogOpen(false)
-                  }}
+                  onClick={() => handleStatusChange(selectedTicket.id, "confirmed")}
                   disabled={loadingId === selectedTicket.id}
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Confirmar Entrada
+                  {loadingId === selectedTicket.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                  {loadingId === selectedTicket.id ? "Confirmando..." : "Confirmar Entrada"}
                 </Button>
                 <Button
                   variant="destructive"

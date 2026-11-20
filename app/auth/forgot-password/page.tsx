@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -29,5 +30,5 @@ export default function ForgotPasswordPage() {
     setIsLoading(false)
   }
 
-  return <main className="flex min-h-svh items-center justify-center bg-muted/30 p-6"><Card className="w-full max-w-sm"><CardHeader className="text-center"><CardTitle>Recuperar contraseña</CardTitle><CardDescription>Te enviaremos un enlace para crear una contraseña nueva.</CardDescription></CardHeader><CardContent><form onSubmit={handleSubmit} className="space-y-5"><div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" placeholder="tu@email.com" required value={email} onChange={(event) => setEmail(event.target.value)} /></div>{error && <p className="text-sm text-destructive">{error}</p>}{message && <p className="text-sm text-primary">{message}</p>}<Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? "Enviando..." : "Enviar enlace"}</Button><p className="text-center text-sm text-muted-foreground"><Link href="/auth/login" className="underline underline-offset-4 text-foreground">Volver a iniciar sesión</Link></p></form></CardContent></Card></main>
+  return <main className="flex min-h-svh items-center justify-center bg-muted/30 p-6"><Card className="w-full max-w-sm"><CardHeader className="text-center"><CardTitle>Recuperar contraseña</CardTitle><CardDescription>Te enviaremos un enlace para crear una contraseña nueva.</CardDescription></CardHeader><CardContent><form onSubmit={handleSubmit} className="space-y-5"><div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" placeholder="tu@email.com" required value={email} onChange={(event) => setEmail(event.target.value)} /></div>{error && <p className="text-sm text-destructive">{error}</p>}{message && <p className="text-sm text-primary">{message}</p>}<Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Enviando...</> : "Enviar enlace"}</Button><p className="text-center text-sm text-muted-foreground"><Link href="/auth/login" className="underline underline-offset-4 text-foreground">Volver a iniciar sesión</Link></p></form></CardContent></Card></main>
 }

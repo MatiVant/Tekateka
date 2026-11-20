@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { AlertCircle, Send, X } from 'lucide-react'
+import { AlertCircle, Loader2, Send, X } from 'lucide-react'
 import { requestOwnershipTransfer, cancelOwnershipTransfer } from '@/app/actions/event-ownership-transfer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
@@ -104,8 +104,8 @@ export function EventOwnershipTransfer({ eventId, currentTransfer }: EventOwners
               disabled={isPending}
               className="w-full"
             >
-              <X className="h-4 w-4 mr-2" />
-              Cancelar Solicitud
+              {isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />}
+              {isPending ? 'Cancelando…' : 'Cancelar Solicitud'}
             </Button>
           </div>
         ) : (
@@ -123,8 +123,8 @@ export function EventOwnershipTransfer({ eventId, currentTransfer }: EventOwners
                 disabled={isPending}
                 className="gap-2"
               >
-                <Send className="h-4 w-4" />
-                Solicitar
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isPending ? 'Enviando…' : 'Solicitar'}
               </Button>
             </div>
           </form>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { compressReceipt, isPdf } from "@/lib/compress-image"
+import { Loader2 } from "lucide-react"
 
 export function ResumeReceiptUpload({ token }: { token: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -33,5 +34,5 @@ export function ResumeReceiptUpload({ token }: { token: string }) {
     }
   }
 
-  return <form onSubmit={submit} className="mt-6 space-y-3 rounded-lg border bg-muted/30 p-4"><div><p className="font-semibold">Enviar comprobante</p><p className="text-sm text-muted-foreground">Subí una imagen o PDF de la transferencia.</p></div><Input type="file" accept="image/*,.pdf" required onChange={(event) => setFile(event.target.files?.[0] || null)} /><Input placeholder="Nota opcional" value={notes} onChange={(event) => setNotes(event.target.value)} /><Button type="submit" disabled={!file || loading}>{loading ? "Enviando..." : "Enviar comprobante"}</Button>{message && <p className="text-sm" role="status">{message}</p>}</form>
+  return <form onSubmit={submit} className="mt-6 space-y-3 rounded-lg border bg-muted/30 p-4"><div><p className="font-semibold">Enviar comprobante</p><p className="text-sm text-muted-foreground">Subí una imagen o PDF de la transferencia.</p></div><Input type="file" accept="image/*,.pdf" required onChange={(event) => setFile(event.target.files?.[0] || null)} /><Input placeholder="Nota opcional" value={notes} onChange={(event) => setNotes(event.target.value)} /><Button type="submit" disabled={!file || loading}>{loading ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Enviando...</> : "Enviar comprobante"}</Button>{message && <p className="text-sm" role="status">{message}</p>}</form>
 }

@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Settings, Ticket } from "lucide-react"
+import { ArrowLeft, Ticket } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { EventForm } from "@/components/admin/event-form"
@@ -48,20 +48,12 @@ export default async function EditEventPage({
             </Link>
           </Button>
 
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/admin/events/${id}/settings`}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configuración de entradas y cupones
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/admin/events/${id}/tickets`}>
-                <Ticket className="mr-2 h-4 w-4" />
-                Ver Tickets
-              </Link>
-            </Button>
-          </div>
+          <Button variant="outline" asChild>
+            <Link href={`/admin/events/${id}/tickets`}>
+              <Ticket className="mr-2 h-4 w-4" />
+              Ver Tickets
+            </Link>
+          </Button>
         </div>
 
         <Card>
@@ -70,7 +62,13 @@ export default async function EditEventPage({
             <CardDescription>Actualiza la información del evento</CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} event={event} venues={venues ?? []} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
+            <EventForm
+              userId={user.id}
+              event={event}
+              venues={venues ?? []}
+              audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)}
+              ticketSettingsHref={`/admin/events/${id}/settings`}
+            />
           </CardContent>
         </Card>
 

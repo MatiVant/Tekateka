@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 export function CancelPaymentButton({ token }: { token: string }) {
   const [loading, setLoading] = useState(false)
@@ -14,5 +15,5 @@ export function CancelPaymentButton({ token }: { token: string }) {
     if (response.ok) setDone(true)
   }
   if (done) return <p className="mt-6 rounded-md bg-muted p-3 text-sm">Listo, avisamos que no vas a comprar. La reserva fue liberada.</p>
-  return <Button variant="ghost" className="mt-4 w-full text-muted-foreground" onClick={cancel} disabled={loading}>{loading ? "Enviando aviso..." : "No voy a comprar esta entrada"}</Button>
+  return <Button variant="ghost" className="mt-4 w-full text-muted-foreground" onClick={cancel} disabled={loading}>{loading ? <><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Enviando aviso...</> : "No voy a comprar esta entrada"}</Button>
 }

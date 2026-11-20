@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -89,7 +90,7 @@ export default function LoginPage() {
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : "Iniciar Sesión"}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm text-muted-foreground">

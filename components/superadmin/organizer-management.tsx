@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, XCircle, Edit, ExternalLink, KeyRound } from "lucide-react"
+import { CheckCircle, XCircle, Edit, ExternalLink, KeyRound, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { slugify } from "@/lib/slugify"
 import { useRouter } from "next/navigation"
@@ -467,7 +467,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
               onClick={handleSetPassword}
               disabled={isLoading || newPassword.length < 12 || newPassword.length > 128 || newPassword !== confirmPassword}
             >
-              {isLoading ? "Actualizando..." : "Cambiar contraseña"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Actualizando...</> : "Cambiar contraseña"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -489,7 +489,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
               Cancelar
             </Button>
             <Button onClick={handleApprove} disabled={isLoading}>
-              {isLoading ? "Aprobando..." : "Aprobar"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aprobando...</> : "Aprobar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -521,7 +521,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleReject} disabled={isLoading || !rejectionReason}>
-              {isLoading ? "Rechazando..." : "Rechazar"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Rechazando...</> : "Rechazar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -575,7 +575,7 @@ export function OrganizerManagement({ organizers }: { organizers: Organizer[] })
               Cancelar
             </Button>
             <Button onClick={handleSubscription} disabled={isLoading}>
-              {isLoading ? "Actualizando..." : "Actualizar"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Actualizando...</> : "Actualizar"}
             </Button>
           </DialogFooter>
         </DialogContent>

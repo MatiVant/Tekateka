@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, X, ImageIcon, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { Loader2, Upload, X, ImageIcon, Plus, Trash2, Settings } from "lucide-react"
 import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
@@ -72,7 +73,7 @@ function formatArgentinaDateTimeLocal(value?: string | null) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function EventForm({ userId, isSuperadmin = false, event, venues = [], audienceTagOptions = [] }: EventFormProps & { audienceTagOptions?: string[] }) {
+export function EventForm({ userId, isSuperadmin = false, event, venues = [], audienceTagOptions = [], ticketSettingsHref }: EventFormProps & { audienceTagOptions?: string[]; ticketSettingsHref?: string }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
@@ -515,7 +516,20 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Precios y entradas</CardTitle><CardDescription>Definí el precio, cupos y tipos de entrada.</CardDescription></CardHeader>
+        <CardHeader className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+          <div>
+            <CardTitle>Precios y entradas</CardTitle>
+            <CardDescription>Definí el precio, cupos y tipos de entrada.</CardDescription>
+          </div>
+          {ticketSettingsHref && (
+            <Button variant="outline" asChild className="w-full shrink-0 sm:w-auto">
+              <Link href={ticketSettingsHref}>
+                <Settings className="mr-2 h-4 w-4" />
+                Tipos de entrada
+              </Link>
+            </Button>
+          )}
+        </CardHeader>
         <CardContent className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">

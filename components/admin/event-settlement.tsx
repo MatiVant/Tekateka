@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { Banknote, Check, Plus, ReceiptText, Trash2 } from 'lucide-react'
+import { Banknote, Check, Loader2, Plus, ReceiptText, Trash2 } from 'lucide-react'
 
 type Ticket = {
   id: string
@@ -268,7 +268,7 @@ export function EventSettlement({ eventId, tickets, doorSales, initialSettlement
         <footer className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">Los cambios se guardan en el resumen del evento.</p>
           <Button onClick={save} disabled={isPending} className="w-full rounded-full px-6 sm:w-auto">
-            {isPending ? 'Guardando…' : closed ? <><Check data-icon="inline-start" /> Guardar cierre</> : 'Guardar resumen'}
+            {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando…</> : closed ? <><Check data-icon="inline-start" /> Guardar cierre</> : 'Guardar resumen'}
           </Button>
         </footer>
       </div>
