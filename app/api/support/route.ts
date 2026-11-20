@@ -31,13 +31,17 @@ export async function POST(request: Request) {
   const supportEmail = process.env.SUPPORT_EMAIL || "consultas@tekateka.com.ar"
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
-    await resend.emails.send({
+    const { error: emailError } = await resend.emails.send({
       from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
       to: supportEmail,
       replyTo: buyerEmail,
       subject: `[Soporte] ${category} — ${buyerName || buyerEmail}`,
       html: `<p><strong>Nueva consulta de soporte</strong></p><p><strong>Comprador:</strong> ${escapeHtml(buyerName || "Sin nombre")}<br><strong>Email:</strong> ${escapeHtml(buyerEmail)}<br><strong>Evento:</strong> ${escapeHtml(eventId || "No informado")}<br><strong>Ticket:</strong> ${escapeHtml(ticketId || "No informado")}<br><strong>Motivo:</strong> ${escapeHtml(category)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p><small>Referencia de soporte: ${supportRequest.id}</small></p>`, 
     })
+    if (emailError) {
+      console.error("[support] Resend no pudo entregar la consulta:", emailError)
+      return NextResponse.json({ error: "La consulta se guardó, pero no pudimos enviarla al correo de soporte." }, { status: 502 })
+    }
   }
 
   return NextResponse.json({ ok: true, id: supportRequest.id })
