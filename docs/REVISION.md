@@ -11,11 +11,11 @@
 ### Stack Tecnológico
 
 **Framework y versiones:**
-- **Next.js 16.0.10** (App Router) — ⚠️ **3 CVEs sin parchear** (ver sección 3)
+- **Next.js 16.4.6** (App Router) — ✅ Actualizado con parches de seguridad recientes (PR #13)
 - **React 19.2.0** / **React DOM 19.2.0**
-- **TypeScript 5.x**
-- **Tailwind CSS 4.1.9** + PostCSS 8.5
-- **pnpm** como gestor de paquetes
+- **TypeScript 5.9.3**
+- **Tailwind CSS 4.3.3** + PostCSS 8.5.28
+- **pnpm 10.33.4** como gestor de paquetes
 
 **Base de datos y ORM:**
 - **Supabase** (PostgreSQL con Row Level Security habilitado)
@@ -36,13 +36,15 @@
 - Secret `MERCADOPAGO_WEBHOOK_SECRET` para validación
 
 **Emails:**
-- **Resend** (`resend` package, latest)
-- Configuración centralizada en `lib/email-config.ts` (PR #13)
-- Remitente: `TekaTeka <notificaciones@tktk.buholabs.com.ar>`
+- **Resend** (`resend@6.32.0`, resuelto desde `latest`)
+- **Configuración centralizada en `lib/email-config.ts`** (PR #13) ✅
+  - Remitente: `Tekateka <notificaciones@tekateka.com.ar>` (migrado de dominio anterior)
+  - Email de soporte: `consultas@tekateka.com.ar`
+  - Variables: `RESEND_FROM_EMAIL`, `SUPPORT_EMAIL`
 - Emails transaccionales: confirmación de compra, QR de entrada, resumen semanal
 
 **Códigos QR:**
-- Librería `qrcode` (latest)
+- Librería `qrcode@1.5.4` (resuelto desde `latest`)
 - Generación dinámica en `/api/generate-qr?code=...`
 - Almacenamiento del código en campo `qr_code` (único) de tabla `tickets`
 
@@ -112,10 +114,13 @@
 | `CRON_SECRET` | Secret para proteger crons | `app/api/cron/weekly-sales-summary/route.ts:17` |
 | `VERCEL_URL` | URL automática de Vercel | `app/actions/create-ticket.ts:258` (fallback) |
 | `SUPPORT_EMAIL` | Email de soporte (sin uso explícito en código actual) | grep output |
+| `RESEND_FROM_EMAIL` | Remitente de Resend (nuevo en PR #13) | `lib/email-config.ts:3` |
 | `PURELYMAIL_FROM` | Remitente de Purelymail (sin uso explícito) | grep output |
 | `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` | Redirect URL en dev (sin uso explícito) | grep output |
 
-**⚠️ Variables obsoletas encontradas:** `PURELYMAIL_FROM`, `SUPPORT_EMAIL`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` — No se usan en el código actual, pueden eliminarse de la configuración.
+**⚠️ Variables obsoletas encontradas:** `PURELYMAIL_FROM`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` — No se usan en el código actual, pueden eliminarse de la configuración.
+
+**✅ Variables nuevas (PR #13):** `RESEND_FROM_EMAIL` — Usada en `lib/email-config.ts` para centralizar configuración de remitente.
 
 ---
 
@@ -372,81 +377,109 @@ export async function middleware(request: NextRequest) {
 
 ### Auditoría de npm (pnpm audit)
 
-**Ejecutado:** `pnpm audit --json`
+**Ejecutado:** `pnpm audit` (21 nov 2026, post-rebase sobre main con PR #13)
 
 **Resultados:**
 
-#### 🔴 Vulnerabilidades Críticas/Altas
+#### ✅ Next.js Actualizado Correctamente
+
+**Estado:** Next.js está en **16.4.6** (actualizado en PR #13), que incluye los parches de seguridad para:
+- CVE-2026-23864 (HIGH 7.5) — DoS por deserialización en RSC
+- CVE-2025-59471 (MODERATE 5.9) — DoS en Image Optimizer
+- CVE-2026-29057 (MODERATE) — HTTP Request Smuggling
+
+✅ **No se encontraron vulnerabilidades en Next.js**
+
+#### 🔴 Vulnerabilidades Críticas/Altas Actuales
 
 | CVE | Paquete | Versión Actual | Severidad | Impacto |
 |-----|---------|----------------|-----------|---------|
-| **CVE-2026-23864** ([GHSA-h25m-26qc-wcjf](https://github.com/advisories/GHSA-h25m-26qc-wcjf)) | `next` | **16.0.10** | 🔴 **HIGH** (7.5 CVSS) | DoS por deserialización en React Server Components. Request HTTP malicioso puede causar uso excesivo de CPU, OOM o crash del servidor. |
-| **CVE-2025-59471** ([GHSA-9g9p-9gw9-jx7f](https://github.com/advisories/GHSA-9g9p-9gw9-jx7f)) | `next` | **16.0.10** | 🟠 **MODERATE** (5.9 CVSS) | DoS en Image Optimizer cuando se usa `remotePatterns`. Atacante puede servir imágenes arbitrariamente grandes causando OOM. |
-| **CVE-2026-29057** ([GHSA-ggv3-7p47-pfv8](https://github.com/advisories/GHSA-ggv3-7p47-pfv8)) | `next` | **16.0.10** | 🟠 **MODERATE** | HTTP Request Smuggling en rewrites. Request `DELETE`/`OPTIONS` con `Transfer-Encoding: chunked` puede bypassear rutas reescritas. |
+| [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) | **zod** | **3.25.76** | 🔴 **HIGH** | DoS: Zod puede agotar memoria al validar colecciones restringidas de gran tamaño. Afecta: dependencia directa + transitiva vía `@vercel/blob`. |
+| [GHSA-xjj6-f33q-929c](https://github.com/advisories/GHSA-xjj6-f33q-929c) | **undici** | <6.29.1 (vía `@vercel/blob`) | 🔴 **HIGH** | DoS por error no manejado en content-encodings excesivos. |
+| [GHSA-2m5v-pch6-74hx](https://github.com/advisories/GHSA-2m5v-pch6-74hx) | **undici** | <6.29.1 (vía `@vercel/blob`) | 🔴 **HIGH** | Bypass de validación de certificados TLS en Agent. |
+| [GHSA-qrxm-fqhp-jwvm](https://github.com/advisories/GHSA-qrxm-fqhp-jwvm) | **undici** | <6.29.1 (vía `@vercel/blob`) | 🔴 **HIGH** | DoS por renegociación TLS 1.2 con cambio de certificado. |
 
 **Parches disponibles:**
-- Next.js **16.0.11+** (CVE-2026-23864)
-- Next.js **16.1.5+** (CVE-2025-59471)
-- Next.js **16.1.7+** (CVE-2026-29057)
-
-**Recomendación:** ⬆️ **Actualizar Next.js a 16.1.7 o superior INMEDIATAMENTE**
-
-```bash
-pnpm update next@16.1.7
-pnpm audit --fix
-```
-
-**Esfuerzo:** Bajo (~30 min)  
-**Riesgo:** Bajo (Next 16.x mantiene compatibilidad en minor versions)  
-**Prioridad:** 🔴 **CRÍTICA**
-
-#### 🟡 Paquetes Desactualizados (no vulnerables pero con updates mayores)
-
-| Paquete | Versión Actual | Última Estable | Notas |
-|---------|----------------|----------------|-------|
-| `next` | 16.0.10 | **16.1.7** | Ver CVEs arriba |
-| `date-fns` | 4.1.0 | 4.1.0 | ✅ Actualizado |
-| `lucide-react` | 0.454.0 | ~0.460.0 | Minor update disponible |
-| `jspdf` | 4.2.1 | **2.5.2** | ⚠️ Versión major muy desactualizada (4.x no es oficial, probablemente typo) |
-
-**Problema con `jspdf`:** El package.json lista `"jspdf": "^4.2.1"` pero la última versión estable es **2.5.2**. Esto sugiere un error en el número de versión o un fork no oficial.
+- `zod@4.6.6+` (última estable: 3.25.76, necesita major update a v4)
+- `undici@6.29.1+` (dependencia transitiva de `@vercel/blob@2.8.0`)
 
 **Recomendación:**
+
+1. **Zod:** Actualizar a v4.6.6+ (⚠️ breaking changes)
 ```bash
-pnpm remove jspdf jspdf-autotable
-pnpm add jspdf@2.5.2 jspdf-autotable@3.8.4
+pnpm update zod@latest
 ```
+Luego verificar que los schemas de validación (ej. `app/actions/*.ts`) sigan funcionando.
 
-Luego verificar que los PDFs de reportes sigan generándose correctamente.
-
-**Esfuerzo:** Bajo (~1 hora testing)  
-**Riesgo:** Medio (puede requerir ajustes en código que genera PDFs)  
-**Prioridad:** 🟡 **MEDIO**
-
-### Dependencias con `latest`
-
-**Paquetes con versión `latest` en `package.json:40-67`:**
-- `@react-email/render: latest`
-- `@supabase/ssr: latest`
-- `@supabase/supabase-js: latest`
-- `@vercel/analytics: latest`
-- `@vercel/blob: latest`
-- `qrcode: latest`
-- `resend: latest`
-
-**Riesgo:** Usar `latest` puede causar **breaking changes inesperados** en deploys automáticos si el paquete lanza una major version.
-
-**Recomendación:** Fijar versiones específicas:
+2. **Undici:** Esperar actualización de `@vercel/blob` o forzar resolución:
 ```json
-"@supabase/ssr": "^0.5.2",
-"@supabase/supabase-js": "^2.47.10",
-"resend": "^4.0.3",
-"qrcode": "^1.5.4"
+// package.json
+"pnpm": {
+  "overrides": {
+    "undici": "^6.29.1"
+  }
+}
 ```
 
-**Esfuerzo:** Bajo (~15 min)  
-**Riesgo:** Muy bajo  
-**Prioridad:** 🟡 **MEDIO**
+**Esfuerzo:** Medio (~2-3 horas testing post-actualización de Zod)  
+**Riesgo:** Medio (Zod v4 puede tener breaking changes en APIs)  
+**Prioridad:** 🔴 **ALTA** (vulnerabilidades de seguridad, pero no de Next.js core)
+
+#### 🟠 Vulnerabilidades Moderadas/Bajas
+
+| CVE | Paquete | Severidad | Impacto |
+|-----|---------|-----------|---------|
+| [GHSA-4qv8-2p9j-2685](https://github.com/advisories/GHSA-4qv8-2p9j-2685) | **undici** (vía `@vercel/blob`) | 🟠 **MODERATE** | DoS: memoria sin límite en parser de EventSource. |
+| [GHSA-9fm3-97px-rjf6](https://github.com/advisories/GHSA-9fm3-97px-rjf6) | **undici** (vía `@vercel/blob`) | 🟠 **MODERATE** | DoS: buffering automático sin límite de PONG en WebSocket. |
+| [GHSA-c6gr-qvv4-5v3f](https://github.com/advisories/GHSA-c6gr-qvv4-5v3f) | **dompurify** (vía `jspdf`) | ⚪ **LOW** | XSS: guard de `attributeName=href` en SMIL se saltea con `application/xhtml+xml`. |
+
+**Nota sobre `jspdf@4.2.1`:** El package.json usa `"jspdf": "^4.2.1"`, pero la última versión oficial estable es **2.5.2**. Sin embargo, pnpm resuelve correctamente a una versión válida. El número de versión mayor probablemente viene de una CDN o build. No es crítico, pero genera confusión.
+
+**Recomendación para jspdf:** Verificar que la versión instalada sea legítima (`pnpm why jspdf`) o considerar downgrade explícito a 2.5.2 si hay dudas.
+
+**Prioridad:** ⚪ **BAJA** (vulnerabilidad de dompurify es low y contexto limitado)
+
+### 🟡 Dependencias con `latest` — Builds No Reproducibles
+
+**Problema:** 7 dependencias críticas usan `"latest"` en `package.json:40-67`:
+
+| Paquete | Declarado en package.json | Resuelto Actualmente | Riesgo |
+|---------|---------------------------|----------------------|--------|
+| `@react-email/render` | `latest` | **2.1.0** | Breaking changes en template rendering |
+| `@supabase/ssr` | `latest` | **0.12.7** | Cambios en API de cookies/sesiones |
+| `@supabase/supabase-js` | `latest` | **2.117.2** | Cambios en queries/RLS |
+| `@vercel/analytics` | `latest` | **2.0.1** | Cambios en API de tracking |
+| `@vercel/blob` | `latest` | **2.8.0** | Cambios en API de storage |
+| `qrcode` | `latest` | **1.5.4** | Cambios en formato de QR |
+| `resend` | `latest` | **6.32.0** | Cambios en API de emails |
+
+**Riesgo:**
+1. **Builds no reproducibles:** Dos instalaciones en diferentes momentos pueden obtener versiones distintas
+2. **Breaking changes inesperados:** Si `@supabase/ssr` lanza v1.0.0 con cambios incompatibles, el próximo deploy puede fallar
+3. **Dificulta debugging:** Imposible saber qué versión exacta causó un bug en producción
+4. **CI inconsistente:** GitHub Actions puede instalar versiones diferentes a Vercel
+
+**Recomendación:** Fijar versiones con caret (`^`) para permitir patches pero no majors:
+
+```json
+"@react-email/render": "^2.1.0",
+"@supabase/ssr": "^0.12.7",
+"@supabase/supabase-js": "^2.117.2",
+"@vercel/analytics": "^2.0.1",
+"@vercel/blob": "^2.8.0",
+"qrcode": "^1.5.4",
+"resend": "^6.32.0"
+```
+
+**Comando:**
+```bash
+# Actualizar package.json con versiones actuales
+pnpm update --save
+```
+
+**Esfuerzo:** Muy bajo (~10 min)  
+**Riesgo:** Ninguno (solo fija el estado actual)  
+**Prioridad:** 🟡 **MEDIO** (importante para estabilidad, no urgente)
 
 ---
 
@@ -776,12 +809,12 @@ jobs:
 | # | Problema | Solución | Esfuerzo | Riesgo | Archivos Afectados |
 |---|----------|----------|----------|--------|-------------------|
 | 1 | **Race condition en stock de entradas** (sobreventa) | Implementar función `create_ticket_atomic` con lock `FOR UPDATE` | 2-3 horas | Bajo | `scripts/`, `app/actions/create-ticket.ts:145` |
-| 2 | **3 CVEs de Next.js sin parchear** (DoS, Request Smuggling) | `pnpm update next@16.1.7` | 30 min | Bajo | `package.json:57` |
 
 ### 🟠 Prioridad ALTA
 
 | # | Problema | Solución | Esfuerzo | Riesgo | Archivos Afectados |
 |---|----------|----------|----------|--------|-------------------|
+| 2 | **Vulnerabilidades en `zod` y `undici`** (4 HIGH) | Actualizar `zod@4.6.6+` + override de `undici` | 2-3 horas | Medio | `package.json`, schemas en `app/actions/` |
 | 3 | **`NEXT_PUBLIC_SITE_URL` sin setear** → Links/QR incorrectos | Setear variable en Vercel + simplificar fallback | 30 min | Bajo | Vercel config, `app/actions/create-ticket.ts:201,258` |
 | 4 | **Logging de `buyer_email` sin enmascarar** (Ley 25.326) | Crear función `maskEmail()` y aplicar en todos los logs | 30 min | Muy bajo | `lib/send-confirmed-ticket-email.ts:74` |
 
@@ -789,18 +822,18 @@ jobs:
 
 | # | Problema | Solución | Esfuerzo | Riesgo | Archivos Afectados |
 |---|----------|----------|----------|--------|-------------------|
-| 5 | **Sin rate limiting** → Vulnerable a spam/DoS | Implementar rate limiting con Upstash | 3-4 horas | Bajo | `middleware.ts`, endpoints `/api/*` |
-| 6 | **Email por cada venta al organizador** (si aplica) | Implementar resumen diario con batching | 4-6 horas | Bajo | Nuevo cron, `app/actions/create-ticket.ts` |
-| 7 | **Paquetes con `latest`** → Breaking changes inesperados | Fijar versiones específicas | 15 min | Muy bajo | `package.json:40-67` |
-| 8 | **`jspdf` versión incorrecta** (4.2.1 vs 2.5.2) | Reinstalar con versión correcta | 1 hora | Medio | `package.json:53`, generación de PDFs |
-| 9 | **Sin tests** → Dificulta mantenimiento | Agregar Jest + tests unitarios básicos | 20-30 horas | Ninguno | Nueva carpeta `__tests__/` |
-| 10 | **Sin CI/CD** → No valida builds antes de deploy | Agregar GitHub Actions workflow | 1-2 horas | Ninguno | `.github/workflows/ci.yml` |
+| 5 | **7 dependencias críticas con `latest`** → Builds no reproducibles | Fijar versiones actuales con caret (`^`) | 10 min | Ninguno | `package.json:40-67` |
+| 6 | **Sin rate limiting** → Vulnerable a spam/DoS | Implementar rate limiting con Upstash | 3-4 horas | Bajo | `middleware.ts`, endpoints `/api/*` |
+| 7 | **Email por cada venta al organizador** (si aplica) | Implementar resumen diario con batching | 4-6 horas | Bajo | Nuevo cron, `app/actions/create-ticket.ts` |
+| 8 | **Sin tests** → Dificulta mantenimiento | Agregar Jest + tests unitarios básicos | 20-30 horas | Ninguno | Nueva carpeta `__tests__/` |
+| 9 | **Sin CI/CD** → No valida builds antes de deploy | Agregar GitHub Actions workflow | 1-2 horas | Ninguno | `.github/workflows/ci.yml` |
 
 ### ⚪ Prioridad BAJA
 
 | # | Problema | Solución | Esfuerzo | Riesgo | Archivos Afectados |
 |---|----------|----------|----------|--------|-------------------|
-| 11 | **Variables de entorno obsoletas** | Eliminar `PURELYMAIL_FROM`, `SUPPORT_EMAIL`, etc. | 5 min | Ninguno | Vercel config |
+| 10 | **Variables de entorno obsoletas** | Eliminar `PURELYMAIL_FROM`, `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` | 5 min | Ninguno | Vercel config |
+| 11 | **Vulnerabilidad LOW en `dompurify`** (vía jspdf) | Esperar actualización de jspdf o forzar override | 1 hora | Bajo | `package.json` |
 | 12 | **Sin validación de formato de email** | Agregar regex o librería de validación | 1 hora | Bajo | `app/actions/create-ticket.ts:39` |
 | 13 | **Sin sanitización de HTML** | Usar `DOMPurify` o similar en campos de texto | 2 horas | Bajo | Componentes que renderizan `description`, etc. |
 
@@ -810,41 +843,51 @@ jobs:
 
 **Tekateka** es una ticketera funcional en producción con un stack moderno (Next.js 16 App Router + Supabase + Mercado Pago). La arquitectura es sólida y las prácticas de seguridad básicas están bien implementadas (RLS, webhooks firmados, auth con SSR).
 
+### ✅ Mejoras Recientes (PR #13)
+
+El PR #13 ya mergeado realizó actualizaciones importantes:
+- ✅ Next.js 16.0.10 → **16.4.6** (parches de CVE-2026-23864, CVE-2025-59471, CVE-2026-29057)
+- ✅ Centralización de configuración de emails en `lib/email-config.ts`
+- ✅ Migración de dominio a `tekateka.com.ar`
+
 ### 🔴 Hallazgos Críticos (Acción Inmediata)
 
 1. **Race condition en reserva de tickets:** Sin lock transaccional, dos usuarios pueden comprar la última entrada simultáneamente → **sobreventa**.
-2. **Vulnerabilidades de Next.js:** 3 CVEs sin parchear (1 HIGH, 2 MODERATE) que permiten DoS y request smuggling.
 
 ### 🟠 Hallazgos de Alta Prioridad
 
+2. **Vulnerabilidades en dependencias:** 4 CVEs HIGH en `zod` (DoS por memoria) y `undici` (DoS + bypass TLS).
 3. **Variable `NEXT_PUBLIC_SITE_URL` faltante:** Puede causar QR codes y links de pago con URLs incorrectas.
 4. **Logging de emails personales:** Incumplimiento potencial de Ley 25.326 de Protección de Datos.
 
 ### 🟡 Deuda Técnica Importante
 
-5. **Sin rate limiting:** APIs vulnerables a spam y abuso.
-6. **Sin tests ni CI/CD:** Dificulta detección de regresiones.
-7. **Dependencias desactualizadas:** Incluyendo una versión incorrecta de `jspdf`.
+5. **7 dependencias críticas con `latest`:** Builds no reproducibles, riesgo de breaking changes inesperados (@supabase/*, resend, qrcode, etc.).
+6. **Sin rate limiting:** APIs vulnerables a spam y abuso.
+7. **Sin tests ni CI/CD:** Dificulta detección de regresiones.
 
 ### ✅ Puntos Fuertes
 
+- Next.js actualizado con parches de seguridad (PR #13)
 - RLS configurado correctamente en todas las tablas
 - Webhook de Mercado Pago seguro (HMAC + validación de timestamp)
 - No hay secretos expuestos en código ni git
 - Uso correcto de `service_role` solo en operaciones admin
+- Configuración de emails centralizada (PR #13)
 - Arquitectura modular y escalable
 
-**Riesgo General en Producción:** 🟠 **MEDIO-ALTO** (principalmente por sobreventa y CVEs)
+**Riesgo General en Producción:** 🟠 **MEDIO** (principalmente por sobreventa y vulnerabilidades en deps no-core)
 
 ---
 
 **Próximos pasos sugeridos:**
 
-1. Parchear CVEs de Next.js (30 min)
-2. Implementar `create_ticket_atomic` con lock (2-3 horas)
-3. Setear `NEXT_PUBLIC_SITE_URL` en Vercel (5 min)
-4. Enmascarar emails en logs (30 min)
-5. Planificar implementación de rate limiting y tests (siguiente sprint)
+1. Implementar `create_ticket_atomic` con lock (2-3 horas) — **CRÍTICO**
+2. Actualizar zod + override undici (2-3 horas) — **ALTO**
+3. Setear `NEXT_PUBLIC_SITE_URL` en Vercel (5 min) — **ALTO**
+4. Fijar versiones de paquetes con `latest` (10 min) — **MEDIO**
+5. Enmascarar emails en logs (30 min) — **ALTO**
+6. Planificar implementación de rate limiting y tests (siguiente sprint)
 
 ---
 
