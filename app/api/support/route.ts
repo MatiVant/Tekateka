@@ -2,11 +2,19 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS, rateLimitMessage } from "@/lib/rate-limit"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const categories = new Set(["Compra o pago", "Entrada o QR", "Problema técnico", "Otro"])
 const escapeHtml = (value: string) => value.replace(/[&<>\"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" } as Record<string, string>)[character] || character)
 
 export async function POST(request: Request) {
+  const identifier = getClientIdentifier(request)
+  const rateLimit = await checkRateLimit(identifier, "/api/support", RATE_LIMITS.support)
+  
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: rateLimitMessage(rateLimit.resetAt, 3600) }, { status: 429 })
+  }
   const body = await request.json().catch(() => null)
   const buyerName = String(body?.buyerName || "").trim().slice(0, 120)
   const buyerEmail = String(body?.buyerEmail || "").trim().toLowerCase().slice(0, 180)
@@ -41,9 +49,8 @@ export async function POST(request: Request) {
     })
     if (emailError) {
       console.error("[support] Error de Resend al notificar soporte:", {
-        error: emailError,
+        error: redactForLog(emailError),
         supportRequestId: supportRequest.id,
-        resendErrorMessage: emailError.message
       })
       return NextResponse.json({ error: "La consulta se guardó, pero no pudimos enviarla al correo de soporte." }, { status: 502 })
     }

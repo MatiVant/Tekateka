@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/admin"
 import { getProducerAccessToken } from "@/lib/mercadopago"
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS, rateLimitMessage } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
+  const identifier = getClientIdentifier(request)
+  const rateLimit = await checkRateLimit(identifier, "/api/mercadopago/checkout", RATE_LIMITS.checkout)
+
+  if (!rateLimit.success) {
+    return NextResponse.json({ error: rateLimitMessage(rateLimit.resetAt, 60) }, { status: 429 })
+  }
   const { ticketId, ticketIds } = await request.json().catch(() => ({}))
   const ids = Array.isArray(ticketIds) && ticketIds.length ? ticketIds : ticketId ? [ticketId] : []
   if (!ids.length || ids.length > 10) return NextResponse.json({ error: "Tickets inválidos" }, { status: 400 })

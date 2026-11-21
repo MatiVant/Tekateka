@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/admin';
+import { redactForLog } from '@/lib/mask-personal-data';
 
 export async function updateTicketReceipt(
   ticketId: string,
@@ -8,10 +9,7 @@ export async function updateTicketReceipt(
   notes?: string
 ) {
   try {
-    console.log('[v0] Server Action - Actualizando ticket con comprobante');
-    console.log('[v0] Ticket ID:', ticketId);
-    console.log('[v0] Receipt URL:', receiptUrl);
-    console.log('[v0] Notes:', notes);
+    console.log("[v0] Server Action - Actualizando ticket con comprobante", { ticketId })
 
     const supabase = createClient();
     
@@ -27,14 +25,14 @@ export async function updateTicketReceipt(
       .single();
 
     if (error) {
-      console.error('[v0] Error al actualizar ticket:', error);
+      console.error("[v0] Error al actualizar ticket:", redactForLog(error))
       throw new Error(error.message);
     }
 
-    console.log('[v0] Ticket actualizado exitosamente:', data);
+    console.log("[v0] Ticket actualizado exitosamente", { ticketId: data?.id })
     return data;
   } catch (error) {
-    console.error('[v0] Error en updateTicketReceipt:', error);
+    console.error("[v0] Error en updateTicketReceipt:", redactForLog(error))
     throw error;
   }
 }

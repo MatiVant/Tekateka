@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/admin"
 import { getProducerAccessToken } from "@/lib/mercadopago"
 import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null)
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
           html: `<p>Hola ${organizer.full_name || ""},</p><p>Mercado Pago informó un pago recibido por un link externo.</p><ul><li><strong>Importe:</strong> ${payment.transaction_amount ?? "No informado"} ${payment.currency_id ?? ""}</li><li><strong>Payment ID:</strong> ${String(paymentId)}</li><li><strong>Estado:</strong> ${payment.status ?? "No informado"}</li><li><strong>Email del pagador:</strong> ${payment.payer?.email ?? "No informado"}</li></ul><p>Revisá el pago en Mercado Pago y confirmá manualmente la entrada si corresponde.</p>`,
         })
       } catch (emailError) {
-        console.error("[v0] No se pudo enviar aviso de pago externo:", emailError)
+        console.error("[v0] No se pudo enviar aviso de pago externo:", redactForLog(emailError))
       }
     }
     return NextResponse.json({ received: true, requires_review: true })

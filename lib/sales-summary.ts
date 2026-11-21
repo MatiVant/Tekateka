@@ -42,6 +42,32 @@ export function getSummaryRange(period: SalesSummaryPeriod, now = new Date()): P
   return { start, end, label }
 }
 
+export function getArgentinaDayRange(dayKey: string): PeriodRange | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null
+  const start = new Date(`${dayKey}T00:00:00-03:00`)
+  if (Number.isNaN(start.getTime())) return null
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
+  return { start, end, label: formatDate(start) }
+}
+
+export function getPreviousArgentinaDayRange(now = new Date()): PeriodRange {
+  const todayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now)
+  const startOfToday = new Date(`${todayKey}T00:00:00-03:00`)
+  const yesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000)
+  const yesterdayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(yesterday)
+  return getArgentinaDayRange(yesterdayKey) ?? { start: yesterday, end: startOfToday, label: formatDate(yesterday) }
+}
+
 export function getScheduledSummaryRange(frequency: Exclude<SalesSummaryFrequency, "off">, now = new Date()): PeriodRange {
   if (frequency === "weekly") return getSummaryRange("week", now)
   if (frequency === "biweekly") {
@@ -99,13 +125,18 @@ async function buildOrganizerRows(organizerId: string, range: PeriodRange) {
   })
 }
 
-export async function sendOrganizerSalesSummary(organizer: { id: string; email: string; full_name?: string | null }, period: SalesSummaryPeriod, idempotencyKey?: string, rangeOverride?: PeriodRange) {
+export async function sendOrganizerSalesSummary(organizer: { id: string; email: string; full_name?: string | null }, period: SalesSummaryPeriod, idempotencyKey?: string, rangeOverride?: PeriodRange, options?: { skipWithoutSales?: boolean }) {
   if (!process.env.RESEND_API_KEY) throw new Error("El envío de correo no está configurado.")
   const range = rangeOverride ?? getSummaryRange(period)
-  const rows = await buildOrganizerRows(organizer.id, range)
+  const activityRows = (await buildOrganizerRows(organizer.id, range)).filter((row) => options?.skipWithoutSales ? row.sold + row.doorSold > 0 : true)
+  const rows = activityRows
   const totalSold = rows.reduce((sum, row) => sum + row.sold + row.doorSold, 0)
   const totalGross = rows.reduce((sum, row) => sum + row.gross + row.doorGross, 0)
   const totalPending = rows.reduce((sum, row) => sum + row.pending, 0)
+
+  if (options?.skipWithoutSales && totalSold === 0) {
+    return { totalSold: 0, totalGross: 0, totalPending: 0, range, skipped: true as const }
+  }
   const tableRows = rows.map((row) => `<tr><td style="padding:14px 10px;border-top:1px solid #e7dcc8"><strong>${escapeHtml(row.title)}</strong><br><span style="font-size:12px;color:#6b6258">${formatEventDate(row.eventDate)} · ${escapeHtml(row.venue || "Sin espacio")}</span></td><td style="padding:14px 10px;border-top:1px solid #e7dcc8">${statusLabel(row.status)}</td><td style="padding:14px 10px;border-top:1px solid #e7dcc8;text-align:right"><strong>${row.sold + row.doorSold}</strong><br><span style="font-size:12px;color:#6b6258">online ${row.sold} · puerta ${row.doorSold}</span></td><td style="padding:14px 10px;border-top:1px solid #e7dcc8;text-align:right">${formatCurrency(row.gross + row.doorGross)}</td><td style="padding:14px 10px;border-top:1px solid #e7dcc8;text-align:right">${row.pending}</td></tr>`).join("")
   const resend = new Resend(process.env.RESEND_API_KEY)
   const { error } = await resend.emails.send({
@@ -115,12 +146,12 @@ export async function sendOrganizerSalesSummary(organizer: { id: string; email: 
     html: `<main style="font-family:Arial,sans-serif;max-width:820px;margin:auto;padding:24px;background:#f4eddf;color:#171717"><section style="background:#fffdf7;border:1px solid #e7dcc8;border-radius:18px;padding:26px"><div style="border-bottom:4px solid #f4511e;padding-bottom:18px"><strong style="font-size:28px">TekaTeka</strong><p style="margin:8px 0 0;color:#6b6258">Informe de actividad · ${range.label}</p></div><h1 style="font-size:25px;margin:24px 0 8px">Resumen de ventas</h1><p style="margin-top:0">Hola ${escapeHtml(organizer.full_name || "")},</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin:22px 0"><div style="background:#f4eddf;border-radius:12px;padding:14px 16px;min-width:150px"><div style="font-size:12px;color:#6b6258">Entradas vendidas</div><strong style="font-size:22px">${totalSold}</strong></div><div style="background:#f4eddf;border-radius:12px;padding:14px 16px;min-width:150px"><div style="font-size:12px;color:#6b6258">Recaudación bruta</div><strong style="font-size:22px">${formatCurrency(totalGross)}</strong></div><div style="background:#f4eddf;border-radius:12px;padding:14px 16px;min-width:150px"><div style="font-size:12px;color:#6b6258">Pendientes</div><strong style="font-size:22px">${totalPending}</strong></div></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr><th style="text-align:left;padding:10px">Evento</th><th style="text-align:left;padding:10px">Estado</th><th style="text-align:right;padding:10px">Entradas</th><th style="text-align:right;padding:10px">Recaudación</th><th style="text-align:right;padding:10px">Pendientes</th></tr></thead><tbody>${tableRows || '<tr><td colspan="5" style="padding:18px;text-align:center">No hay eventos para mostrar.</td></tr>'}</tbody></table></div><p style="font-size:12px;color:#6b6258;margin-top:22px">El total incluye ventas online y ventas registradas en puerta. Se excluyen entradas canceladas.</p></section></main>`, 
   }, idempotencyKey ? { idempotencyKey } : undefined)
   if (error) throw error
-  return { totalSold, totalGross, totalPending, range }
+  return { totalSold, totalGross, totalPending, range, skipped: false as const }
 }
 
-export async function getOrganizerRecipients() {
+export async function getOrganizerRecipients(roles: string[] = ["organizer"]) {
   const supabase = createAdminClient()
-  const { data, error } = await supabase.from("profiles").select("id, email, full_name").eq("role", "organizer").not("email", "is", null)
+  const { data, error } = await supabase.from("profiles").select("id, email, full_name").in("role", roles).not("email", "is", null)
   if (error) throw error
   return (data ?? []).filter((organizer): organizer is typeof organizer & { email: string } => Boolean(organizer.email))
 }

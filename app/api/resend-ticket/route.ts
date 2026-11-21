@@ -4,11 +4,19 @@ import { Resend } from "resend"
 import { requireAuth } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS, rateLimitMessage } from "@/lib/rate-limit"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
+    const identifier = getClientIdentifier(request)
+    const rateLimit = await checkRateLimit(identifier, "/api/resend-ticket", RATE_LIMITS.resendTicket)
+    
+    if (!rateLimit.success) {
+      return NextResponse.json({ error: rateLimitMessage(rateLimit.resetAt, 600) }, { status: 429 })
+    }
     const body = await request.json()
     const ticketIds = Array.isArray(body.ticketIds) ? [...new Set(body.ticketIds.filter(Boolean))] : body.ticketId ? [body.ticketId] : []
     if (ticketIds.length === 0 || ticketIds.some((id: unknown) => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id))) return NextResponse.json({ error: "Seleccioná entradas válidas" }, { status: 400 })
@@ -45,16 +53,15 @@ export async function POST(request: Request) {
     })
     if (emailError) {
       console.error("[resend-ticket] Error de Resend:", {
-        error: emailError,
+        error: redactForLog(emailError),
         ticketIds,
-        buyerEmail: ticket.buyer_email,
-        resendErrorMessage: emailError.message
+        recipient: redactForLog(ticket.buyer_email),
       })
       throw emailError
     }
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[v0] Error al reenviar entrada:", error)
+    console.error("[v0] Error al reenviar entrada:", redactForLog(error))
     return NextResponse.json({ error: "No se pudo reenviar la entrada" }, { status: 500 })
   }
 }

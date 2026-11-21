@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 import { formatArgentinaDateTime } from "@/lib/date"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -200,12 +201,12 @@ export async function POST(request: NextRequest) {
       })
 
       if (emailError) {
-        console.error("[v0] Error al enviar email de rechazo:", emailError)
+        console.error("[v0] Error al enviar email de rechazo:", redactForLog(emailError))
       } else {
-        console.log("[v0] Email de rechazo enviado exitosamente:", emailData)
+        console.log("[v0] Email de rechazo enviado", { emailId: emailData?.id })
       }
     } catch (emailError) {
-      console.error("[v0] Error al enviar email de rechazo:", emailError)
+      console.error("[v0] Error al enviar email de rechazo:", redactForLog(emailError))
     }
 
     return NextResponse.json({

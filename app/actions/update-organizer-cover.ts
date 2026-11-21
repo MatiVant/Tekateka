@@ -13,9 +13,12 @@ export async function updateOrganizerCover(organizerProfileId: string, coverUrl:
   if (coverUrl !== null) {
     try {
       const parsedUrl = new URL(coverUrl)
+      const isSupabaseStorage = parsedUrl.hostname.includes(".supabase.co") && parsedUrl.pathname.includes("/storage/v1/object/public/")
+      const isVercelBlob = parsedUrl.hostname.endsWith(".public.blob.vercel-storage.com")
+      
       if (
         parsedUrl.protocol !== "https:" ||
-        !parsedUrl.hostname.endsWith(".public.blob.vercel-storage.com") ||
+        (!isSupabaseStorage && !isVercelBlob) ||
         coverUrl.length > 2048
       ) {
         return { error: "La URL de la portada no es válida." }

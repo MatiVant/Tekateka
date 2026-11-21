@@ -9,6 +9,27 @@ import { formatArgentinaDateTime } from "@/lib/date"
 import { EMAIL_CONFIG } from "@/lib/email-config"
 import { TICKET_TERMS_VERSION } from "@/lib/legal"
 import { calculatePlatformFee, getPlatformFeePercent } from "@/lib/platform-fees"
+import { checkRateLimit, identifierFromHeaders, RATE_LIMITS } from "@/lib/rate-limit"
+import { redactForLog } from "@/lib/mask-personal-data"
+
+async function allowPurchaseEmail() {
+  try {
+    const requestHeaders = await headers()
+    const rate = await checkRateLimit(
+      identifierFromHeaders((name) => requestHeaders.get(name)),
+      "purchase-email",
+      RATE_LIMITS.purchaseEmail,
+    )
+    if (!rate.success) {
+      console.error("[email] No se envió el correo de la reserva para evitar demasiados envíos seguidos")
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error("[email] No se pudo evaluar el límite de envíos", redactForLog(error))
+    return true
+  }
+}
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -195,7 +216,7 @@ export async function createTicket(data: CreateTicketData) {
 
     if (isFreeTicket) {
       try {
-        if (resend && data.sendEmail !== false && normalizedPaymentMethod !== "free") {
+        if (resend && data.sendEmail !== false && normalizedPaymentMethod !== "free" && await allowPurchaseEmail()) {
           const { data: eventDetails } = await supabase.from("events").select("title, event_date, venue, location_url").eq("id", data.event_id).single()
           const requestHeaders = await headers()
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
@@ -213,7 +234,7 @@ export async function createTicket(data: CreateTicketData) {
           })
         }
       } catch (freeEmailError) {
-        console.error("[v0] Error al enviar QR de entrada gratuita:", freeEmailError)
+        console.error("[v0] Error al enviar QR de entrada gratuita:", redactForLog(freeEmailError))
       }
       return createdTicket
     }
@@ -222,7 +243,7 @@ export async function createTicket(data: CreateTicketData) {
     // Cuando la compra incluye varias entradas, se crean varios tickets pero solo
     // se debe enviar un único email consolidado (controlado por data.sendEmail).
     try {
-      if (data.sendEmail !== false) {
+      if (data.sendEmail !== false && await allowPurchaseEmail()) {
         // La restricción única en purchase_notifications hace idempotente el envío:
         // recargar la pantalla o reintentar la compra no vuelve a notificar.
         let shouldSendEmail = true
@@ -271,13 +292,13 @@ export async function createTicket(data: CreateTicketData) {
         }
       }
     } catch (emailError) {
-      console.error("[v0] Error al enviar email:", emailError)
+      console.error("[v0] Error al enviar email:", redactForLog(emailError))
       // No lanzar error, el ticket ya fue creado
     }
 
     return createdTicket
   } catch (error) {
-    console.error("[v0] Error en createTicket:", error)
+    console.error("[v0] Error en createTicket:", redactForLog(error))
     throw error
   }
 }

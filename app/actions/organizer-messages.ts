@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { Resend } from "resend"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -97,7 +98,7 @@ export async function sendOrganizerMessage(formData: {
         })
     }
   } catch (err) {
-    console.log("[v0] sendOrganizerMessage - email error:", err instanceof Error ? err.message : String(err))
+    console.log("[v0] sendOrganizerMessage - email error:", redactForLog(err instanceof Error ? err.message : String(err)))
   }
 
   revalidatePath("/admin")
@@ -143,7 +144,7 @@ export async function replyToOrganizerMessage(formData: { messageId: string; bod
       })
     }
   } catch (err) {
-    console.log("[v0] replyToOrganizerMessage - email error:", err instanceof Error ? err.message : String(err))
+    console.log("[v0] replyToOrganizerMessage - email error:", redactForLog(err instanceof Error ? err.message : String(err)))
   }
 
   revalidatePath("/superadmin")
