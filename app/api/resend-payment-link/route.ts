@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
+      replyTo: EMAIL_CONFIG.replyTo,
       to: ticket.buyer_email,
       subject: `Enlace para continuar tu compra: ${event?.title || "tu evento"}`,
       html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>.</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event?.event_date)}</strong></p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,

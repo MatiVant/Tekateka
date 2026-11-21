@@ -40,6 +40,7 @@ export async function sendMarketingCampaign(formData: { subject: string; body: s
     const unsubscribeUrl = `${siteUrl}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${createUnsubscribeToken(email)}`
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
+      replyTo: EMAIL_CONFIG.replyTo,
       to: email,
       subject,
       html: `<main style="max-width:620px;margin:auto;font-family:Arial,sans-serif;line-height:1.6;color:#171717"><div style="white-space:pre-wrap">${escapeHtml(body)}</div><hr style="margin:32px 0;border:0;border-top:1px solid #ddd"><p style="font-size:12px;color:#666">Recibís este email porque aceptaste recibir novedades y promociones de TekaTeka al comprar una entrada. <a href="${unsubscribeUrl}">Desuscribirme de emails promocionales</a>.</p></main>`,

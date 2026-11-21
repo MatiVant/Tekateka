@@ -60,6 +60,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
   const resend = new Resend(process.env.RESEND_API_KEY)
   const { data: emailData, error: emailError } = await resend.emails.send({
     from: EMAIL_CONFIG.from,
+    replyTo: EMAIL_CONFIG.replyTo,
     to: firstTicket.buyer_email,
     subject: `Tu entrada está confirmada: ${event.title}`,
     html: `<main style="max-width:620px;margin:0 auto;padding:28px 18px;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><h1>Tu entrada está confirmada</h1><p>Hola <strong>${firstTicket.buyer_name}</strong>, tu pago fue confirmado.</p><p><strong>${event.title}</strong><br>${formatArgentinaDateTime(event.event_date)}<br><strong>Dirección:</strong><br>${venue}</p><p><a href="${mapUrl}" style="display:inline-block;padding:11px 16px;background:#f4511e;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">${mapLabel}</a></p>${ticketCards}<p>Guardá este email o descargá tus entradas. Los códigos QR son personales.</p><p style="font-size:12px;color:#6b6258">Este correo es automático. Si tenés dudas, escribinos a consultas@tekateka.com.ar.</p></main>`,

@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
     try {
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: EMAIL_CONFIG.from,
+        replyTo: EMAIL_CONFIG.replyTo,
         to: ticket.buyer_email,
         subject: `❌ Tu pago para ${ticket.events.title} no pudo ser verificado`,
         html: `
