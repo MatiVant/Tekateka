@@ -106,8 +106,6 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
     if (isLoggingOut) return
     setIsLoggingOut(true)
     const supabase = createClient()
-    setUser(null)
-    setProfile(null)
     const { error } = await supabase.auth.signOut()
 
     if (error) {
@@ -125,7 +123,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#e7dcc8] bg-[#f4eddf]/95 backdrop-blur-md">
+    <nav className="relative sticky top-0 z-50 border-b border-[#e7dcc8] bg-[#f4eddf]/95 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-[4.25rem] items-center justify-between">
           <Link href="/" className="flex items-center gap-2" aria-label="TekaTeka, volver al inicio">
@@ -210,7 +208,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
             {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}
             {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets</Link></Button>}
             <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil</Link></Button>
-            <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}><LogOut className="mr-2 h-4 w-4" />Salir</Button>
+            <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}><LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}</Button>
           </> : <>
             <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
             <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
@@ -218,6 +216,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
           </div>
         </div>}
       </div>
+      {isLoggingOut && <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#f4eddf]/95 px-4" role="status" aria-live="polite"><span className="text-sm font-semibold">Cerrando sesión…</span></div>}
     </nav>
   )
 }

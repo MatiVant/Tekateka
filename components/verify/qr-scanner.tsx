@@ -85,13 +85,14 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
 
     try {
       if (checkerToken) {
-        const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, qrCode: qrCode.trim() }) })
+        const response = await fetch('/api/check-ticket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: checkerToken, action: 'check_in', qrCode: qrCode.trim() }) })
         const payload = await response.json()
         if (!response.ok) {
           setResult({ type: 'error', message: payload.error || 'No se pudo verificar' })
           return
         }
         setResult({ type: payload.type, message: payload.message, ticket: payload.ticket })
+        if (payload.type === 'success' && typeof navigator !== 'undefined') navigator.vibrate?.(100)
         return
       }
 
@@ -151,11 +152,24 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
         return;
       }
 
+      const { data: updatedTicket, error: updateError } = await supabase
+        .from('tickets')
+        .update({ status: 'used', verified_at: new Date().toISOString(), verified_by: userId })
+        .eq('id', ticket.id)
+        .eq('status', 'confirmed')
+        .select('id')
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!updatedTicket) {
+        setResult({ type: 'warning', message: 'Este ticket ya fue utilizado anteriormente.', ticket: { ...ticket, status: 'used' } });
+        return;
+      }
       setResult({
         type: 'success',
-        message: 'Ticket válido. Confirmá el ingreso para marcarlo como usado.',
-        ticket: { ...ticket, status: 'confirmed' },
+        message: 'Ingreso registrado correctamente.',
+        ticket: { ...ticket, status: 'used' },
       });
+      if (typeof navigator !== 'undefined') navigator.vibrate?.(100);
     } catch (error) {
       console.error('[v0] Error al verificar ticket:', error);
       setResult({

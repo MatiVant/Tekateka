@@ -166,7 +166,7 @@ export async function POST(request: Request) {
       }
       return NextResponse.json({ error: "El estado de la entrada cambió. Volvé a verificarla." }, { status: 409 })
     }
-    return NextResponse.json({ type: "success", message: action === "manual_check_in" ? "Ingreso manual registrado correctamente." : "Entrada verificada correctamente.", ticket: ticketDetails(ticket, event, "used") })
+    return NextResponse.json({ type: "success", message: action === "manual_check_in" ? "Ingreso manual registrado correctamente." : "Ingreso registrado correctamente.", ticket: ticketDetails(ticket, event, "used") })
   } catch {
     return NextResponse.json({ error: "No se pudo verificar la entrada" }, { status: 500 })
   }

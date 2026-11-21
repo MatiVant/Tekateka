@@ -275,20 +275,30 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
       return
     }
     const missingFields: string[] = []
-    if (!title.trim()) missingFields.push("Título del evento")
-    if (!eventDate) missingFields.push("Fecha del evento")
-    if (!eventTime) missingFields.push("Hora de inicio")
-    if (!venueId && !venue.trim()) missingFields.push("Lugar")
-    if (venues.length > 0 && !venueId) missingFields.push("Espacio del catálogo")
-    if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) missingFields.push("Total de entradas")
-    if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) missingFields.push("Precio")
-    if (!imageUrl.trim()) missingFields.push("Imagen del evento")
-    if (!event && audienceTags.length < 3) missingFields.push("Al menos 3 estilos del evento")
+    let firstMissingFieldId: string | null = null
+    const addMissingField = (label: string, fieldId: string) => {
+      missingFields.push(label)
+      if (!firstMissingFieldId) firstMissingFieldId = fieldId
+    }
+    if (!title.trim()) addMissingField("Título del evento", "title")
+    if (!eventDate) addMissingField("Fecha del evento", "eventDate")
+    if (!eventTime) addMissingField("Hora de inicio", "eventTime")
+    if (!venueId && !venue.trim()) addMissingField("Lugar", "venue")
+    if (venues.length > 0 && !venueId) addMissingField("Espacio del catálogo", "venue")
+    if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) addMissingField("Total de entradas", "totalTickets")
+    if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) addMissingField("Precio", "price")
+    if (!imageUrl.trim()) addMissingField("Imagen del evento", "image-upload")
+    if (!event && audienceTags.length < 3) addMissingField("Al menos 3 estilos del evento", "audience-tags")
 
     if (missingFields.length > 0) {
       const message = `Completá: ${missingFields.join(", ")}.`
       setFormError(message)
       toast({ variant: "destructive", title: "Faltan datos obligatorios", description: message })
+      window.requestAnimationFrame(() => {
+        const firstInvalidField = firstMissingFieldId ? document.getElementById(firstMissingFieldId) : null
+        firstInvalidField?.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (firstInvalidField instanceof HTMLElement && firstInvalidField.tagName !== "DIV") firstInvalidField.focus({ preventScroll: true })
+      })
       return
     }
     setIsLoading(true)
@@ -399,7 +409,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="relative space-y-6">
+    <form noValidate onSubmit={handleSubmit} onWheelCapture={(event) => { if (event.target instanceof HTMLInputElement && event.target.type === "number") event.target.blur() }} className="relative space-y-6">
       {formError && <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
       {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 rounded-lg bg-background/80 backdrop-blur-sm">
@@ -444,7 +454,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
           <Label>Estilo del evento <span className="font-normal text-muted-foreground">(obligatorio: elegí al menos 3, hasta 3)</span></Label>
           <p className="mt-1 text-xs text-muted-foreground">Elegí los tres estilos que mejor describen el espectáculo{!event && ` (${audienceTags.length}/3 seleccionados)`}.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div id="audience-tags" className="flex flex-wrap gap-2" tabIndex={-1}>
           {audienceTagOptions.map((tag) => {
             const selected = audienceTags.includes(tag.toLowerCase())
             return <button key={tag} type="button" onClick={() => setAudienceTags((current) => selected ? current.filter((item) => item !== tag.toLowerCase()) : current.length < 3 ? [...current, tag.toLowerCase()] : current)} className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/60"}`} aria-pressed={selected}>{tag}</button>
