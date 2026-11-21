@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character)
@@ -31,12 +32,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (nonBuyerRecipients.length > 0 && profile?.role !== "superadmin") return NextResponse.json({ error: "Los organizadores solo pueden enviar a compradores confirmados" }, { status: 403 })
 
   const result = await resend.emails.send({
-    from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+    from: EMAIL_CONFIG.from,
     to: recipients,
-    replyTo: process.env.PURELYMAIL_FROM || "consultas@tekateka.com.ar",
+    replyTo: EMAIL_CONFIG.replyTo,
     subject,
     html: `<main style="max-width:620px;margin:0 auto;padding:28px 18px;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><h1>${escapeHtml(subject)}</h1><p style="white-space:pre-wrap;line-height:1.6">${escapeHtml(message)}</p><p style="font-size:13px;color:#6b6258">Evento: ${escapeHtml(event.title)}</p></main>`,
   })
-  if (result.error) return NextResponse.json({ error: result.error.message || "Resend rechazó el envío" }, { status: 502 })
+  if (result.error) {
+    console.error("[buyer-notice] Error de Resend:", {
+      error: result.error,
+      eventId: id,
+      recipients: recipients.length,
+      resendErrorMessage: result.error.message
+    })
+    return NextResponse.json({ error: result.error.message || "Resend rechazó el envío" }, { status: 502 })
+  }
   return NextResponse.json({ success: true, sent: recipients.length, emailId: result.data?.id ?? null })
 }

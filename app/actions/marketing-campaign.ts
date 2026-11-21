@@ -4,6 +4,7 @@ import { Resend } from "resend"
 import { requireAuth } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { createUnsubscribeToken } from "@/lib/marketing"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -32,13 +33,13 @@ export async function sendMarketingCampaign(formData: { subject: string; body: s
   const blocked = new Set((unsubscribes ?? []).map((row) => row.email.trim().toLowerCase()))
   const recipients = [...new Set((tickets ?? []).map((ticket) => ticket.buyer_email.trim().toLowerCase()))]
     .filter((email) => email && !blocked.has(email))
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar").replace(/\/$/, "")
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar").replace(/\/$/, "")
   let sent = 0
 
   for (const email of recipients) {
     const unsubscribeUrl = `${siteUrl}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${createUnsubscribeToken(email)}`
     const result = await resend.emails.send({
-      from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+      from: EMAIL_CONFIG.from,
       to: email,
       subject,
       html: `<main style="max-width:620px;margin:auto;font-family:Arial,sans-serif;line-height:1.6;color:#171717"><div style="white-space:pre-wrap">${escapeHtml(body)}</div><hr style="margin:32px 0;border:0;border-top:1px solid #ddd"><p style="font-size:12px;color:#666">Recibís este email porque aceptaste recibir novedades y promociones de TekaTeka al comprar una entrada. <a href="${unsubscribeUrl}">Desuscribirme de emails promocionales</a>.</p></main>`,

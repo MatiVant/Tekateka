@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+        from: EMAIL_CONFIG.from,
         to: ticket.buyer_email,
         subject: `❌ Tu pago para ${ticket.events.title} no pudo ser verificado`,
         html: `

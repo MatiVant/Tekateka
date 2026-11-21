@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
 import { getCurrentUser } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 import { TICKET_TERMS_VERSION } from "@/lib/legal"
 import { calculatePlatformFee, getPlatformFeePercent } from "@/lib/platform-fees"
 
@@ -198,14 +199,14 @@ export async function createTicket(data: CreateTicketData) {
           const { data: eventDetails } = await supabase.from("events").select("title, event_date, venue, location_url").eq("id", data.event_id).single()
           const requestHeaders = await headers()
           const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `https://${forwardedHost}` : "https://tktk.buholabs.com.ar")
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `https://${forwardedHost}` : "https://tekateka.com.ar")
           const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(data.qr_code)}`
           const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
           const venue = eventDetails?.venue || "Ubicación del evento"
           const mapUrl = eventDetails?.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
           const mapLabel = eventDetails?.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
           await resend.emails.send({
-            from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+            from: EMAIL_CONFIG.from,
             to: buyerEmail,
             subject: `Tu entrada gratuita: ${eventDetails?.title || "TekaTeka"}`,
             html: `<!doctype html><html><body style="margin:0;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><main style="max-width:620px;margin:auto;padding:28px 18px"><header style="padding:12px 0 22px;border-bottom:4px solid #f4511e"><div style="font-size:34px;font-weight:900;letter-spacing:-2px">Te<span style="color:#f4511e">k</span>aTeka</div><div style="margin-top:10px;font-size:11px;letter-spacing:4px;text-transform:uppercase">Más cultura. Más encuentros.</div></header><section style="background:#fffdf7;border:1px solid #e7dcc8;border-radius:0 0 18px 18px;padding:30px;text-align:center"><p style="color:#f4511e;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Entrada gratuita</p><h1 style="font-size:30px;letter-spacing:-1px">Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><div style="margin:26px 0;padding:24px;background:#fff;border:1px solid #e7dcc8;border-radius:16px"><p><strong>${eventDetails?.event_date ? formatArgentinaDateTime(eventDetails.event_date) : ""}</strong></p><p><strong>Dirección:</strong><br>${venue}</p><p><a href="${mapUrl}" style="display:inline-block;padding:11px 16px;background:#f4511e;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">${mapLabel}</a></p><img src="${qrImageUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto"><p style="font-family:monospace;font-weight:bold;color:#f4511e">${data.qr_code}</p><p><strong>Presentá este QR al ingresar.</strong></p></div><p><a href="${ticketUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:13px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir entrada digital</a></p><p style="color:#6b6258;font-size:13px">Este código es único y personal. No lo compartas.</p></section><footer style="margin-top:24px;font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</footer></main></body></html>`,
@@ -259,7 +260,7 @@ export async function createTicket(data: CreateTicketData) {
           const resumeUrl = `${siteUrl.replace(/\/$/, "")}/pay/${resumeToken}`
           const reservationCode = effectivePurchaseGroupId ? effectivePurchaseGroupId.slice(0, 8).toUpperCase() : "sin código"
           await resend.emails.send({
-            from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+            from: EMAIL_CONFIG.from,
             to: buyerEmail,
             subject: `Reserva pendiente: ${event.title}`,
             html: `<p>Hola ${data.buyer_name},</p><p>Registramos una <strong>reserva pendiente</strong> de ${entradasLabel} para <strong>${event.title}</strong>. Este correo no confirma todavía tus entradas: falta completar el pago o enviar el comprobante.</p><p><strong>Código de reserva:</strong> ${reservationCode}</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event.event_date)}</strong></p><p>Total: ${totalAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.</p>${normalizedPaymentMethod === "transfer" && (event.transfer_alias || event.transfer_account_holder) ? `<p><strong>Recordá hacer la transferencia a:</strong><br />${event.transfer_alias ? `Alias: <strong>${event.transfer_alias}</strong><br />` : ""}${event.transfer_account_holder ? `A nombre de: <strong>${event.transfer_account_holder}</strong>` : ""}</p>` : ""}<p>${normalizedPaymentMethod === "transfer" ? "Cuando hagas la transferencia, volvé a este enlace para enviar el comprobante." : "Podés retomar el pago desde este enlace:"}</p><p><a href="${resumeUrl}">${normalizedPaymentMethod === "transfer" ? "Enviar comprobante" : "Continuar con Mercado Pago"}</a></p><p><a href="${resumeUrl}?action=cancel">No voy a comprar esta entrada</a></p><p>El enlace es privado y válido durante 48 horas.</p><p>Si iniciás otra compra para el mismo evento, recibirás otro correo con un código de reserva diferente.</p><p>Después, podés consultar el estado y tus entradas en <a href="${siteUrl.replace(/\/$/, "")}/my-tickets">Mis entradas</a> con la cuenta asociada a esta compra.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,

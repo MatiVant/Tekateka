@@ -5,6 +5,7 @@ import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     const resumeUrl = `${baseUrl.replace(/\/$/, "")}/pay/${token}`
     const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
     const result = await resend.emails.send({
-      from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+      from: EMAIL_CONFIG.from,
       to: ticket.buyer_email,
       subject: `Enlace para continuar tu compra: ${event?.title || "tu evento"}`,
       html: `<p>Hola ${ticket.buyer_name},</p><p>Te reenviamos el enlace para continuar con el pago de tu entrada para <strong>${event?.title || "tu evento"}</strong>.</p><p><strong>Fecha y hora: ${formatArgentinaDateTime(event?.event_date)}</strong></p><p><a href="${resumeUrl}">Continuar con mi compra</a></p><p>El enlace es privado y válido durante 48 horas.</p><hr /><p style="font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,

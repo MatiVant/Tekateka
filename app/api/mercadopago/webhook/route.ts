@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto"
 import { createClient } from "@/lib/supabase/admin"
 import { getProducerAccessToken } from "@/lib/mercadopago"
 import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null)
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
         const { Resend } = await import("resend")
         const resend = new Resend(process.env.RESEND_API_KEY)
         await resend.emails.send({
-          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+          from: EMAIL_CONFIG.from,
           to: organizer.email,
           subject: "Pago recibido por link externo — requiere revisión",
           html: `<p>Hola ${organizer.full_name || ""},</p><p>Mercado Pago informó un pago recibido por un link externo.</p><ul><li><strong>Importe:</strong> ${payment.transaction_amount ?? "No informado"} ${payment.currency_id ?? ""}</li><li><strong>Payment ID:</strong> ${String(paymentId)}</li><li><strong>Estado:</strong> ${payment.status ?? "No informado"}</li><li><strong>Email del pagador:</strong> ${payment.payer?.email ?? "No informado"}</li></ul><p>Revisá el pago en Mercado Pago y confirmá manualmente la entrada si corresponde.</p>`,

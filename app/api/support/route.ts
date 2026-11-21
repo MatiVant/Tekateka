@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const categories = new Set(["Compra o pago", "Entrada o QR", "Problema técnico", "Otro"])
 const escapeHtml = (value: string) => value.replace(/[&<>\"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" } as Record<string, string>)[character] || character)
@@ -28,18 +29,22 @@ export async function POST(request: Request) {
   }).select("id").single()
   if (error || !supportRequest) return NextResponse.json({ error: "No pudimos registrar tu consulta." }, { status: 500 })
 
-  const supportEmail = process.env.SUPPORT_EMAIL || "consultas@tekateka.com.ar"
+  const supportEmail = EMAIL_CONFIG.supportEmail
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const { error: emailError } = await resend.emails.send({
-      from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+      from: EMAIL_CONFIG.from,
       to: supportEmail,
       replyTo: buyerEmail,
       subject: `[Soporte] ${category} — ${buyerName || buyerEmail}`,
       html: `<p><strong>Nueva consulta de soporte</strong></p><p><strong>Comprador:</strong> ${escapeHtml(buyerName || "Sin nombre")}<br><strong>Email:</strong> ${escapeHtml(buyerEmail)}<br><strong>Evento:</strong> ${escapeHtml(eventId || "No informado")}<br><strong>Ticket:</strong> ${escapeHtml(ticketId || "No informado")}<br><strong>Motivo:</strong> ${escapeHtml(category)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p><small>Referencia de soporte: ${supportRequest.id}</small></p>`, 
     })
     if (emailError) {
-      console.error("[support] Resend no pudo entregar la consulta:", emailError)
+      console.error("[support] Error de Resend al notificar soporte:", {
+        error: emailError,
+        supportRequestId: supportRequest.id,
+        resendErrorMessage: emailError.message
+      })
       return NextResponse.json({ error: "La consulta se guardó, pero no pudimos enviarla al correo de soporte." }, { status: 502 })
     }
   }
