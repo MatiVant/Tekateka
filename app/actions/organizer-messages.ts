@@ -138,7 +138,7 @@ export async function replyToOrganizerMessage(formData: { messageId: string; bod
       await resend.emails.send({
         from: EMAIL_CONFIG.from,
         to: organizer.email,
-        replyTo: "consultas@tekateka.com.ar",
+        replyTo: EMAIL_CONFIG.replyTo,
         subject: `Respuesta: ${original.subject}`,
         html: `<p>Hola ${organizer.full_name || ""},</p><p>${body.replace(/</g, "&lt;")}</p><p>Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
       })
