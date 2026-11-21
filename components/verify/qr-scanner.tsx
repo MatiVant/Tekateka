@@ -610,8 +610,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       {/* Modo cámara */}
       {scanMode === 'camera' && !result && (
         <div className="space-y-4">
-          {cameraError ? <Alert variant="destructive"><Camera className="h-4 w-4" /><AlertDescription>{cameraError}</AlertDescription></Alert> : <div className="overflow-hidden rounded-xl border bg-black"><video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline /><p className="p-3 text-center text-sm text-white">Apuntá la cámara al QR de la entrada</p></div>}
-          <Button type="button" variant="outline" className="w-full" onClick={() => setScanMode('manual')}>Usar modo manual</Button>
+          {cameraError ? <Alert variant="destructive"><Camera className="h-4 w-4" /><AlertDescription>{cameraError}</AlertDescription></Alert> : <div className="overflow-hidden rounded-xl border bg-black"><div className="relative"><video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />{isScanning && <div className="absolute inset-0 flex items-center justify-center bg-black/45"><div className="rounded-full bg-white px-5 py-3 text-sm font-black tracking-[0.2em] text-primary shadow-lg" role="status" aria-live="polite">VERIFICANDO ENTRADA…</div></div>}</div><p className="p-3 text-center text-sm font-bold tracking-[0.18em] text-white" role="status" aria-live="polite">{isScanning ? 'VERIFICANDO ENTRADA…' : 'ESCANEANDO'}</p><p className="pb-3 text-center text-xs text-white/70">Apuntá la cámara al QR de la entrada</p></div>}
+          <Button type="button" variant="outline" className="w-full" onClick={() => setScanMode('manual')} disabled={isScanning}>Usar modo manual</Button>
         </div>
       )}
 
