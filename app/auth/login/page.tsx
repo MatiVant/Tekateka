@@ -65,7 +65,7 @@ export default function LoginPage() {
             <CardDescription className="mt-1 text-[#6b6258]">Entrá para ver tus entradas y eventos.</CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-7 pt-5 sm:px-8 sm:pb-8">
-            <form onSubmit={handleLogin}>
+            <form onSubmit={handleLogin} aria-busy={isLoading}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -76,16 +76,18 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <div className="flex items-center justify-between"><Label htmlFor="password">Contraseña</Label><Link href="/auth/forgot-password" className="text-xs text-primary underline underline-offset-4">¿Olvidaste tu contraseña?</Link></div>
+                  <div className="flex items-center justify-between"><Label htmlFor="password">Contraseña</Label><Link href="/auth/forgot-password" aria-disabled={isLoading} tabIndex={isLoading ? -1 : undefined} onClick={(event) => { if (isLoading) event.preventDefault() }} className="text-xs text-primary underline underline-offset-4">¿Olvidaste tu contraseña?</Link></div>
                   <Input
                     id="password"
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
@@ -95,7 +97,7 @@ export default function LoginPage() {
               </div>
               <div className="mt-4 text-center text-sm text-muted-foreground">
                 ¿No tienes cuenta?{" "}
-                <Link href="/auth/sign-up" className="underline underline-offset-4 text-foreground hover:text-primary">
+                <Link href="/auth/sign-up" aria-disabled={isLoading} tabIndex={isLoading ? -1 : undefined} onClick={(event) => { if (isLoading) event.preventDefault() }} className="underline underline-offset-4 text-foreground hover:text-primary">
                   Registrarte
                 </Link>
               </div>
