@@ -54,6 +54,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
   const [manualEmail, setManualEmail] = useState('');
   const [manualTickets, setManualTickets] = useState<ManualTicket[]>([]);
   const [allTickets, setAllTickets] = useState<AllTicket[]>([]);
+  const [ticketSearch, setTicketSearch] = useState('');
   const [doorSales, setDoorSales] = useState<DoorSale[]>([]);
   const [isLoadingAllTickets, setIsLoadingAllTickets] = useState(false);
   const [allTicketsError, setAllTicketsError] = useState<string | null>(null);
@@ -333,6 +334,11 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
     setManualLookupError(null);
   };
 
+  const normalizedTicketSearch = ticketSearch.trim().toLocaleLowerCase('es-AR');
+  const filteredTickets = normalizedTicketSearch
+    ? allTickets.filter((ticket) => `${ticket.buyer_name || ''} ${ticket.buyer_email || ''}`.toLocaleLowerCase('es-AR').includes(normalizedTicketSearch))
+    : allTickets;
+
   return (
     <div className="min-w-0 space-y-6">
       {/* Selector de modo */}
@@ -399,6 +405,21 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             {allTicketsError && <p role="alert" className="mt-3 text-sm text-destructive">{allTicketsError}</p>}
             {allTickets.length > 0 && (
               <>
+              <div className="relative mt-4">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  type="search"
+                  value={ticketSearch}
+                  onChange={(event) => setTicketSearch(event.target.value)}
+                  placeholder="Buscar por nombre o email"
+                  aria-label="Buscar entrada por nombre o email"
+                  className="pl-9"
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                {filteredTickets.length} {filteredTickets.length === 1 ? 'entrada encontrada' : 'entradas encontradas'}
+              </p>
+              {filteredTickets.length > 0 ? <>
               <div className="mt-4 hidden overflow-x-auto rounded-lg border md:block">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60 text-left">
@@ -411,7 +432,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {allTickets.map((ticket) => {
+                    {filteredTickets.map((ticket) => {
                       const entered = ticket.status === 'used';
                       return (
                         <tr key={ticket.id}>
@@ -438,7 +459,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                 </table>
               </div>
               <div className="mt-4 space-y-2 md:hidden" aria-label="Entradas disponibles">
-                {allTickets.map((ticket) => {
+                {filteredTickets.map((ticket) => {
                   const entered = ticket.status === 'used';
                   return (
                     <article key={ticket.id} className="rounded-xl border bg-background p-3">
@@ -462,6 +483,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                   );
                 })}
               </div>
+              </> : <p className="mt-4 rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">No encontramos entradas con esa búsqueda.</p>}
               </>
             )}
             {doorSales.length > 0 && (
