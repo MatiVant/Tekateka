@@ -2,6 +2,7 @@ import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { formatArgentinaDateTime } from "@/lib/date"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { maskEmail, redactForLog } from "@/lib/mask-personal-data"
 
 export async function sendConfirmedTicketEmail(ticketIds: string[], force = false) {
   if (!process.env.RESEND_API_KEY) return { sent: false, reason: "missing_api_key" as const }
@@ -14,7 +15,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
     .in("id", ticketIds)
 
   if (error || !tickets?.length) {
-    console.error("[email] No se pudieron obtener las entradas confirmadas:", error)
+    console.error("[email] No se pudieron obtener las entradas confirmadas:", redactForLog(error))
     return { sent: false, reason: "tickets_not_found" as const }
   }
 
@@ -44,7 +45,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
       }
     }
   } catch (trackingError) {
-    console.error("[email] No se pudo registrar el estado del envío:", trackingError)
+    console.error("[email] No se pudo registrar el estado del envío:", redactForLog(trackingError))
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar"
@@ -68,15 +69,14 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
   if (emailError) {
     if (deliveryId) await supabase.from("ticket_email_deliveries").update({ status: "failed", error_message: emailError.message, updated_at: new Date().toISOString() }).eq("id", deliveryId)
     console.error("[email] Error de Resend al enviar entrada confirmada:", {
-      error: emailError,
+      error: redactForLog(emailError),
       ticketIds,
-      buyerEmail: firstTicket.buyer_email,
-      resendErrorMessage: emailError.message
+      recipient: maskEmail(firstTicket.buyer_email),
     })
     return { sent: false, reason: "resend_error" as const, error: emailError.message }
   }
 
   if (deliveryId) await supabase.from("ticket_email_deliveries").update({ status: "sent", resend_id: emailData?.id ?? null, sent_at: new Date().toISOString(), error_message: null, updated_at: new Date().toISOString() }).eq("id", deliveryId)
-  console.log("[email] Entrada confirmada enviada", { emailId: emailData?.id, ticketIds, recipient: firstTicket.buyer_email })
+  console.log("[email] Entrada confirmada enviada", { emailId: emailData?.id, ticketIds, recipient: maskEmail(firstTicket.buyer_email) })
   return { sent: true, emailId: emailData?.id }
 }

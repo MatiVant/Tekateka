@@ -1,3 +1,6 @@
+// Script histórico para copiar imágenes de Vercel Blob a Supabase Storage.
+// La aplicación ya no depende de @vercel/blob. Si hubiera que correrlo de nuevo,
+// instalar esa versión aparte: pnpm add -D @vercel/blob@2.8.0
 import { list } from '@vercel/blob'
 import { createClient } from '@supabase/supabase-js'
 

@@ -1,4 +1,5 @@
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
+import { redactForLog } from "@/lib/mask-personal-data"
 import { getOrganizerRecipients, getScheduledSummaryRange, sendOrganizerSalesSummary } from "@/lib/sales-summary"
 import type { SalesSummaryFrequency } from "@/lib/sales-summary"
 
@@ -31,16 +32,21 @@ export async function GET(request: Request) {
   const organizers = await getOrganizerRecipients()
   const range = getScheduledSummaryRange(frequency, now)
   let sent = 0
+  let skipped = 0
   for (const organizer of organizers) {
     try {
-      await sendOrganizerSalesSummary(organizer, frequency === "weekly" ? "week" : frequency === "biweekly" ? "fortnight" : "month", `sales-summary/${frequency}/${organizer.id}/${range.start.toISOString()}`, range)
-      sent += 1
+      const result = await sendOrganizerSalesSummary(organizer, frequency === "weekly" ? "week" : frequency === "biweekly" ? "fortnight" : "month", `sales-summary/${frequency}/${organizer.id}/${range.start.toISOString()}`, range)
+      if (result.skipped) {
+        skipped += 1
+      } else {
+        sent += 1
+      }
     } catch (error) {
-      console.error(`[sales-summary] No se pudo enviar a ${organizer.email}`, error)
+      console.error("[sales-summary] No se pudo enviar el resumen", redactForLog(error))
     }
   }
 
-  return Response.json({ success: true, sent, frequency, period: range.label })
+  return Response.json({ success: true, sent, skipped, frequency, period: range.label })
 }
 
 export { GET as POST }

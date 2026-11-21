@@ -6,11 +6,15 @@ import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS, rateLimitMessage } from "@/lib/rate-limit"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = await checkRateLimit(getClientIdentifier(request), "/api/resend-payment-link", RATE_LIMITS.resendPaymentLink)
+    if (!rateLimit.success) return NextResponse.json({ error: rateLimitMessage(rateLimit.resetAt, 600) }, { status: 429 })
     const { ticketId } = await request.json()
     if (typeof ticketId !== "string" || !/^[0-9a-f-]{36}$/i.test(ticketId)) return NextResponse.json({ error: "Ticket ID inválido" }, { status: 400 })
     const { authorized, user, profile } = await requireAuth(["organizer", "superadmin"])
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
     if (result.error) return NextResponse.json({ error: "No se pudo enviar el email" }, { status: 502 })
     return NextResponse.json({ sent: true })
   } catch (error) {
-    console.error("[v0] Error reenviando enlace de pago:", error)
+    console.error("[v0] Error reenviando enlace de pago:", redactForLog(error))
     return NextResponse.json({ error: "No se pudo reenviar el enlace" }, { status: 500 })
   }
 }

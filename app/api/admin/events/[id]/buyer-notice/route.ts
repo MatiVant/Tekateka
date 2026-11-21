@@ -3,6 +3,7 @@ import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { requireAuth } from "@/lib/auth"
 import { EMAIL_CONFIG } from "@/lib/email-config"
+import { redactForLog } from "@/lib/mask-personal-data"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character)
@@ -40,10 +41,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   })
   if (result.error) {
     console.error("[buyer-notice] Error de Resend:", {
-      error: result.error,
+      error: redactForLog(result.error),
       eventId: id,
       recipients: recipients.length,
-      resendErrorMessage: result.error.message
     })
     return NextResponse.json({ error: result.error.message || "Resend rechazó el envío" }, { status: 502 })
   }
