@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { Resend } from "resend"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -74,7 +75,7 @@ export async function sendOrganizerMessage(formData: {
 
     if (resend && recipients.length > 0) {
       await resend.emails.send({
-          from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+          from: EMAIL_CONFIG.from,
           to: recipients,
           replyTo: user.email ?? undefined,
           subject: `[${PRIORITY_LABELS[priority]}] Mensaje de organizador: ${subject}`,
@@ -134,7 +135,7 @@ export async function replyToOrganizerMessage(formData: { messageId: string; bod
   try {
     if (resend) {
       await resend.emails.send({
-        from: "TKTK Entradas <notificaciones@tktk.buholabs.com.ar>",
+        from: EMAIL_CONFIG.from,
         to: organizer.email,
         replyTo: "consultas@tekateka.com.ar",
         subject: `Respuesta: ${original.subject}`,

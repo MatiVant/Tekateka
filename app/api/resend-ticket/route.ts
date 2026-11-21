@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { requireAuth } from "@/lib/auth"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     if (tickets.some((item) => item.status !== "confirmed" || item.payment_status !== "approved")) return NextResponse.json({ error: "Solo se pueden reenviar entradas confirmadas" }, { status: 400 })
     const ticket = firstTicket
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar"
     const venue = ticket.events.venue || "Ubicación del evento"
     const mapUrl = ticket.events.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
     const mapLabel = ticket.events.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
@@ -37,12 +38,20 @@ export async function POST(request: Request) {
     }).join("")
 
     const { error: emailError } = await resend.emails.send({
-      from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+      from: EMAIL_CONFIG.from,
       to: ticket.buyer_email,
       subject: `Tu entrada está confirmada: ${ticket.events.title}`,
       html: `<!doctype html><html><body style="margin:0;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><main style="max-width:620px;margin:auto;padding:28px 18px"><header style="padding:12px 0 22px;border-bottom:4px solid #f4511e"><img src="${siteUrl.replace(/\/$/, "")}/tekateka-logo.png" alt="TekaTeka — Tus eventos. Tus entradas." width="220" style="display:block;width:220px;height:auto"></header><section style="background:#fffdf7;border:1px solid #e7dcc8;border-radius:0 0 18px 18px;padding:30px;text-align:center"><p style="color:#f4511e;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Tu entrada digital</p><h1 style="font-size:30px;letter-spacing:-1px">Tu entrada está confirmada</h1><p>Hola <strong>${ticket.buyer_name}</strong>, acá tenés nuevamente tu entrada para <strong>${ticket.events.title}</strong>.</p>${ticketCards}<p>Este email contiene ${tickets.length} entradas confirmadas.</p><p style="color:#6b6258;font-size:13px">Este código es único y personal. No lo compartas.</p><hr style="border:0;border-top:1px solid #e7dcc8;margin:24px 0 14px" /><p style="color:#6b6258;font-size:12px">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p></section></main></body></html>`,
     })
-    if (emailError) throw emailError
+    if (emailError) {
+      console.error("[resend-ticket] Error de Resend:", {
+        error: emailError,
+        ticketIds,
+        buyerEmail: ticket.buyer_email,
+        resendErrorMessage: emailError.message
+      })
+      throw emailError
+    }
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[v0] Error al reenviar entrada:", error)
