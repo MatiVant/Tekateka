@@ -1,6 +1,7 @@
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { formatArgentinaDateTime } from "@/lib/date"
+import { EMAIL_CONFIG } from "@/lib/email-config"
 
 export async function sendConfirmedTicketEmail(ticketIds: string[], force = false) {
   if (!process.env.RESEND_API_KEY) return { sent: false, reason: "missing_api_key" as const }
@@ -46,7 +47,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
     console.error("[email] No se pudo registrar el estado del envío:", trackingError)
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tktk.buholabs.com.ar"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar"
   const venue = event.venue || "Ubicación del evento"
   const mapUrl = event.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
   const mapLabel = event.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
@@ -58,7 +59,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
 
   const resend = new Resend(process.env.RESEND_API_KEY)
   const { data: emailData, error: emailError } = await resend.emails.send({
-    from: "TekaTeka <notificaciones@tktk.buholabs.com.ar>",
+    from: EMAIL_CONFIG.from,
     to: firstTicket.buyer_email,
     subject: `Tu entrada está confirmada: ${event.title}`,
     html: `<main style="max-width:620px;margin:0 auto;padding:28px 18px;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><h1>Tu entrada está confirmada</h1><p>Hola <strong>${firstTicket.buyer_name}</strong>, tu pago fue confirmado.</p><p><strong>${event.title}</strong><br>${formatArgentinaDateTime(event.event_date)}<br><strong>Dirección:</strong><br>${venue}</p><p><a href="${mapUrl}" style="display:inline-block;padding:11px 16px;background:#f4511e;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">${mapLabel}</a></p>${ticketCards}<p>Guardá este email o descargá tus entradas. Los códigos QR son personales.</p><p style="font-size:12px;color:#6b6258">Este correo es automático. Si tenés dudas, escribinos a consultas@tekateka.com.ar.</p></main>`,
@@ -66,7 +67,12 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
 
   if (emailError) {
     if (deliveryId) await supabase.from("ticket_email_deliveries").update({ status: "failed", error_message: emailError.message, updated_at: new Date().toISOString() }).eq("id", deliveryId)
-    console.error("[email] Error de Resend al enviar entrada confirmada:", emailError)
+    console.error("[email] Error de Resend al enviar entrada confirmada:", {
+      error: emailError,
+      ticketIds,
+      buyerEmail: firstTicket.buyer_email,
+      resendErrorMessage: emailError.message
+    })
     return { sent: false, reason: "resend_error" as const, error: emailError.message }
   }
 
