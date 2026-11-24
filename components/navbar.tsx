@@ -36,6 +36,10 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
   const { resolvedTheme, setTheme } = useTheme()
   const latestUserIdRef = useRef<string | null>(null)
   const authEventReceivedRef = useRef(false)
+  // Email que ya conoce el servidor: si Supabase avisa SIGNED_IN con el mismo
+  // usuario (pasa al cargar la página o al volver a la pestaña) no hace falta
+  // pedirle al servidor que vuelva a renderizar todo.
+  const knownEmailRef = useRef<string | null>(initialUser?.email ?? null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -72,7 +76,10 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
         }, 0)
       }
 
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+      const nextEmail = nextUser?.email ?? null
+      const userChanged = nextEmail !== knownEmailRef.current
+      knownEmailRef.current = nextEmail
+      if ((event === "SIGNED_IN" || event === "SIGNED_OUT") && userChanged) {
         router.refresh()
       }
     })

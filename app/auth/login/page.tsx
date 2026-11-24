@@ -26,7 +26,7 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -35,11 +35,11 @@ export default function LoginPage() {
       // La navegación completa garantiza que el middleware reciba las cookies
       // recién actualizadas por Supabase antes de entrar a una ruta protegida.
       // Obtener el usuario autenticado
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = signInData.user
       if (!user) throw new Error("No se pudo obtener el usuario")
 
       // Obtener el perfil del usuario para redirigir según su rol
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
 
       const destination = profile?.role === "organizer" || profile?.role === "superadmin"
         ? "/admin"

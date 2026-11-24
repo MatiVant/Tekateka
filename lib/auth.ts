@@ -1,9 +1,12 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { hasSuperadminAccess } from "@/lib/superadmin-access";
 
 export { hasSuperadminAccess } from "@/lib/superadmin-access";
 
-export async function getCurrentUser() {
+// cache(): layout, página y requireAuth comparten la misma consulta de
+// usuario + perfil dentro de un mismo request (antes se repetía 2-3 veces).
+export const getCurrentUser = cache(async function getCurrentUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -30,7 +33,7 @@ export async function getCurrentUser() {
   }
 
   return { user, profile };
-}
+});
 
 export async function requireAuth(allowedRoles?: string[]) {
   const userData = await getCurrentUser();

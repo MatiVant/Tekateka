@@ -7,6 +7,8 @@ import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Calendar, Ticket, DollarSign, Plus, Clock, XCircle, Banknote, CreditCard, DoorOpen, Users } from "lucide-react"
 import Link from "next/link"
 import { EventsList } from "@/components/admin/events-list"
+import { Suspense } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { LiveEventSearch } from "@/components/admin/live-event-search"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MercadoPagoConnect } from "@/components/admin/mercadopago-connect"
@@ -51,11 +53,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   if (!authorized || !user) {
     redirect("/auth/login")
   }
-
-  const supabase = await createClient()
-  const adminSupabase = createAdminClient()
-  const pendingTransfers = await getPendingTransfers()
-  const { data: mercadoPagoConnection } = await adminSupabase.from("mercadopago_connections").select("id").eq("producer_id", user.id).maybeSingle()
 
   // El trigger de la BD actualiza automáticamente el estado
 
@@ -111,56 +108,60 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   // La limitación por suscripción queda desactivada temporalmente.
   const canCreateEvent = true
 
-  const { data: events } = await supabase
-    .from("events")
-    .select("*")
-    .eq("organizer_id", user.id)
-    .in("status", ["active", "inactive", "sold_out"])
+  const supabase = await createClient()
+  const adminSupabase = createAdminClient()
 
-  const { data: tickets } = await supabase
-    .from("tickets")
-    .select("*, events!inner(*)")
-    .eq("events.organizer_id", user.id)
-    .order("purchased_at", { ascending: false })
-
-  const { data: externalPayments } = await adminSupabase
-    .from("external_payment_notifications")
-    .select("payment_id, amount, currency, payer_email, payment_date, raw_status, created_at")
-    .eq("producer_id", user.id)
-    .eq("status", "pending_review")
-    .order("created_at", { ascending: false })
-    .limit(20)
-
-  const { data: allOrganizerEvents } = await adminSupabase
-    .from("events")
-    .select("id, title, status")
-    .eq("organizer_id", user.id)
+  // Primera tanda: todo lo que no depende de otra consulta va en paralelo.
+  const [
+    pendingTransfers,
+    { data: mercadoPagoConnection },
+    { data: tickets },
+    { data: externalPayments },
+    { data: allOrganizerEvents },
+  ] = await Promise.all([
+    getPendingTransfers(),
+    adminSupabase.from("mercadopago_connections").select("id").eq("producer_id", user.id).maybeSingle(),
+    supabase
+      .from("tickets")
+      .select("id, event_id, status, payment_status, payment_method, payment_provider, charged_amount, final_price, net_amount, payment_fee_amount, payment_receipt_url, purchased_at, buyer_name, events!inner(price, title, organizer_id)")
+      .eq("events.organizer_id", user.id)
+      .order("purchased_at", { ascending: false }),
+    adminSupabase
+      .from("external_payment_notifications")
+      .select("payment_id, amount, currency, payer_email, payment_date, raw_status, created_at")
+      .eq("producer_id", user.id)
+      .eq("status", "pending_review")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    adminSupabase
+      .from("events")
+      .select("id, title, status")
+      .eq("organizer_id", user.id),
+  ])
   const organizerEventIds = (allOrganizerEvents || []).map((event) => event.id)
 
-  const { data: movements } = organizerEventIds.length
-    ? await adminSupabase
-        .from("platform_movements")
-        .select("id, movement_type, amount, created_at, event_id, ticket_id, metadata, events(title, organizer_id), tickets(buyer_name, buyer_email)")
-        .in("event_id", organizerEventIds)
-        .order("created_at", { ascending: false })
-        .limit(200)
-    : { data: [] }
+  // Segunda tanda: depende de los ids de eventos del organizador.
+  const [{ data: movements }, { data: settlements }, { data: doorSales }] = organizerEventIds.length
+    ? await Promise.all([
+        adminSupabase
+          .from("platform_movements")
+          .select("id, movement_type, amount, created_at, event_id, ticket_id, metadata, events(title, organizer_id), tickets(buyer_name, buyer_email)")
+          .in("event_id", organizerEventIds)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        adminSupabase
+          .from("event_settlements")
+          .select("event_id, door_paid_count, door_paid_unit_price")
+          .in("event_id", organizerEventIds),
+        adminSupabase.from("door_sales").select("event_id, quantity, unit_price").in("event_id", organizerEventIds),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }]
 
-  const { data: settlements } = organizerEventIds.length
-    ? await adminSupabase
-        .from("event_settlements")
-        .select("event_id, door_paid_count, door_paid_unit_price")
-        .in("event_id", organizerEventIds)
-    : { data: [] }
-  const { data: doorSales } = organizerEventIds.length
-    ? await adminSupabase.from("door_sales").select("event_id, quantity, unit_price").in("event_id", organizerEventIds)
-    : { data: [] }
-
-  const ticketRecords = (tickets || []) as AdminTicketSummary[]
+  const ticketRecords = (tickets || []) as unknown as AdminTicketSummary[]
   const eventRecords = (allOrganizerEvents || []) as OrganizerEventSummary[]
   const settlementRecords = (settlements || []) as EventSettlementSummary[]
   const doorSaleRecords = (doorSales || []) as DoorSaleSummary[]
-  const totalEvents = events?.length || 0
+  const totalEvents = eventRecords.filter((event) => ["active", "inactive", "sold_out"].includes(event.status ?? "")).length
   const recentPurchases = ticketRecords
     .filter((ticket) => ticket.status !== "cancelled")
     .sort((a, b) => new Date(b.purchased_at ?? 0).getTime() - new Date(a.purchased_at ?? 0).getTime())
@@ -240,8 +241,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <TabsList className="grid w-fit grid-cols-2"><TabsTrigger value="active">Activos</TabsTrigger><TabsTrigger value="archived">Finalizados</TabsTrigger></TabsList>
               <LiveEventSearch initialValue={q || ""} />
             </div>
-            <TabsContent value="active"><EventsList userId={user.id} showArchived={false} search={q} /></TabsContent>
-            <TabsContent value="archived"><EventsList userId={user.id} showArchived={true} search={q} /></TabsContent>
+            <TabsContent value="active"><Suspense fallback={<EventsListSkeleton />}><EventsList userId={user.id} showArchived={false} search={q} /></Suspense></TabsContent>
+            <TabsContent value="archived"><Suspense fallback={<EventsListSkeleton />}><EventsList userId={user.id} showArchived={true} search={q} /></Suspense></TabsContent>
           </Tabs>
         </section>
 
@@ -380,6 +381,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function EventsListSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Cargando eventos">
+      {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />)}
     </div>
   )
 }
