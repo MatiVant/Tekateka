@@ -14,6 +14,7 @@ import { SalesSummarySettings } from "@/components/superadmin/sales-summary-sett
 import { TicketCancellationRequests } from "@/components/superadmin/ticket-cancellation-requests"
 import { PlatformFeeSettings } from "@/components/superadmin/platform-fee-settings"
 import { TicketEmailRecovery } from "@/components/superadmin/ticket-email-recovery"
+import { TicketSearch } from "@/components/superadmin/ticket-search"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
@@ -140,6 +141,7 @@ export default async function SuperAdminPage() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <PlatformFeeSettings globalPercent={Number((platformSettings?.value as { percent?: number } | null)?.percent ?? 8)} startsAt={(platformSettings?.value as { starts_at?: string | null } | null)?.starts_at ?? null} venues={venues ?? []} />
+        <div className="mb-8"><TicketSearch /></div>
         <div className="mb-8"><TicketEmailRecovery /></div>
         <SuperAdminDashboard
           metrics={{
