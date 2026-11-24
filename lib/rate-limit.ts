@@ -83,4 +83,5 @@ export const RATE_LIMITS = {
   resendPaymentLink: { windowMs: 60 * 60 * 1000, maxRequests: 60 },
   support: { windowMs: 60 * 60 * 1000, maxRequests: 15 },
   purchaseEmail: { windowMs: 30 * 60 * 1000, maxRequests: 40 },
+  venueProposal: { windowMs: 24 * 60 * 60 * 1000, maxRequests: 10 },
 } as const

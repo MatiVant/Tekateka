@@ -10,6 +10,7 @@ import { EventForm } from "@/components/admin/event-form"
 import { EventOwnershipTransfer } from "@/components/admin/event-ownership-transfer"
 import { getPendingTransfersForEvent } from "@/app/actions/event-ownership-transfer"
 import { getAudienceTags } from "@/app/actions/audience-tags"
+import { getMyPendingVenueProposals } from "@/lib/venue-proposals"
 
 export default async function EditEventPage({
   params,
@@ -27,9 +28,10 @@ export default async function EditEventPage({
   const currentTransfer = await getPendingTransfersForEvent(id)
   const audienceTags = await getAudienceTags()
 
-  const [{ data: event }, { data: venues }] = await Promise.all([
+  const [{ data: event }, { data: venues }, pendingVenueProposals] = await Promise.all([
     supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single(),
     supabase.from("venues").select("id, name, address").eq("active", true).order("name"),
+    getMyPendingVenueProposals(user.id),
   ])
 
   if (!event) {
@@ -66,6 +68,7 @@ export default async function EditEventPage({
               userId={user.id}
               event={event}
               venues={venues ?? []}
+              pendingVenueProposals={pendingVenueProposals}
               audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)}
               ticketSettingsHref={`/admin/events/${id}/settings`}
             />

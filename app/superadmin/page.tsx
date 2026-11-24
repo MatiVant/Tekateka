@@ -17,6 +17,7 @@ import { TicketEmailRecovery } from "@/components/superadmin/ticket-email-recove
 import { TicketSearch } from "@/components/superadmin/ticket-search"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { VenueManager } from "@/components/superadmin/venue-manager"
+import { loadVenuesForSuperadmin } from "@/lib/venue-proposals"
 import { CalendarDays, Mail, MapPin, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
@@ -47,7 +48,7 @@ export default async function SuperAdminPage() {
     { data: rawMessages },
     { data: rawCancellationRequests },
     { data: ticketSearchEventRows },
-    { data: venueCatalog },
+    venueData,
   ] = await Promise.all([
     getAudienceTags(),
     getSalesSummarySettings(),
@@ -87,7 +88,7 @@ export default async function SuperAdminPage() {
       .select("id, title, event_date, tickets(count)")
       .order("event_date", { ascending: false })
       .limit(300),
-    supabase.from("venues").select("id, name, address, location_url, active").order("name"),
+    loadVenuesForSuperadmin(supabase),
   ])
 
   // Obtener estadísticas de organizadores
@@ -198,10 +199,10 @@ export default async function SuperAdminPage() {
           <SuperAdminModuleCard
             id="venues"
             title="Espacios"
-            description="Nombre, dirección y mapa de cada espacio"
+            description={venueData.proposals.length > 0 ? `${venueData.proposals.length} ${venueData.proposals.length === 1 ? "propuesta pendiente" : "propuestas pendientes"} de aprobación` : "Nombre, dirección y mapa de cada espacio"}
             icon={MapPin}
           >
-            <VenueManager venues={venueCatalog ?? []} />
+            <VenueManager venues={venueData.catalog} proposals={venueData.proposals} proposalsEnabled={venueData.proposalsEnabled} />
           </SuperAdminModuleCard>
 
           <SuperAdminModuleCard
