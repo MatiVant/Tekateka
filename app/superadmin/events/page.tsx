@@ -1,5 +1,6 @@
 import { createClient as createServerClient } from "@/lib/supabase/server"
-import { requireAuth, getCurrentUser } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import { requireSuperadmin } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Ticket, DollarSign, Users } from "lucide-react"
@@ -9,9 +10,9 @@ import { DeleteEventButton } from "@/components/superadmin/delete-event-button"
 import { EventPrioritySelect } from "@/components/superadmin/event-priority-select"
 
 export default async function SuperAdminEventsPage() {
-  await requireAuth(["superadmin"])
-  const userData = await getCurrentUser()
-  const user = userData?.user
+  const { authorized, user } = await requireSuperadmin()
+  if (!user) redirect("/auth/login")
+  if (!authorized) redirect("/")
 
   const supabase = await createServerClient()
 

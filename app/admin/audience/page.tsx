@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from "next/navigation"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { AudienceReport } from "@/components/admin/audience-report"
 
@@ -41,9 +41,9 @@ type TicketRecord = {
 }
 
 export default async function AudiencePage() {
-  const { authorized, user, profile } = await requireAuth(["superadmin"])
-  if (!authorized || !user) redirect("/auth/login")
-  if (profile?.role !== "superadmin") redirect("/admin")
+  const { authorized, user } = await requireSuperadmin()
+  if (!user) redirect("/auth/login")
+  if (!authorized) redirect("/admin")
 
   const supabase = createAdminClient()
   const { data } = await supabase

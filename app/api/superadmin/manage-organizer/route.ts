@@ -1,3 +1,4 @@
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/admin';
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'superadmin') {
+    if (!hasSuperadminAccess(user.email, profile?.role)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
     isSuperadmin = true;

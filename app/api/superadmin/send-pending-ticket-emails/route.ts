@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/admin"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
 
 export async function GET() {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const supabase = createClient()
   const { data, error } = await supabase.from("ticket_email_deliveries").select("id, buyer_email, event_id, status, error_message, attempts, updated_at, events(title)").eq("status", "failed").order("updated_at", { ascending: false }).limit(100)
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const supabase = createClient()
   const { data: tickets, error } = await supabase

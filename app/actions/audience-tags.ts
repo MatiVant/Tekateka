@@ -1,11 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 
 export async function createAudienceTag(name: string) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const cleanName = name.trim().replace(/\s+/g, " ").slice(0, 40)
   if (!cleanName) throw new Error("La etiqueta no puede estar vacía")
@@ -17,7 +17,7 @@ export async function createAudienceTag(name: string) {
 }
 
 export async function updateAudienceTag(id: string, name: string) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const cleanName = name.trim().replace(/\s+/g, " ").slice(0, 40)
   if (!cleanName) throw new Error("La etiqueta no puede estar vacía")
@@ -29,7 +29,7 @@ export async function updateAudienceTag(id: string, name: string) {
 }
 
 export async function deleteAudienceTag(id: string) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const supabase = createAdminClient()
   const { error } = await supabase.from("audience_tag_options").delete().eq("id", id)
@@ -39,7 +39,7 @@ export async function deleteAudienceTag(id: string) {
 }
 
 export async function toggleAudienceTag(id: string, active: boolean) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const supabase = createAdminClient()
   const { error } = await supabase.from("audience_tag_options").update({ active }).eq("id", id)

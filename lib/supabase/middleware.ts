@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasSuperadminAccess } from "@/lib/superadmin-access";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -71,6 +72,24 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
+  }
+
+  // Solo el superadmin puede ver /superadmin y usar /api/superadmin.
+  const isSuperadminPage = request.nextUrl.pathname.startsWith("/superadmin");
+  const isSuperadminApi = request.nextUrl.pathname.startsWith("/api/superadmin");
+  if (isSuperadminPage || isSuperadminApi) {
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+      : { data: null };
+    if (!user || !hasSuperadminAccess(user.email, profile?.role)) {
+      if (isSuperadminApi) {
+        return NextResponse.json({ error: "No autorizado" }, { status: user ? 403 : 401 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = user ? "/" : "/auth/login";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   // Proteger rutas de verificación

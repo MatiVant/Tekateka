@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/admin"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { redactForLog } from "@/lib/mask-personal-data"
 
 export const dynamic = "force-dynamic"
@@ -62,10 +62,9 @@ function parsePositiveInt(value: string | null, fallback: number, max: number) {
 }
 
 export async function GET(request: Request) {
-  const { user, profile } = await requireAuth(["superadmin"])
+  const { authorized, user } = await requireSuperadmin()
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  // requireAuth deja pasar usuarios sin perfil; acá exigimos el rol explícito.
-  if (profile?.role !== "superadmin") return NextResponse.json({ error: "No tenés permiso para buscar entradas" }, { status: 403 })
+  if (!authorized) return NextResponse.json({ error: "No tenés permiso para buscar entradas" }, { status: 403 })
 
   const params = new URL(request.url).searchParams
   const query = sanitizeQuery(params.get("q"))

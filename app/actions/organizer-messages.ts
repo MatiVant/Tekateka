@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -111,7 +112,7 @@ export async function replyToOrganizerMessage(formData: { messageId: string; bod
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "No autenticado" }
   const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single()
-  if (profile?.role !== "superadmin") return { error: "No autorizado" }
+  if (!hasSuperadminAccess(user.email, profile?.role)) return { error: "No autorizado" }
 
   const body = formData.body.trim()
   if (!body) return { error: "La respuesta no puede estar vacía" }
@@ -162,7 +163,7 @@ export async function updateMessageStatus(messageId: string, status: "unread" | 
   }
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "superadmin") {
+  if (!hasSuperadminAccess(user.email, profile?.role)) {
     return { error: "No autorizado" }
   }
 

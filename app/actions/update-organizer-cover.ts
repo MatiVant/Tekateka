@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
@@ -37,7 +38,7 @@ export async function updateOrganizerCover(organizerProfileId: string, coverUrl:
     .select("role")
     .eq("id", user.id)
     .maybeSingle()
-  const isSuperadmin = currentProfile?.role === "superadmin"
+  const isSuperadmin = hasSuperadminAccess(user.email, currentProfile?.role)
   if (!isSuperadmin && currentProfile?.role !== "organizer") {
     return { error: "No tenés permiso para cambiar esta portada." }
   }
