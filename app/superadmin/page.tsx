@@ -14,6 +14,7 @@ import { SalesSummarySettings } from "@/components/superadmin/sales-summary-sett
 import { TicketCancellationRequests } from "@/components/superadmin/ticket-cancellation-requests"
 import { PlatformFeeSettings } from "@/components/superadmin/platform-fee-settings"
 import { TicketEmailRecovery } from "@/components/superadmin/ticket-email-recovery"
+import { TicketSearch } from "@/components/superadmin/ticket-search"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
@@ -136,10 +137,24 @@ export default async function SuperAdminPage() {
     organizer: cancellationOrganizerMap.get(ticket.cancellation_requested_by as string) || null,
   }))
 
+  // Eventos con entradas para el filtro del buscador (más recientes primero)
+  const { data: ticketSearchEventRows } = await supabase
+    .from("events")
+    .select("id, title, event_date, tickets(count)")
+    .order("event_date", { ascending: false })
+    .limit(300)
+  const ticketSearchEvents = (ticketSearchEventRows || [])
+    .filter((event) => {
+      const counts = event.tickets as unknown as { count: number }[] | null
+      return Array.isArray(counts) ? (counts[0]?.count ?? 0) > 0 : true
+    })
+    .map((event) => ({ id: event.id as string, title: (event.title as string | null) ?? null, event_date: (event.event_date as string | null) ?? null }))
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <PlatformFeeSettings globalPercent={Number((platformSettings?.value as { percent?: number } | null)?.percent ?? 8)} startsAt={(platformSettings?.value as { starts_at?: string | null } | null)?.starts_at ?? null} venues={venues ?? []} />
+        <div className="mb-8"><TicketSearch events={ticketSearchEvents} /></div>
         <div className="mb-8"><TicketEmailRecovery /></div>
         <SuperAdminDashboard
           metrics={{
