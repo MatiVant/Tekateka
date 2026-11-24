@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { setAuthFeedback } from "@/components/auth-feedback"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -44,10 +46,18 @@ export default function LoginPage() {
         : profile?.role === "ticketero"
           ? "/verify"
           : "/"
+      setAuthFeedback("login")
       window.location.assign(destination)
+      // Dejamos el botón en "Ingresando…" hasta que cargue la página de destino.
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Error al iniciar sesión")
-    } finally {
+      const rawMessage = error instanceof Error ? error.message : ""
+      const message = /invalid login credentials/i.test(rawMessage)
+        ? "Email o contraseña incorrectos."
+        : /email not confirmed/i.test(rawMessage)
+          ? "Todavía no confirmaste tu email. Revisá tu casilla."
+          : rawMessage || "No pudimos iniciar sesión. Probá de nuevo."
+      setError(message)
+      toast.error(message)
       setIsLoading(false)
     }
   }
@@ -90,9 +100,9 @@ export default function LoginPage() {
                     disabled={isLoading}
                   />
                 </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive" role="alert">{error}</p>}
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando sesión...</> : "Iniciar Sesión"}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ingresando…</> : "Iniciar Sesión"}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm text-muted-foreground">
