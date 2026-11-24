@@ -1,3 +1,4 @@
+import { getEventLocation, renderEventLocationHtml } from "@/lib/event-location"
 import { createClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     if (!resend) return NextResponse.json({ error: "El servicio de email no está configurado" }, { status: 503 })
 
     const supabase = createClient()
-    const { data: tickets, error } = await supabase.from("tickets").select("*, events(id, organizer_id, title, event_date, venue, location_url)").in("id", ticketIds)
+    const { data: tickets, error } = await supabase.from("tickets").select("*, events(id, organizer_id, title, event_date, venue, location_url, venues(name, address, location_url))").in("id", ticketIds)
     if (error || !tickets?.length || tickets.length !== ticketIds.length) return NextResponse.json({ error: "Entrada no encontrada" }, { status: 404 })
     if (profile?.role !== "superadmin" && tickets.some((item: { events?: { organizer_id?: string | null } | null }) => item.events?.organizer_id !== user.id)) return NextResponse.json({ error: "No tenés permiso para reenviar estas entradas" }, { status: 403 })
     const firstTicket = tickets[0]
@@ -35,14 +36,12 @@ export async function POST(request: Request) {
     const ticket = firstTicket
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar"
-    const venue = ticket.events.venue || "Ubicación del evento"
-    const mapUrl = ticket.events.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
-    const mapLabel = ticket.events.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
+    const locationHtml = renderEventLocationHtml(await getEventLocation(ticket.events), { fontSize: 16 })
     const eventDate = formatArgentinaDateTime(ticket.events.event_date)
     const ticketCards = tickets.map((item) => {
       const itemUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(item.qr_code)}`
       const itemQrUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(itemUrl)}`
-      return `<div style="margin:26px 0;padding:24px;background:#fff;border:1px solid #e7dcc8;border-radius:16px"><p><strong>${eventDate}</strong></p><p style="font-size:16px"><strong>Dirección:</strong><br>${venue}</p><p><a href="${mapUrl}" style="display:inline-block;padding:11px 16px;background:#f4511e;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">${mapLabel}</a></p><img src="${itemQrUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto"><p style="font-family:monospace;font-weight:bold;color:#f4511e">${item.qr_code}</p><p><strong>Presentá este QR al ingresar.</strong></p><p><a href="${itemUrl}">Abrir entrada digital</a></p></div>`
+      return `<div style="margin:26px 0;padding:24px;background:#fff;border:1px solid #e7dcc8;border-radius:16px"><p><strong>${eventDate}</strong></p>${locationHtml}<img src="${itemQrUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto"><p style="font-family:monospace;font-weight:bold;color:#f4511e">${item.qr_code}</p><p><strong>Presentá este QR al ingresar.</strong></p><p><a href="${itemUrl}">Abrir entrada digital</a></p></div>`
     }).join("")
 
     const { error: emailError } = await resend.emails.send({
