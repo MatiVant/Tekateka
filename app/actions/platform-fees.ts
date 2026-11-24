@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/admin"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 
 function normalizePercent(value: FormDataEntryValue | null) {
   const percent = Number(value)
@@ -11,7 +11,7 @@ function normalizePercent(value: FormDataEntryValue | null) {
 }
 
 export async function updatePlatformFee(formData: FormData) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const percent = normalizePercent(formData.get("percent"))
   const startsAt = String(formData.get("startsAt") || "").trim() || null
@@ -26,7 +26,7 @@ export async function updatePlatformFee(formData: FormData) {
 }
 
 export async function clearVenuePlatformFee(formData: FormData) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   const venueId = String(formData.get("venueId") || "")
   if (!venueId) throw new Error("Espacio inválido")

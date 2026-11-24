@@ -1,7 +1,7 @@
 "use server"
 
 import { Resend } from "resend"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { createUnsubscribeToken } from "@/lib/marketing"
 import { EMAIL_CONFIG } from "@/lib/email-config"
@@ -13,7 +13,7 @@ function escapeHtml(value: string) {
 }
 
 export async function sendMarketingCampaign(formData: { subject: string; body: string }) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) return { error: "No autorizado" }
   if (!resend) return { error: "El servicio de email no está configurado" }
 

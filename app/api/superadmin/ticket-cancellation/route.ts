@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/admin"
 
 export async function POST(request: NextRequest) {
@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 })
     }
 
-    const { authorized, user, profile } = await requireAuth(["superadmin"])
-    if (!authorized || !user || profile?.role !== "superadmin") {
+    const { authorized, user } = await requireSuperadmin()
+    if (!authorized || !user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 

@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -11,7 +12,7 @@ export async function deleteEvent(eventId: string) {
     if (!user) return { success: false, error: "No autenticado" }
 
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-    const isSuperadmin = profile?.role === "superadmin"
+    const isSuperadmin = hasSuperadminAccess(user.email, profile?.role)
     const lookupClient = isSuperadmin ? createAdminClient() : supabase
     const { data: event, error: eventLookupError } = await lookupClient
       .from("events")

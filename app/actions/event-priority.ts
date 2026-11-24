@@ -1,11 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/admin"
 
 export async function updateEventPriority(eventId: string, priority: number) {
-  const { authorized } = await requireAuth(["superadmin"])
+  const { authorized } = await requireSuperadmin()
   if (!authorized) throw new Error("No autorizado")
   if (!Number.isInteger(priority) || priority < 0 || priority > 2) throw new Error("Prioridad inválida")
   const supabase = createClient()

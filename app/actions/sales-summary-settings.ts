@@ -1,6 +1,6 @@
 "use server"
 
-import { getCurrentUser } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { getOrganizerRecipients, getSummaryRange, sendOrganizerSalesSummary } from "@/lib/sales-summary"
 import type { SalesSummaryFrequency, SalesSummaryPeriod } from "@/lib/sales-summary"
@@ -15,8 +15,8 @@ export async function getSalesSummarySettings() {
 }
 
 export async function saveSalesSummarySettings(frequency: SalesSummaryFrequency) {
-  const userData = await getCurrentUser()
-  if (!userData?.user || userData.profile?.role !== "superadmin") throw new Error("No autorizado")
+  const { authorized } = await requireSuperadmin()
+  if (!authorized) throw new Error("No autorizado")
   if (!(["monthly", "weekly", "biweekly", "off"] as string[]).includes(frequency)) throw new Error("Frecuencia inválida")
   const supabase = createAdminClient()
   const { error } = await supabase.from("platform_settings").upsert({ key: "sales_summary", value: { frequency }, updated_at: new Date().toISOString() }, { onConflict: "key" })
@@ -25,8 +25,8 @@ export async function saveSalesSummarySettings(frequency: SalesSummaryFrequency)
 }
 
 export async function sendCurrentSalesSummary(organizerId?: string, period: SalesSummaryPeriod = "now") {
-  const userData = await getCurrentUser()
-  if (!userData?.user || userData.profile?.role !== "superadmin") throw new Error("No autorizado")
+  const { authorized } = await requireSuperadmin()
+  if (!authorized) throw new Error("No autorizado")
   const organizers = await getOrganizerRecipients()
   const selected = organizerId ? organizers.filter((organizer) => organizer.id === organizerId) : organizers
   if (organizerId && selected.length === 0) throw new Error("Organizador no encontrado")

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { requireAuth } from "@/lib/auth"
+import { requireSuperadmin } from "@/lib/auth"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { SuperAdminDashboard } from "@/components/superadmin/superadmin-dashboard"
 import { OrganizerManagement } from "@/components/superadmin/organizer-management"
@@ -19,11 +19,10 @@ import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
 import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
-  const { authorized, user, profile } = await requireAuth(["superadmin"])
+  const { authorized, user } = await requireSuperadmin()
 
-  if (!authorized || !user) {
-    redirect("/auth/login")
-  }
+  if (!user) redirect("/auth/login")
+  if (!authorized) redirect("/")
 
   const supabase = createAdminClient()
   const audienceTagOptions = await getAudienceTags()

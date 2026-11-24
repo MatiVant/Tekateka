@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 
@@ -18,7 +19,7 @@ export async function restoreUsedTicket(ticketId: string) {
     .eq("id", user.id)
     .maybeSingle()
 
-  if (profile?.role !== "superadmin") {
+  if (!hasSuperadminAccess(user.email, profile?.role)) {
     return { success: false, error: "Solo un superadmin puede revertir el uso de una entrada." }
   }
 

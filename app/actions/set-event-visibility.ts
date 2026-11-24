@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
@@ -20,7 +21,7 @@ export async function setEventVisibility(eventId: string, isPublic: boolean) {
     .eq("id", user.id)
     .maybeSingle()
 
-  const isSuperadmin = profile?.role === "superadmin"
+  const isSuperadmin = hasSuperadminAccess(user.email, profile?.role)
   const adminSupabase = isSuperadmin ? createAdminClient() : null
   const dataClient = adminSupabase ?? supabase
   const { data: event, error: eventError } = await dataClient

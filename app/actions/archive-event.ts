@@ -1,5 +1,6 @@
 "use server"
 
+import { hasSuperadminAccess } from "@/lib/superadmin-access"
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -19,7 +20,7 @@ export async function archiveEvent(eventId: string) {
 
   const { data: event } = await supabase.from("events").select("organizer_id").eq("id", eventId).single()
 
-  if (!event || (event.organizer_id !== user.id && profile?.role !== "superadmin")) {
+  if (!event || (event.organizer_id !== user.id && !hasSuperadminAccess(user.email, profile?.role))) {
     return { success: false, error: "No autorizado" }
   }
 
@@ -51,7 +52,7 @@ export async function unarchiveEvent(eventId: string) {
 
   const { data: event } = await supabase.from("events").select("organizer_id").eq("id", eventId).single()
 
-  if (!event || (event.organizer_id !== user.id && profile?.role !== "superadmin")) {
+  if (!event || (event.organizer_id !== user.id && !hasSuperadminAccess(user.email, profile?.role))) {
     return { success: false, error: "No autorizado" }
   }
 
