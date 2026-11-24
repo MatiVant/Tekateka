@@ -40,12 +40,16 @@ export async function EventsList({ userId, showArchived = false, search = "" }: 
     const matchesSearch = normalizedSearch.length < 3 || [event.title, event.venue].some((value) => String(value || "").toLocaleLowerCase("es-AR").includes(normalizedSearch))
     return matchesTab && matchesSearch
   })
-  const { data: eventTickets } = await supabase.from("tickets").select("event_id, status, payment_status")
   const eventIds = events.map((event) => event.id)
   const adminSupabase = createAdminClient()
-  const { data: doorSales } = eventIds.length
-    ? await adminSupabase.from("door_sales").select("event_id, quantity").in("event_id", eventIds)
-    : { data: [] }
+  // Antes se traían TODAS las entradas visibles (RLS deja ver todas a cualquier
+  // organizador); ahora solo las de los eventos que se muestran.
+  const [{ data: eventTickets }, { data: doorSales }] = eventIds.length
+    ? await Promise.all([
+        supabase.from("tickets").select("event_id, status, payment_status").in("event_id", eventIds),
+        adminSupabase.from("door_sales").select("event_id, quantity").in("event_id", eventIds),
+      ])
+    : [{ data: [] as { event_id: string; status: string | null; payment_status: string | null }[] }, { data: [] as { event_id: string; quantity: number }[] }]
   const salesByEvent = (eventTickets || []).reduce<Record<string, { confirmed: number; pending: number }>>((counts, ticket) => {
     const current = counts[ticket.event_id] || { confirmed: 0, pending: 0 }
     if (ticket.status === "confirmed" || ticket.payment_status === "approved") current.confirmed += 1

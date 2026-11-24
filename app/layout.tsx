@@ -4,6 +4,11 @@ import { Geist, Geist_Mono, Outfit } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Suspense } from "react"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
+import { NavigationProgress } from "@/components/navigation-progress"
+import { AuthFeedbackToast } from "@/components/auth-feedback"
 import { getCurrentUser } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import "./globals.css"
@@ -58,8 +63,12 @@ export default async function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${_geist.variable} ${_geistMono.variable} ${_outfit.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <Suspense fallback={null}><NavigationProgress /></Suspense>
           <Navbar user={userData?.user} profile={userData?.profile} pendingTicketCount={pendingTicketCount} />
           {children}
+          <Toaster />
+          <SonnerToaster position="top-center" richColors closeButton />
+          <AuthFeedbackToast />
           <Analytics />
         </ThemeProvider>
       </body>

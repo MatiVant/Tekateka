@@ -2,7 +2,10 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Bell, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
+import { Bell, ChevronDown, CircleHelp, Loader2, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
+import { toast } from "sonner"
+import { setAuthFeedback } from "@/components/auth-feedback"
+import { LinkPendingIndicator } from "@/components/link-pending-indicator"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -33,6 +36,10 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
   const { resolvedTheme, setTheme } = useTheme()
   const latestUserIdRef = useRef<string | null>(null)
   const authEventReceivedRef = useRef(false)
+  // Email que ya conoce el servidor: si Supabase avisa SIGNED_IN con el mismo
+  // usuario (pasa al cargar la página o al volver a la pestaña) no hace falta
+  // pedirle al servidor que vuelva a renderizar todo.
+  const knownEmailRef = useRef<string | null>(initialUser?.email ?? null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -69,7 +76,10 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
         }, 0)
       }
 
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+      const nextEmail = nextUser?.email ?? null
+      const userChanged = nextEmail !== knownEmailRef.current
+      knownEmailRef.current = nextEmail
+      if ((event === "SIGNED_IN" || event === "SIGNED_OUT") && userChanged) {
         router.refresh()
       }
     })
@@ -105,6 +115,8 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
   const handleLogout = async () => {
     if (isLoggingOut) return
     setIsLoggingOut(true)
+    setIsMenuOpen(false)
+    toast.loading("Cerrando sesión…", { id: "logout" })
     const supabase = createClient()
     const { error } = await supabase.auth.signOut()
 
@@ -114,8 +126,11 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
       setUser(initialUser)
       setProfile(initialProfile)
       setIsLoggingOut(false)
+      toast.error("No pudimos cerrar la sesión. Probá de nuevo.", { id: "logout" })
       return
     }
+
+    setAuthFeedback("logout")
 
     // Navegación completa: fuerza a Next.js a consultar la sesión/cookies nuevas
     // y evita que quede visible el dashboard del árbol RSC anterior.
@@ -132,24 +147,24 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
           </Link>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
-            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Espacios</Link></Button>
+            <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/eventos">Espacios<LinkPendingIndicator /></Link></Button>
             {user && pendingTicketCount > 0 && (profile?.role === "organizer" || profile?.role === "superadmin") && (
               <Button variant="outline" className="relative gap-2 rounded-full border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100" asChild>
                 <Link href="/admin/tickets?view=pending" aria-label={`${pendingTicketCount} entradas pendientes de revisión`}>
                   <Bell className="size-4" />
                   <span className="hidden sm:inline">Pendientes</span>
                   <span className="flex size-5 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">{pendingTicketCount > 99 ? "99+" : pendingTicketCount}</span>
-                </Link>
+                <LinkPendingIndicator /></Link>
               </Button>
             )}
-            {!user && <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda</Link></Button>}
+            {!user && <Button variant="ghost" className="hidden rounded-full sm:inline-flex" asChild><Link href="/ayuda">Ayuda<LinkPendingIndicator /></Link></Button>}
             {user ? (
               <>
                 <div className="hidden items-center gap-1 sm:flex">
-                  {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin</Link></Button>}
-                  {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`}>Mi página</Link></Button>}
-                  {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin</Link></Button>}
-                  {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets</Link></Button>}
+                  {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" asChild><Link href="/admin">Panel Admin<LinkPendingIndicator /></Link></Button>}
+                  {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`}>Mi página<LinkPendingIndicator /></Link></Button>}
+                  {profile?.role === "superadmin" && <Button variant="ghost" asChild><Link href="/superadmin">Superadmin<LinkPendingIndicator /></Link></Button>}
+                  {profile?.role === "ticketero" && <Button variant="ghost" asChild><Link href="/verify">Verificar Tickets<LinkPendingIndicator /></Link></Button>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="max-w-52 gap-2 rounded-full px-3" aria-label="Abrir menú de usuario">
@@ -162,10 +177,10 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
                       <DropdownMenuLabel className="truncate">{profile?.full_name || user.email || "Mi cuenta"}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/profile"><UserRound />Mi perfil</Link>
+                        <Link href="/profile"><UserRound />Mi perfil<LinkPendingIndicator /></Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/ayuda"><CircleHelp />Ayuda</Link>
+                        <Link href="/ayuda"><CircleHelp />Ayuda<LinkPendingIndicator /></Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
                         {resolvedTheme === "dark" ? <Sun /> : <Moon />}
@@ -174,7 +189,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut} aria-busy={isLoggingOut}>
-                    <LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}
+                    {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}{isLoggingOut ? "Cerrando sesión…" : "Salir"}
                   </Button>
                 </div>
                 <Button variant="outline" size="icon" className="rounded-full border-[#d8c9b4] sm:hidden" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={isMenuOpen}>
@@ -184,8 +199,8 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
             ) : (
               <>
                 <div className="hidden items-center gap-1 sm:flex">
-                  <Button variant="ghost" className="rounded-full px-2 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/login">Iniciar sesión</Link></Button>
-                  <Button className="rounded-full px-3 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/sign-up">Registrarse</Link></Button>
+                  <Button variant="ghost" className="rounded-full px-2 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/login">Iniciar sesión<LinkPendingIndicator /></Link></Button>
+                  <Button className="rounded-full px-3 text-xs sm:px-4 sm:text-sm" asChild><Link href="/auth/sign-up">Registrarse<LinkPendingIndicator /></Link></Button>
                 </div>
                 <Button variant="outline" size="icon" className="rounded-full border-[#d8c9b4] sm:hidden" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={isMenuOpen}>
                   {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -196,27 +211,26 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
         </div>
         {isMenuOpen && <div className="flex flex-col gap-2 border-t border-[#e7dcc8] py-3 sm:hidden">
           <div className="flex w-full flex-col gap-2">
-          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Espacios</Link></Button>
-          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/ayuda" onClick={() => setIsMenuOpen(false)}><CircleHelp className="mr-2 size-4" />Ayuda</Link></Button>
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/eventos" onClick={() => setIsMenuOpen(false)}>Espacios<LinkPendingIndicator /></Link></Button>
+          <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/ayuda" onClick={() => setIsMenuOpen(false)}><CircleHelp className="mr-2 size-4" />Ayuda<LinkPendingIndicator /></Link></Button>
           {user ? <>
             <Button variant="ghost" className="justify-start rounded-xl" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
               {resolvedTheme === "dark" ? <Sun className="mr-2 size-4" /> : <Moon className="mr-2 size-4" />}
               {resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}
             </Button>
-            {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin</Link></Button>}
-            {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`} onClick={() => setIsMenuOpen(false)}>Mi página pública</Link></Button>}
-            {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin</Link></Button>}
-            {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets</Link></Button>}
-            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil</Link></Button>
-            <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}><LogOut className="mr-2 h-4 w-4" />{isLoggingOut ? "Saliendo..." : "Salir"}</Button>
+            {(profile?.role === "organizer" || profile?.role === "superadmin") && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/admin" onClick={() => setIsMenuOpen(false)}>Panel Admin<LinkPendingIndicator /></Link></Button>}
+            {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`} onClick={() => setIsMenuOpen(false)}>Mi página pública<LinkPendingIndicator /></Link></Button>}
+            {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin<LinkPendingIndicator /></Link></Button>}
+            {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets<LinkPendingIndicator /></Link></Button>}
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil<LinkPendingIndicator /></Link></Button>
+            <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}>{isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}{isLoggingOut ? "Cerrando sesión…" : "Salir"}</Button>
           </> : <>
-            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión</Link></Button>
-            <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse</Link></Button>
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión<LinkPendingIndicator /></Link></Button>
+            <Button className="rounded-xl" asChild><Link href="/auth/sign-up" onClick={() => setIsMenuOpen(false)}>Registrarse<LinkPendingIndicator /></Link></Button>
           </>}
           </div>
         </div>}
       </div>
-      {isLoggingOut && <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#f4eddf]/95 px-4" role="status" aria-live="polite"><span className="text-sm font-semibold">Cerrando sesión…</span></div>}
     </nav>
   )
 }
