@@ -29,7 +29,7 @@ export default async function EditEventPage({
 
   const [{ data: event }, { data: venues }] = await Promise.all([
     supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single(),
-    supabase.from("venues").select("id, name").eq("active", true).order("name"),
+    supabase.from("venues").select("id, name, address").eq("active", true).order("name"),
   ])
 
   if (!event) {

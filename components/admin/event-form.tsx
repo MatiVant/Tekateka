@@ -22,6 +22,7 @@ import { compressEventImage } from "@/lib/compress-image"
 interface VenueOption {
   id: string
   name: string
+  address?: string | null
 }
 
 interface EventFormProps {
@@ -509,6 +510,12 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
           <option value="">Elegí un espacio del catálogo</option>
           {venues.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
         </select>
+        {venueId && (() => {
+          const selectedAddress = venues.find((option) => option.id === venueId)?.address
+          return selectedAddress
+            ? <p className="rounded-md bg-muted/60 px-3 py-2 text-sm"><span className="font-medium">Dirección:</span> {selectedAddress}</p>
+            : <p className="text-xs text-amber-700">Este espacio todavía no tiene dirección cargada. Pedile al equipo de TekaTeka que la agregue.</p>
+        })()}
         <p className="text-xs text-muted-foreground">Usá siempre el espacio existente para mantener unificados los informes y las portadas.</p>
       </>
     ) : <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />}

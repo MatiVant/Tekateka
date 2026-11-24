@@ -17,7 +17,7 @@ export default async function NewEventPage() {
   }
 
   const audienceTags = await getAudienceTags()
-  const { data: venues } = await createAdminClient().from('venues').select('id, name').eq('active', true).order('name')
+  const { data: venues } = await createAdminClient().from('venues').select('id, name, address').eq('active', true).order('name')
 
   return (
     <div className="min-h-screen bg-muted/30">

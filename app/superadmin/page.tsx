@@ -16,7 +16,8 @@ import { PlatformFeeSettings } from "@/components/superadmin/platform-fee-settin
 import { TicketEmailRecovery } from "@/components/superadmin/ticket-email-recovery"
 import { TicketSearch } from "@/components/superadmin/ticket-search"
 import { MarketingCampaign } from "@/components/superadmin/marketing-campaign"
-import { CalendarDays, Mail, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
+import { VenueManager } from "@/components/superadmin/venue-manager"
+import { CalendarDays, Mail, MapPin, MessageSquareText, Tags, Users, Wallet } from "lucide-react"
 
 export default async function SuperAdminPage() {
   const { authorized, user } = await requireSuperadmin()
@@ -46,6 +47,7 @@ export default async function SuperAdminPage() {
     { data: rawMessages },
     { data: rawCancellationRequests },
     { data: ticketSearchEventRows },
+    { data: venueCatalog },
   ] = await Promise.all([
     getAudienceTags(),
     getSalesSummarySettings(),
@@ -85,6 +87,7 @@ export default async function SuperAdminPage() {
       .select("id, title, event_date, tickets(count)")
       .order("event_date", { ascending: false })
       .limit(300),
+    supabase.from("venues").select("id, name, address, location_url, active").order("name"),
   ])
 
   // Obtener estadísticas de organizadores
@@ -191,6 +194,15 @@ export default async function SuperAdminPage() {
 
         <section aria-label="Herramientas de administración" className="mt-10 grid gap-4">
           <TicketCancellationRequests requests={cancellationRequests} />
+
+          <SuperAdminModuleCard
+            id="venues"
+            title="Espacios"
+            description="Nombre, dirección y mapa de cada espacio"
+            icon={MapPin}
+          >
+            <VenueManager venues={venueCatalog ?? []} />
+          </SuperAdminModuleCard>
 
           <SuperAdminModuleCard
             id="sales-summary"

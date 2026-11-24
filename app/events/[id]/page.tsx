@@ -82,10 +82,14 @@ export default async function EventDetailPage({
 
   const isFree = event.price === 0 || event.price === null
   const isPwyw = event.is_pay_what_you_want === true
-  const [{ data: organizerProfile }, platformFeePercent] = await Promise.all([
+  const [{ data: organizerProfile }, platformFeePercent, { data: venueDetails }] = await Promise.all([
     createAdminClient().from("profiles").select("role").eq("id", event.organizer_id).maybeSingle(),
     getPlatformFeePercent(createAdminClient(), event.venue_id, event.created_at),
+    event.venue_id
+      ? createAdminClient().from("venues").select("address").eq("id", event.venue_id).maybeSingle()
+      : Promise.resolve({ data: null as { address: string | null } | null }),
   ])
+  const venueAddress = venueDetails?.address?.trim() || null
   const mercadoPagoEnabled = organizerProfile?.role === "superadmin"
   const configuredPaymentMethods = event.payment_methods?.length ? event.payment_methods : mercadoPagoEnabled ? ["mercado_pago"] : ["transfer"]
   const availablePaymentMethods = configuredPaymentMethods.filter((method: string) => mercadoPagoEnabled || !["mercado_pago", "external_link"].includes(method))
@@ -153,7 +157,10 @@ export default async function EventDetailPage({
 
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
-                <span className="text-lg text-pretty">{event.venue}</span>
+                <span className="text-lg text-pretty">
+                  {event.venue}
+                  {venueAddress && <span className="block text-sm text-muted-foreground">{venueAddress}</span>}
+                </span>
               </div>
 
               <div className="flex items-center gap-3">
