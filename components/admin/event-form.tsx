@@ -18,16 +18,19 @@ import { formatCurrency } from "@/lib/format"
 import { saveEvent } from "@/app/actions/save-event"
 import { EventCreatedShareCard } from "@/components/admin/event-created-share-card"
 import { compressEventImage } from "@/lib/compress-image"
+import { VenueProposalDialog } from "@/components/admin/venue-proposal-dialog"
 
 interface VenueOption {
   id: string
   name: string
+  address?: string | null
 }
 
 interface EventFormProps {
   userId: string
   isSuperadmin?: boolean
   venues?: VenueOption[]
+  pendingVenueProposals?: { id: string; name: string }[]
   event?: {
     id: string
     title: string
@@ -73,7 +76,7 @@ function formatArgentinaDateTimeLocal(value?: string | null) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function EventForm({ userId, isSuperadmin = false, event, venues = [], audienceTagOptions = [], ticketSettingsHref }: EventFormProps & { audienceTagOptions?: string[]; ticketSettingsHref?: string }) {
+export function EventForm({ userId, isSuperadmin = false, event, venues = [], pendingVenueProposals = [], audienceTagOptions = [], ticketSettingsHref }: EventFormProps & { audienceTagOptions?: string[]; ticketSettingsHref?: string }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
@@ -105,6 +108,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
 
   const [venueId, setVenueId] = useState(event?.venue_id || "")
   const [venue, setVenue] = useState(event?.venue || "")
+  const [pendingVenueNames, setPendingVenueNames] = useState(() => pendingVenueProposals.map((proposal) => proposal.name))
   const [locationUrl, setLocationUrl] = useState((event as { location_url?: string | null } | undefined)?.location_url || "")
   const [price, setPrice] = useState(event?.price.toString() || "")
   const [doorTicketPrice, setDoorTicketPrice] = useState((event as { door_ticket_price?: number | null } | undefined)?.door_ticket_price?.toString() || "")
@@ -502,16 +506,28 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], au
   </div>
   
   <div className="space-y-2">
-    <Label htmlFor="venue">Espacio *</Label>
+    <div className="flex items-center justify-between gap-2">
+      <Label htmlFor="venue">Espacio *</Label>
+      {!isSuperadmin && <VenueProposalDialog onProposed={(name) => setPendingVenueNames((names) => [name, ...names.filter((item) => item !== name)])} />}
+    </div>
     {venues.length > 0 ? (
       <>
         <select id="venue" required value={venueId} onChange={(e) => { const nextId = e.target.value; setVenueId(nextId); setVenue(venues.find((option) => option.id === nextId)?.name || "") }} className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
           <option value="">Elegí un espacio del catálogo</option>
           {venues.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
         </select>
+        {venueId && (() => {
+          const selectedAddress = venues.find((option) => option.id === venueId)?.address
+          return selectedAddress
+            ? <p className="rounded-md bg-muted/60 px-3 py-2 text-sm"><span className="font-medium">Dirección:</span> {selectedAddress}</p>
+            : <p className="text-xs text-amber-700">Este espacio todavía no tiene dirección cargada. Pedile al equipo de TekaTeka que la agregue.</p>
+        })()}
         <p className="text-xs text-muted-foreground">Usá siempre el espacio existente para mantener unificados los informes y las portadas.</p>
       </>
     ) : <Input id="venue" type="text" placeholder="Teatro Nacional" required value={venue} onChange={(e) => setVenue(e.target.value)} />}
+    {!isSuperadmin && (pendingVenueNames.length > 0
+      ? <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">Pendiente de aprobación de Tekateka: <strong>{pendingVenueNames.join(", ")}</strong>. Te avisamos por mail cuando esté disponible.</p>
+      : <p className="text-xs text-muted-foreground">¿Tu espacio no está en la lista? Tocá <strong>Nuevo Espacio</strong>: queda sujeto a aprobación de Tekateka.</p>)}
   </div>
       </div>
 

@@ -1,3 +1,4 @@
+import { getEventLocation, renderEventLocationHtml } from "@/lib/event-location"
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/admin"
 import { formatArgentinaDateTime } from "@/lib/date"
@@ -11,7 +12,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
   const supabase = createClient()
   const { data: tickets, error } = await supabase
     .from("tickets")
-    .select("id, qr_code, buyer_name, buyer_email, status, payment_status, event_id, purchase_group_id, events(id, title, event_date, venue, location_url, organizer_id)")
+    .select("id, qr_code, buyer_name, buyer_email, status, payment_status, event_id, purchase_group_id, events(id, title, event_date, venue, location_url, organizer_id, venues(name, address, location_url))")
     .in("id", ticketIds)
 
   if (error || !tickets?.length) {
@@ -49,9 +50,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tekateka.com.ar"
-  const venue = event.venue || "Ubicación del evento"
-  const mapUrl = event.location_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`
-  const mapLabel = event.location_url ? "Abrir mapa del lugar" : "Buscar lugar en Google Maps"
+  const locationHtml = renderEventLocationHtml(await getEventLocation(event))
   const ticketCards = tickets.map((ticket) => {
     const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(ticket.qr_code)}`
     const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
@@ -64,7 +63,7 @@ export async function sendConfirmedTicketEmail(ticketIds: string[], force = fals
     replyTo: EMAIL_CONFIG.replyTo,
     to: firstTicket.buyer_email,
     subject: `Tu entrada está confirmada: ${event.title}`,
-    html: `<main style="max-width:620px;margin:0 auto;padding:28px 18px;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><h1>Tu entrada está confirmada</h1><p>Hola <strong>${firstTicket.buyer_name}</strong>, tu pago fue confirmado.</p><p><strong>${event.title}</strong><br>${formatArgentinaDateTime(event.event_date)}<br><strong>Dirección:</strong><br>${venue}</p><p><a href="${mapUrl}" style="display:inline-block;padding:11px 16px;background:#f4511e;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">${mapLabel}</a></p>${ticketCards}<p>Guardá este email o descargá tus entradas. Los códigos QR son personales.</p><p style="font-size:12px;color:#6b6258">Este correo es automático. Si tenés dudas, escribinos a consultas@tekateka.com.ar.</p></main>`,
+    html: `<main style="max-width:620px;margin:0 auto;padding:28px 18px;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><h1>Tu entrada está confirmada</h1><p>Hola <strong>${firstTicket.buyer_name}</strong>, tu pago fue confirmado.</p><p><strong>${event.title}</strong><br>${formatArgentinaDateTime(event.event_date)}</p>${locationHtml}${ticketCards}<p>Guardá este email o descargá tus entradas. Los códigos QR son personales.</p><p style="font-size:12px;color:#6b6258">Este correo es automático. Si tenés dudas, escribinos a consultas@tekateka.com.ar.</p></main>`,
   })
 
   if (emailError) {

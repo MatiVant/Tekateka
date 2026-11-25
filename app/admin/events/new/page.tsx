@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { EventForm } from '@/components/admin/event-form';
 import { getAudienceTags } from '@/app/actions/audience-tags';
 import { createClient as createAdminClient } from '@/lib/supabase/admin';
+import { getMyPendingVenueProposals } from '@/lib/venue-proposals';
 
 export default async function NewEventPage() {
   const { authorized, user, profile } = await requireAuth(['organizer', 'superadmin']);
@@ -17,7 +18,10 @@ export default async function NewEventPage() {
   }
 
   const audienceTags = await getAudienceTags()
-  const { data: venues } = await createAdminClient().from('venues').select('id, name').eq('active', true).order('name')
+  const [{ data: venues }, pendingVenueProposals] = await Promise.all([
+    createAdminClient().from('venues').select('id, name, address').eq('active', true).order('name'),
+    getMyPendingVenueProposals(user.id),
+  ])
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -38,7 +42,7 @@ export default async function NewEventPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EventForm userId={user.id} isSuperadmin={profile?.role === "superadmin"} venues={venues ?? []} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
+            <EventForm userId={user.id} isSuperadmin={profile?.role === "superadmin"} venues={venues ?? []} pendingVenueProposals={pendingVenueProposals} audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)} />
           </CardContent>
         </Card>
       </main>
