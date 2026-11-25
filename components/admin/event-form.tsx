@@ -76,7 +76,7 @@ function formatArgentinaDateTimeLocal(value?: string | null) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function EventForm({ userId, isSuperadmin = false, event, venues = [], pendingVenueProposals = [], audienceTagOptions = [], ticketSettingsHref }: EventFormProps & { audienceTagOptions?: string[]; ticketSettingsHref?: string }) {
+export function EventForm({ userId, isSuperadmin = false, event, venues = [], pendingVenueProposals = [], audienceTagOptions = [], ticketSettingsHref, hasExistingTicketTiers = false }: EventFormProps & { audienceTagOptions?: string[]; ticketSettingsHref?: string; hasExistingTicketTiers?: boolean }) {
   const [title, setTitle] = useState(event?.title || "")
   const [description, setDescription] = useState(event?.description || "")
   const [audienceTags, setAudienceTags] = useState<string[]>(event?.audience_tags || [])
@@ -158,6 +158,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
     sales_end_at: "",
     promotion_type: "standard" as const,
   })
+  const priceDefinedByTiers = Boolean(hasExistingTicketTiers) || ticketTiers.length > 0
   const router = useRouter()
   const { toast } = useToast()
 
@@ -290,7 +291,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
     if (!venueId && !venue.trim()) addMissingField("Lugar", "venue")
     if (venues.length > 0 && !venueId) addMissingField("Espacio del catálogo", "venue")
     if (!totalTickets || Number.parseInt(totalTickets, 10) < 1) addMissingField("Total de entradas", "totalTickets")
-    if (eventType === "paid" && ticketTiers.length === 0 && (!price.trim() || Number.parseFloat(price) < 0)) addMissingField("Precio", "price")
+    if (eventType === "paid" && !priceDefinedByTiers && (!price.trim() || Number.parseFloat(price) < 0)) addMissingField("Precio", "price")
     if (!imageUrl.trim()) addMissingField("Imagen del evento", "image-upload")
     if (!event && audienceTags.length < 3) addMissingField("Al menos 3 estilos del evento", "audience-tags")
 
@@ -314,12 +315,14 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
       let basePrice = 0
       if (eventType === "free") {
         basePrice = 0
-      } else if (ticketTiers.length === 0) {
-        // Si no hay tipos de entrada, usar el precio base del evento
+      } else if (price.trim() !== "" && Number.isFinite(Number.parseFloat(price))) {
+        // Conservamos el valor guardado aunque haya tipos de entrada.
         basePrice = Number.parseFloat(price)
-      } else {
-        // Si hay tipos de entrada, el precio base del evento no importa
-        basePrice = Math.min(...ticketTiers.map((tier) => Number.parseFloat(tier.base_price)))
+      } else if (ticketTiers.length > 0) {
+        const tierPrices = ticketTiers
+          .map((tier) => Number.parseFloat(tier.base_price))
+          .filter((tierPrice) => Number.isFinite(tierPrice) && tierPrice >= 0)
+        basePrice = tierPrices.length > 0 ? Math.min(...tierPrices) : 0
       }
 
       const eventData = {
@@ -591,20 +594,33 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
           </div>
         </div>
 
-        {eventType !== "free" && ticketTiers.length === 0 && (
+        {eventType !== "free" && (
           <div className="space-y-2">
-            <Label htmlFor="price">{eventType === "pwyw" ? "Precio sugerido ($)" : "Precio ($)"} *</Label>
+            <Label htmlFor="price" className={priceDefinedByTiers ? "text-muted-foreground" : undefined}>
+              {eventType === "pwyw" ? "Precio sugerido ($)" : "Precio ($)"}
+              {!priceDefinedByTiers ? " *" : ""}
+            </Label>
             <Input
               id="price"
               type="number"
               step="0.01"
               min="0"
               placeholder="25.00"
-              required={eventType === "paid"}
+              required={eventType === "paid" && !priceDefinedByTiers}
+              disabled={priceDefinedByTiers}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">Si agregas tipos de entrada abajo, este precio no se usará</p>
+            {priceDefinedByTiers ? (
+              <p className="text-xs text-muted-foreground">
+                El precio lo definen los tipos de entrada.
+                {ticketTiers.length > 0
+                  ? ` El más bajo es ${formatCurrency(Math.min(...ticketTiers.map((tier) => Number.parseFloat(tier.base_price))))}.`
+                  : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Si agregás tipos de entrada abajo, este precio no se usará.</p>
+            )}
           </div>
         )}
 
@@ -614,17 +630,6 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
   <p className="text-xs text-muted-foreground">Queda guardado para que quien esté en la puerta no tenga que cargarlo cada vez.</p>
   </div>
 
-  {ticketTiers.length > 0 && (
-  <div className="space-y-2">
-            <Label className="text-muted-foreground">Precio Base del Evento</Label>
-            <p className="text-sm">
-              Los tipos de entrada definen sus propios precios. El precio más bajo es:{" "}
-              <span className="font-semibold text-foreground">
-                {formatCurrency(Math.min(...ticketTiers.map((tier) => Number.parseFloat(tier.base_price))))}
-              </span>
-            </p>
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
