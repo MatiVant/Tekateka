@@ -60,7 +60,7 @@ export function PurchaseFlow({
   platformFeePercent = 8,
   mercadoPagoEnabled = false,
   isFree = false,
-  isPwyw = false,
+  isPwyw: isPwywEvent = false,
 }: PurchaseFlowProps) {
   const [step, setStep] = useState<Step>("form")
   const [ticketId, setTicketId] = useState<string | null>(null)
@@ -85,6 +85,8 @@ export function PurchaseFlow({
   const [finalPrice, setFinalPrice] = useState(eventPrice)
   const [discountApplied, setDiscountApplied] = useState(false)
   const [promotionType, setPromotionType] = useState<string | null>(null)
+  // Con un código de precio fijo el precio lo define el código, aunque el evento sea "a voluntad".
+  const isPwyw = isPwywEvent && promotionType !== "fixed_price"
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
   const [pendingPurchase, setPendingPurchase] = useState<PendingPurchase | null>(null)
@@ -593,7 +595,9 @@ export function PurchaseFlow({
           <Alert className="bg-green-50 border-green-200">
             <AlertCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              ¡Código aplicado! Precio con descuento: {formatCurrency(finalPrice)}
+              {promotionType === "fixed_price"
+                ? `¡Código aplicado! Precio con código: ${formatCurrency(finalPrice)} por entrada`
+                : `¡Código aplicado! Precio con descuento: ${formatCurrency(finalPrice)}`}
             </AlertDescription>
           </Alert>
         )}

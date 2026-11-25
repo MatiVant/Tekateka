@@ -122,6 +122,13 @@ export async function createTicket(data: CreateTicketData) {
       if (promo.promotion_type === "protocol") serverPrice = 0
       if (promo.promotion_type === "percentage") serverPrice = serverPrice * (1 - Number(promo.discount_value) / 100)
       if (promo.promotion_type === "fixed") serverPrice = Math.max(0, serverPrice - Number(promo.discount_value))
+      if (promo.promotion_type === "fixed_price") {
+        // Precio fijo: la entrada cuesta exactamente el valor del código, sin importar el precio del tipo de entrada
+        // (aunque sea más alto o el evento sea a voluntad). Lo decide el organizador al crear el código.
+        const fixedPrice = Number(promo.discount_value)
+        if (!Number.isFinite(fixedPrice) || fixedPrice <= 0) throw new Error("El código de precio fijo no tiene un valor válido")
+        serverPrice = fixedPrice
+      }
       if (promo.promotion_type === "2x1") serverPrice = serverPrice / 2
     }
     if (Math.abs(Number(data.final_price) - Math.max(0, serverPrice)) > 0.01) throw new Error("El precio de la compra cambió, actualizá la página")

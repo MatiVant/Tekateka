@@ -64,6 +64,19 @@ export async function validatePromotion(
     } else if (promoData.promotion_type === 'fixed') {
       discountAmount = promoData.discount_value;
       finalPrice = Math.max(0, basePrice - discountAmount);
+    } else if (promoData.promotion_type === 'fixed_price') {
+      const fixedPrice = Number(promoData.discount_value);
+      if (!Number.isFinite(fixedPrice) || fixedPrice <= 0) {
+        return {
+          isValid: false,
+          discountAmount: 0,
+          finalPrice: basePrice,
+          error: 'Este código de precio fijo no tiene un valor válido',
+        };
+      }
+      // Puede ser mayor al precio normal: es decisión del organizador.
+      finalPrice = fixedPrice;
+      discountAmount = Math.max(0, basePrice - fixedPrice);
     } else if (promoData.promotion_type === '2x1') {
       discountAmount = basePrice / 2;
       finalPrice = basePrice / 2;
