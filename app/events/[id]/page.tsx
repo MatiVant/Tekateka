@@ -11,6 +11,7 @@ import { PurchaseFlow } from "@/components/purchase-flow"
 import { SupportForm } from "@/components/support-form"
 import { formatCurrency } from "@/lib/format"
 import { getPlatformFeePercent } from "@/lib/platform-fees"
+import { getCurrentUser } from "@/lib/auth"
 import ReactMarkdown from "react-markdown"
 
 export const dynamic = "force-dynamic"
@@ -62,6 +63,7 @@ export default async function EventDetailPage({
   if (new Date(event.event_date).getTime() < now && !(await canViewPastEvent(event.organizer_id))) {
     notFound()
   }
+  const buyer = await getCurrentUser()
 
   const { count: activeTickets } = await createAdminClient()
     .from("tickets")
@@ -224,6 +226,7 @@ export default async function EventDetailPage({
   mercadoPagoEnabled={mercadoPagoEnabled}
                     isFree={isFree}
                     isPwyw={isPwyw}
+                    isLoggedIn={Boolean(buyer)}
                   />
                 ) : (
                   <div className={`rounded-lg border p-4 text-sm ${noTicketsAvailable ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-primary/30 bg-primary/5 text-foreground"}`}>
