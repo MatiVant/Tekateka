@@ -1,10 +1,6 @@
 import { redirect, notFound } from "next/navigation"
 import { requireAuth } from "@/lib/auth"
-import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Ticket } from "lucide-react"
-import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { EventForm } from "@/components/admin/event-form"
 import { EventOwnershipTransfer } from "@/components/admin/event-ownership-transfer"
@@ -18,7 +14,7 @@ export default async function EditEventPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { authorized, user, profile } = await requireAuth(["organizer"])
+  const { authorized, user } = await requireAuth(["organizer"])
 
   if (!authorized || !user) {
     redirect("/auth/login")
@@ -40,45 +36,26 @@ export default async function EditEventPage({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Editar evento</CardTitle>
+          <CardDescription>Actualizá la información del evento</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EventForm
+            userId={user.id}
+            event={event}
+            venues={venues ?? []}
+            pendingVenueProposals={pendingVenueProposals}
+            audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)}
+            ticketSettingsHref={`/admin/events/${id}/settings`}
+            hasExistingTicketTiers={(ticketTierCount ?? 0) > 0}
+          />
+        </CardContent>
+      </Card>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" asChild>
-            <Link href="/admin">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver al Panel
-            </Link>
-          </Button>
-
-          <Button variant="outline" asChild>
-            <Link href={`/admin/events/${id}/tickets`}>
-              <Ticket className="mr-2 h-4 w-4" />
-              Ver Tickets
-            </Link>
-          </Button>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Editar Evento</CardTitle>
-            <CardDescription>Actualiza la información del evento</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EventForm
-              userId={user.id}
-              event={event}
-              venues={venues ?? []}
-              pendingVenueProposals={pendingVenueProposals}
-              audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)}
-              ticketSettingsHref={`/admin/events/${id}/settings`}
-              hasExistingTicketTiers={(ticketTierCount ?? 0) > 0}
-            />
-          </CardContent>
-        </Card>
-
-        <EventOwnershipTransfer eventId={id} currentTransfer={currentTransfer} />
-      </main>
-    </div>
+      <EventOwnershipTransfer eventId={id} currentTransfer={currentTransfer} />
+    </>
   )
 }

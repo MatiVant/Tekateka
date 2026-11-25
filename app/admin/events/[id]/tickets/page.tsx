@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { requireAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Link2, ScanLine } from 'lucide-react';
+import { Link2, ScanLine } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@/lib/supabase/admin';
@@ -64,16 +64,8 @@ export default async function EventTicketsPage({
     .order('created_at', { ascending: false });
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
         <div className="mb-6 flex flex-col gap-4">
-          <Button variant="ghost" asChild className="w-fit">
-            <Link href="/admin">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver al Panel
-            </Link>
-          </Button>
           <div className="grid gap-3 rounded-2xl border border-[#e7dcc8] bg-card p-3 sm:grid-cols-3">
             <CheckerLinkButton eventId={id} />
             <Button asChild variant="outline" size="lg" className="h-auto min-h-16 w-full justify-center gap-2 rounded-xl border-[#d8c9b4] bg-background px-4 py-3 text-center whitespace-normal hover:bg-muted/50">
@@ -93,9 +85,9 @@ export default async function EventTicketsPage({
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Tickets: {event.title}</CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Entradas vendidas</CardTitle>
             <CardDescription>
-              Gestiona las entradas vendidas y confirma los pagos
+              Gestioná las entradas vendidas y confirmá los pagos
             </CardDescription></div></div>
           </CardHeader>
           <CardContent>
@@ -113,7 +105,6 @@ export default async function EventTicketsPage({
             <EventSettlement eventId={id} tickets={tickets || []} doorSales={doorSales || []} initialSettlement={initialSettlement} initialReconciliations={reconciliations} />
           </CardContent>
         </Card>
-      </main>
-    </div>
+    </>
   );
 }

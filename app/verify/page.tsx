@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { requireAuth } from '@/lib/auth';
 import { Navbar } from '@/components/navbar';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { QRScanner } from '@/components/verify/qr-scanner';
-import { Scan } from 'lucide-react';
+import { ArrowLeft, Scan } from 'lucide-react';
 import { DoorSaleForm } from '@/components/verify/door-sale-form';
 import { createClient } from '@/lib/supabase/server';
 
@@ -27,6 +29,14 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
       <Navbar user={navbarUser} profile={profile} />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {eventId ? (
+          <Button variant="ghost" className="mb-4 w-fit" asChild>
+            <Link href={`/admin/events/${eventId}/tickets`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver al evento
+            </Link>
+          </Button>
+        ) : null}
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
