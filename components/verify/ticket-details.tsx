@@ -6,6 +6,7 @@ import { getTicketStatusLabel } from '@/lib/payment-status';
 interface TicketDetailsProps {
   ticket: {
     buyer_name: string;
+    attendee_name?: string | null;
     buyer_email: string;
     qr_code: string;
     status: string;
@@ -74,10 +75,20 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
           <div className="flex items-start gap-3">
             <User className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
-              <p className="font-medium">{ticket.buyer_name}</p>
-              <p className="text-sm text-muted-foreground">Comprador</p>
+              <p className="font-medium">{ticket.attendee_name || ticket.buyer_name}</p>
+              <p className="text-sm text-muted-foreground">{ticket.attendee_name ? 'A nombre de' : 'Comprador'}</p>
             </div>
           </div>
+
+          {ticket.attendee_name && (
+            <div className="flex items-start gap-3">
+              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="font-medium">{ticket.buyer_name}</p>
+                <p className="text-sm text-muted-foreground">Comprado por</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-start gap-3">
             <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />

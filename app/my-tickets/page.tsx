@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 import { createClient as createAdminClient } from "@/lib/supabase/admin"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,12 +6,17 @@ import { Calendar, MapPin, CheckCircle, Clock, XCircle } from "lucide-react"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { QRCodeDisplay } from "@/components/qr-code-display"
+import { AttendeeNameEditor } from "@/components/attendee-name-editor"
+import { eventDateHasPassed } from "@/lib/attendee-name"
 
 type BuyerTicket = {
   id: string
   status: string
   purchased_at: string
   buyer_name: string
+  buyer_id?: string | null
+  buyer_email?: string | null
+  attendee_name?: string | null
   qr_code: string
   events: {
     title: string
@@ -23,7 +27,6 @@ type BuyerTicket = {
 }
 
 export default async function MyTicketsPage() {
-  const supabase = await createClient()
   const userData = await getCurrentUser()
 
   if (!userData) {
@@ -41,10 +44,10 @@ export default async function MyTicketsPage() {
     )
   `
 
+  const adminSupabase = createAdminClient()
   const normalizedEmail = userData.user.email?.trim().toLowerCase()
-  if (userData.user.email_confirmed_at && normalizedEmail) {
-    const escapedEmail = normalizedEmail.replace(/[\\%_]/g, "\\$&")
-    const adminSupabase = createAdminClient()
+  const escapedEmail = normalizedEmail ? normalizedEmail.replace(/[\\%_]/g, "\\$&") : null
+  if (userData.user.email_confirmed_at && escapedEmail) {
     await adminSupabase
       .from("tickets")
       .update({ buyer_id: userData.user.id })
@@ -52,13 +55,21 @@ export default async function MyTicketsPage() {
       .ilike("buyer_email", escapedEmail)
   }
 
-  const { data: tickets } = await supabase
-    .from("tickets")
-    .select(ticketSelect)
-    .eq("buyer_id", userData.user.id)
-    .order("purchased_at", { ascending: false })
+  // Traemos por buyer_id y, si el mail está confirmado, también por email
+  // (por si alguna entrada de la misma compra quedó sin vincular).
+  const [{ data: ticketsById }, emailResult] = await Promise.all([
+    adminSupabase.from("tickets").select(ticketSelect).eq("buyer_id", userData.user.id).order("purchased_at", { ascending: false }),
+    userData.user.email_confirmed_at && escapedEmail
+      ? adminSupabase.from("tickets").select(ticketSelect).ilike("buyer_email", escapedEmail).order("purchased_at", { ascending: false })
+      : Promise.resolve({ data: [] as BuyerTicket[] }),
+  ])
 
-  const ticketRecords = (tickets ?? []) as BuyerTicket[]
+  const ticketMap = new Map<string, BuyerTicket>()
+  for (const ticket of [...(ticketsById ?? []), ...(emailResult.data ?? [])] as BuyerTicket[]) {
+    if (ticket.buyer_id && ticket.buyer_id !== userData.user.id) continue
+    ticketMap.set(ticket.id, ticket)
+  }
+  const ticketRecords = [...ticketMap.values()].sort((a, b) => String(b.purchased_at).localeCompare(String(a.purchased_at)))
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -142,6 +153,18 @@ export default async function MyTicketsPage() {
                       <span className="text-pretty">{ticket.events.venue}</span>
                     </div>
                   </div>
+
+                  <AttendeeNameEditor
+                    ticketId={ticket.id}
+                    buyerName={ticket.buyer_name}
+                    attendeeName={ticket.attendee_name ?? null}
+                    editable={(ticket.status === "pending" || ticket.status === "confirmed") && !eventDateHasPassed((Array.isArray(ticket.events) ? ticket.events[0] : ticket.events)?.event_date)}
+                    disabledReason={
+                      (ticket.status === "pending" || ticket.status === "confirmed") && eventDateHasPassed((Array.isArray(ticket.events) ? ticket.events[0] : ticket.events)?.event_date)
+                        ? "Esta entrada ya no se puede modificar porque el evento ya pasó."
+                        : null
+                    }
+                  />
 
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium mb-2">Código QR para verificación:</p>

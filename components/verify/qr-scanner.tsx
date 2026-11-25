@@ -23,6 +23,7 @@ import {
 type ManualTicket = {
   id: string;
   buyer_name: string | null;
+  attendee_name?: string | null;
   buyer_email?: string | null;
   status: string;
   purchased_at: string | null;
@@ -70,6 +71,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
     message: string;
     ticket?: {
       buyer_name: string;
+      attendee_name?: string | null;
       buyer_email: string;
       id: string;
       qr_code: string;
@@ -350,7 +352,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
 
   const normalizedTicketSearch = ticketSearch.trim().toLocaleLowerCase('es-AR');
   const filteredTickets = normalizedTicketSearch
-    ? allTickets.filter((ticket) => `${ticket.buyer_name || ''} ${ticket.buyer_email || ''}`.toLocaleLowerCase('es-AR').includes(normalizedTicketSearch))
+    ? allTickets.filter((ticket) => `${ticket.attendee_name || ''} ${ticket.buyer_name || ''} ${ticket.buyer_email || ''}`.toLocaleLowerCase('es-AR').includes(normalizedTicketSearch))
     : allTickets;
 
   return (
@@ -451,7 +453,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                       return (
                         <tr key={ticket.id}>
                           <td className="px-3 py-3">
-                            <p className="font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                            <p className="font-medium">{ticket.attendee_name || ticket.buyer_name || 'Titular sin nombre'}</p>
+                            {ticket.attendee_name && <p className="text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}
                             {ticket.buyer_email && <p className="text-xs text-muted-foreground">{ticket.buyer_email}</p>}
                           </td>
                           <td className="px-3 py-3 text-muted-foreground">Online</td>
@@ -479,7 +482,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                     <article key={ticket.id} className="rounded-xl border bg-background p-3">
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="break-words font-medium leading-tight">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                          <p className="break-words font-medium leading-tight">{ticket.attendee_name || ticket.buyer_name || 'Titular sin nombre'}</p>
+                          {ticket.attendee_name && <p className="mt-0.5 text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}
                           {ticket.buyer_email && <p className="mt-1 truncate text-xs text-muted-foreground">{ticket.buyer_email}</p>}
                         </div>
                         {entered ? (
@@ -602,7 +606,8 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
                     return (
                       <li key={ticket.id} className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <p className="truncate font-medium">{ticket.buyer_name || 'Titular sin nombre'}</p>
+                          <p className="truncate font-medium">{ticket.attendee_name || ticket.buyer_name || 'Titular sin nombre'}</p>
+                          {ticket.attendee_name && <p className="truncate text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}
                           <p className="mt-1 text-xs text-muted-foreground">Compra {ticket.purchased_at ? new Date(ticket.purchased_at).toLocaleDateString('es-AR') : ''}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
@@ -630,7 +635,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
             <AlertDialogTitle>¿Registrar este ingreso?</AlertDialogTitle>
             <AlertDialogDescription>
               {ticketToCheckIn
-                ? `La entrada de ${ticketToCheckIn.buyer_name || 'este titular'} se marcará como usada. Esta acción no se puede deshacer desde el lector.`
+                ? `La entrada de ${ticketToCheckIn.attendee_name || ticketToCheckIn.buyer_name || 'este titular'} se marcará como usada. Esta acción no se puede deshacer desde el lector.`
                 : 'La entrada se marcará como usada. Esta acción no se puede deshacer desde el lector.'}
             </AlertDialogDescription>
           </AlertDialogHeader>

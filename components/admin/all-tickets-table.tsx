@@ -63,6 +63,7 @@ interface TicketTier {
 interface Ticket {
   id: string
   buyer_name: string
+  attendee_name?: string | null
   buyer_email: string
   buyer_phone?: string | null
   qr_code: string
@@ -485,6 +486,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
         if (!search) return true
         return (
           ticket.buyer_name.toLowerCase().includes(search) ||
+          (ticket.attendee_name ?? "").toLowerCase().includes(search) ||
           ticket.buyer_email.toLowerCase().includes(search) ||
           ticket.qr_code.toLowerCase().includes(search) ||
           ticket.events.title.toLowerCase().includes(search)
@@ -1071,7 +1073,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center justify-between gap-2">
-                            <h3 className="min-w-0 break-words text-sm font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
+                            <div className="min-w-0"><h3 className="break-words text-sm font-semibold leading-tight">{ticket.attendee_name || ticket.buyer_name || "Titular sin nombre"}</h3>{ticket.attendee_name && <p className="text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}</div>
                             {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
                           </div>
                           {isTwoForOneGroup && (
@@ -1102,7 +1104,8 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="break-words font-semibold leading-tight">{ticket.buyer_name || "Titular sin nombre"}</h3>
+                            <h3 className="break-words font-semibold leading-tight">{ticket.attendee_name || ticket.buyer_name || "Titular sin nombre"}</h3>
+                            {ticket.attendee_name && <p className="text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}
                             <Badge variant={group.tickets.length > 1 ? "outline" : "secondary"} className="mt-1 text-[10px] font-medium">
                               {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
                             </Badge>
@@ -1205,7 +1208,8 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                   {!fixedEventId && <td className="p-4 font-medium">{ticket.events.title}</td>}
                   <td className="p-4">
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{ticket.buyer_name}</span>
+                      <span className="font-medium">{ticket.attendee_name || ticket.buyer_name}</span>
+                      {ticket.attendee_name && <span className="text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</span>}
                       <Badge variant={group.tickets.length > 1 ? "outline" : "secondary"} className="w-fit text-[10px] font-medium">
                         {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
                       </Badge>
@@ -1525,6 +1529,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Comprador</p>
                   <p className="font-medium">{selectedTicket.buyer_name}</p>
+                  {selectedTicket.attendee_name && <p className="text-sm">A nombre de: <strong>{selectedTicket.attendee_name}</strong></p>}
             <p className="text-sm text-muted-foreground">{selectedTicket.buyer_email}</p>
             {selectedTicket.buyer_phone && <><p className="text-sm text-muted-foreground">Tel: {selectedTicket.buyer_phone}</p><Button type="button" size="sm" variant="outline" className="mt-2 text-green-600 hover:text-green-700" onClick={() => openWhatsApp(selectedTicket)}><MessageCircle className="mr-2 h-4 w-4" />Escribir por WhatsApp</Button></>}
           </div>

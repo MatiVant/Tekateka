@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Bell, ChevronDown, CircleHelp, Loader2, LogOut, Menu, Moon, Sun, UserRound, X } from "lucide-react"
+import { Bell, ChevronDown, CircleHelp, Loader2, LogOut, Menu, Moon, Sun, Ticket, UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 import { setAuthFeedback } from "@/components/auth-feedback"
 import { LinkPendingIndicator } from "@/components/link-pending-indicator"
@@ -180,6 +180,9 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
                         <Link href="/profile"><UserRound />Mi perfil<LinkPendingIndicator /></Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link href="/my-tickets"><Ticket />Mis entradas<LinkPendingIndicator /></Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/ayuda"><CircleHelp />Ayuda<LinkPendingIndicator /></Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
@@ -222,7 +225,8 @@ export function Navbar({ user: initialUser, profile: initialProfile, pendingTick
             {(profile?.role === "organizer" || profile?.role === "superadmin" || profile?.role === "admin") && (profile.organization_name || profile.full_name) && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href={`/${slugify(profile.organization_name || profile.full_name || "")}`} onClick={() => setIsMenuOpen(false)}>Mi página pública<LinkPendingIndicator /></Link></Button>}
             {profile?.role === "superadmin" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/superadmin" onClick={() => setIsMenuOpen(false)}>Superadmin<LinkPendingIndicator /></Link></Button>}
             {profile?.role === "ticketero" && <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/verify" onClick={() => setIsMenuOpen(false)}>Verificar tickets<LinkPendingIndicator /></Link></Button>}
-            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}>Mi perfil<LinkPendingIndicator /></Link></Button>
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/profile" onClick={() => setIsMenuOpen(false)}><UserRound className="mr-2 size-4" />Mi perfil<LinkPendingIndicator /></Link></Button>
+            <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/my-tickets" onClick={() => setIsMenuOpen(false)}><Ticket className="mr-2 size-4" />Mis entradas<LinkPendingIndicator /></Link></Button>
             <Button variant="outline" className="justify-start rounded-xl" onClick={handleLogout} disabled={isLoggingOut}>{isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}{isLoggingOut ? "Cerrando sesión…" : "Salir"}</Button>
           </> : <>
             <Button variant="ghost" className="justify-start rounded-xl" asChild><Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Iniciar sesión<LinkPendingIndicator /></Link></Button>

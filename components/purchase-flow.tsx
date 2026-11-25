@@ -44,6 +44,23 @@ interface PurchaseFlowProps {
   mercadoPagoEnabled?: boolean
   isFree?: boolean
   isPwyw?: boolean
+  isLoggedIn?: boolean
+}
+
+
+function AttendeeNameHint({ isLoggedIn, className }: { isLoggedIn: boolean; className?: string }) {
+  return isLoggedIn ? (
+    <p className={className}>
+      Después podés ponerle nombre a cada entrada desde{" "}
+      <Link href="/my-tickets" className="font-medium underline underline-offset-2">Mis entradas</Link>.
+    </p>
+  ) : (
+    <p className={className}>
+      Para ponerle nombre a cada entrada,{" "}
+      <Link href="/auth/sign-up" className="font-medium underline underline-offset-2">creá tu cuenta con este email</Link>
+      {" "}y entrá a Mis entradas.
+    </p>
+  )
 }
 
 type Step = "tiers" | "form" | "review" | "payment" | "receipt" | "success"
@@ -62,6 +79,7 @@ export function PurchaseFlow({
   mercadoPagoEnabled = false,
   isFree = false,
   isPwyw: isPwywEvent = false,
+  isLoggedIn = false,
 }: PurchaseFlowProps) {
   const [step, setStep] = useState<Step>("form")
   const [ticketId, setTicketId] = useState<string | null>(null)
@@ -569,6 +587,9 @@ export function PurchaseFlow({
   ? `Máximo ${effectiveMaxTickets} entradas por persona para este evento`
   : "Máximo 10 entradas por compra"}
           </p>
+          {quantity > 1 && (
+            <AttendeeNameHint isLoggedIn={isLoggedIn} className="text-xs text-muted-foreground" />
+          )}
         </div>
 
         {isPwyw && (
@@ -920,6 +941,7 @@ export function PurchaseFlow({
             Te enviamos la información de tus entradas por correo. Si no la encontrás, revisá también la carpeta de spam o correo no deseado.
           </AlertDescription>
         </Alert>
+        <AttendeeNameHint isLoggedIn={isLoggedIn} className="text-sm text-muted-foreground text-left leading-relaxed" />
         <div className="flex flex-col justify-center gap-2 sm:flex-row">
           <Button asChild>
             <Link href="/my-tickets">Ver mis entradas</Link>

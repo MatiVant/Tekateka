@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 import crypto from "node:crypto"
 import { createClient } from "@/lib/supabase/admin"
+import { fetchAttendeeNamesByIds, fetchAttendeeNamesForEvent } from "@/lib/attendee-name"
 
 type TicketDetailsRecord = {
   id: string
   buyer_name: string
+  attendee_name?: string | null
   buyer_email: string
   qr_code: string
   status: string
@@ -20,6 +22,7 @@ type EventDetailsRecord = {
 const ticketDetails = (ticket: TicketDetailsRecord, event: EventDetailsRecord, status = ticket.status) => ({
   id: ticket.id,
   buyer_name: ticket.buyer_name,
+  attendee_name: ticket.attendee_name ?? null,
   buyer_email: ticket.buyer_email,
   qr_code: ticket.qr_code,
   status,
@@ -80,7 +83,8 @@ export async function POST(request: Request) {
       ])
       if (ticketsError) throw ticketsError
       if (doorSalesError) throw doorSalesError
-      return NextResponse.json({ tickets: tickets ?? [], doorSales: doorSales ?? [] })
+      const attendeeNames = await fetchAttendeeNamesForEvent(supabase, link.event_id)
+      return NextResponse.json({ tickets: (tickets ?? []).map((item) => ({ ...item, attendee_name: attendeeNames[item.id] ?? null })), doorSales: doorSales ?? [] })
     }
 
     if (action === "search_by_email") {
@@ -98,7 +102,8 @@ export async function POST(request: Request) {
         .order("purchased_at", { ascending: false })
         .limit(20)
       if (error) throw error
-      return NextResponse.json({ tickets: (tickets ?? []).map(({ id, buyer_name, status, purchased_at }) => ({ id, buyer_name, status, purchased_at })) })
+      const attendeeNames = await fetchAttendeeNamesByIds(supabase, (tickets ?? []).map((item) => item.id))
+      return NextResponse.json({ tickets: (tickets ?? []).map(({ id, buyer_name, status, purchased_at }) => ({ id, buyer_name, attendee_name: attendeeNames[id] ?? null, status, purchased_at })) })
     }
 
     let ticketQuery = supabase
@@ -126,7 +131,8 @@ export async function POST(request: Request) {
       ticketQuery = ticketQuery.eq("qr_code", decodeURIComponent(normalizedQrCode).trim())
     }
 
-    const { data: ticket } = await ticketQuery.maybeSingle()
+    const { data: ticketRow } = await ticketQuery.maybeSingle()
+    const ticket = ticketRow ? { ...ticketRow, attendee_name: (await fetchAttendeeNamesByIds(supabase, [ticketRow.id]))[ticketRow.id] ?? null } : null
     const event = ticket && (Array.isArray(ticket.events) ? ticket.events[0] : ticket.events)
     if (!ticket || !event || event.organizer_id !== link.organizer_id) {
       return NextResponse.json({ error: action === "manual_check_in" ? "No encontramos esa entrada para este evento" : "Código QR no válido para este evento" }, { status: 404 })
