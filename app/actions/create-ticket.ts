@@ -1,7 +1,7 @@
 "use server"
 
-import { getEventLocation, renderEventLocationHtml } from "@/lib/event-location"
 import { createClient } from "@/lib/supabase/admin"
+import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
 import { Resend } from "resend"
 import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
@@ -12,7 +12,6 @@ import { TICKET_TERMS_VERSION } from "@/lib/legal"
 import { calculatePlatformFee, getPlatformFeePercent } from "@/lib/platform-fees"
 import { checkRateLimit, identifierFromHeaders, RATE_LIMITS } from "@/lib/rate-limit"
 import { redactForLog } from "@/lib/mask-personal-data"
-import { attendeeNameHintHtml } from "@/lib/attendee-name"
 import { assertPromoNotAlreadyUsed, markPromoUsedOnServerDevice } from "@/lib/promo-usage"
 
 async function allowPurchaseEmail() {
@@ -228,24 +227,28 @@ export async function createTicket(data: CreateTicketData) {
 
     if (isFreeTicket) {
       try {
-        if (resend && data.sendEmail !== false && normalizedPaymentMethod !== "free" && await allowPurchaseEmail()) {
-          const { data: eventDetails } = await supabase.from("events").select("title, event_date, venue, location_url, venues(name, address, location_url)").eq("id", data.event_id).single()
-          const requestHeaders = await headers()
-          const forwardedHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host")
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `https://${forwardedHost}` : "https://tekateka.com.ar")
-          const ticketUrl = `${siteUrl.replace(/\/$/, "")}/ticket/${encodeURIComponent(data.qr_code)}`
-          const qrImageUrl = `${siteUrl.replace(/\/$/, "")}/api/generate-qr?code=${encodeURIComponent(ticketUrl)}`
-          const locationHtml = renderEventLocationHtml(await getEventLocation(eventDetails))
-          const freeEmail = await resend.emails.send({
-            from: EMAIL_CONFIG.from,
-            replyTo: EMAIL_CONFIG.replyTo,
-            to: buyerEmail,
-            subject: `Tu entrada gratuita: ${eventDetails?.title || "TekaTeka"}`,
-            html: `<!doctype html><html><body style="margin:0;background:#f4eddf;color:#171717;font-family:Arial,sans-serif"><main style="max-width:620px;margin:auto;padding:28px 18px"><header style="padding:12px 0 22px;border-bottom:4px solid #f4511e"><div style="font-size:34px;font-weight:900;letter-spacing:-2px">Te<span style="color:#f4511e">k</span>aTeka</div><div style="margin-top:10px;font-size:11px;letter-spacing:4px;text-transform:uppercase">Más cultura. Más encuentros.</div></header><section style="background:#fffdf7;border:1px solid #e7dcc8;border-radius:0 0 18px 18px;padding:30px;text-align:center"><p style="color:#f4511e;font-size:12px;font-weight:bold;letter-spacing:2px;text-transform:uppercase">Entrada gratuita</p><h1 style="font-size:30px;letter-spacing:-1px">Tu entrada está confirmada</h1><p>Hola ${data.buyer_name}, tu entrada para <strong>${eventDetails?.title || "el evento"}</strong> ya está confirmada.</p><div style="margin:26px 0;padding:24px;background:#fff;border:1px solid #e7dcc8;border-radius:16px"><p><strong>${eventDetails?.event_date ? formatArgentinaDateTime(eventDetails.event_date) : ""}</strong></p>${locationHtml}<img src="${qrImageUrl}" alt="Código QR de entrada" width="280" height="280" style="display:block;width:280px;height:280px;margin:20px auto"><p style="font-family:monospace;font-weight:bold;color:#f4511e">${data.qr_code}</p><p><strong>Presentá este QR al ingresar.</strong></p></div><p><a href="${ticketUrl}" style="display:inline-block;background:#f4511e;color:#fff;padding:13px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir entrada digital</a></p><p style="color:#6b6258;font-size:13px">Este código es único y personal. No lo compartas.</p>${attendeeNameHintHtml(siteUrl, Boolean(buyer?.user.id))}</section><footer style="margin-top:24px;font-size:12px;color:#666">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</footer></main></body></html>`,
-          })
-          if (freeEmail.error) {
-            console.error("[email] Resend rechazó la entrada gratuita:", { from: EMAIL_CONFIG.from, message: freeEmail.error.message })
-            throw new Error(freeEmail.error.message)
+        // Un código de protocolo (u otro que deje el total en $0) confirma la entrada
+        // al instante. El mail tiene que ser el de entrada confirmada con QR, igual
+        // que después de un pago aprobado: antes no se enviaba porque se exigía
+        // payment_method !== "free" justo después de forzar payment_method a "free".
+        if (data.sendEmail !== false && await allowPurchaseEmail()) {
+          let ticketIds = [createdTicket.id]
+          if (effectivePurchaseGroupId) {
+            const { data: groupTickets, error: groupError } = await supabase
+              .from("tickets")
+              .select("id")
+              .eq("purchase_group_id", effectivePurchaseGroupId)
+              .eq("status", "confirmed")
+              .eq("payment_status", "approved")
+            if (groupError) {
+              console.error("[email] No se pudieron agrupar las entradas gratuitas:", redactForLog(groupError))
+            } else if (groupTickets?.length) {
+              ticketIds = groupTickets.map((item) => item.id)
+            }
+          }
+          const emailResult = await sendConfirmedTicketEmail(ticketIds)
+          if (!emailResult.sent) {
+            console.error("[email] No se pudo enviar la entrada gratuita confirmada:", { reason: emailResult.reason, ticketIds })
           }
         }
       } catch (freeEmailError) {
