@@ -14,11 +14,13 @@ export function AttendeeNameEditor({
   buyerName,
   attendeeName,
   editable,
+  disabledReason = null,
 }: {
   ticketId: string
   buyerName: string
   attendeeName: string | null
   editable: boolean
+  disabledReason?: string | null
 }) {
   const [saved, setSaved] = useState(attendeeName)
   const [value, setValue] = useState(attendeeName ?? "")
@@ -80,6 +82,7 @@ export function AttendeeNameEditor({
   }
 
   return (
+    <div className="space-y-1.5">
     <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
       <div className="flex min-w-0 items-center gap-2 text-sm">
         <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -92,6 +95,10 @@ export function AttendeeNameEditor({
           <Pencil className="h-3.5 w-3.5" />
           {saved ? "Editar nombre" : "Asignar nombre"}
         </Button>
+      )}
+    </div>
+      {!editable && disabledReason && (
+        <p className="text-xs text-muted-foreground">{disabledReason}</p>
       )}
     </div>
   )

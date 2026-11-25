@@ -8,10 +8,29 @@ export const ATTENDEE_NAME_DISABLED_MESSAGE =
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const isUuid = (value: string) => UUID_PATTERN.test(value)
 
-// 42703 = Postgres (columna inexistente), PGRST204 = PostgREST (columna fuera de caché).
+// Solo cuando falta la columna (migración 049) o PostgREST todavía no la ve.
+// No usar el texto "attendee_name" a secas: un check 23514 también lo menciona.
 export function isMissingAttendeeColumn(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false
-  return error.code === "42703" || error.code === "PGRST204" || /attendee_name/i.test(error.message ?? "")
+  if (error.code !== "42703" && error.code !== "PGRST204") return false
+  const message = error.message ?? ""
+  return !message || /attendee_name/i.test(message)
+}
+
+export function eventDateHasPassed(eventDate: string | null | undefined) {
+  if (!eventDate) return false
+  const time = new Date(eventDate).getTime()
+  return Number.isFinite(time) && time < Date.now()
+}
+
+export function ticketOwnerMatches(
+  ticket: { buyer_id?: string | null; buyer_email?: string | null },
+  user: { id: string; email?: string | null; email_confirmed_at?: string | null },
+) {
+  if (ticket.buyer_id === user.id) return true
+  const email = user.email?.trim().toLowerCase()
+  if (!user.email_confirmed_at || !email) return false
+  return (ticket.buyer_email ?? "").trim().toLowerCase() === email
 }
 
 export function normalizeAttendeeName(raw: unknown): { ok: true; value: string | null } | { ok: false; error: string } {
