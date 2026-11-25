@@ -2,6 +2,8 @@
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@/lib/supabase/admin';
+import { getCurrentUser } from '@/lib/auth';
+import { assertPromoNotAlreadyUsed } from '@/lib/promo-usage';
 
 interface ValidationResult {
   isValid: boolean;
@@ -9,14 +11,15 @@ interface ValidationResult {
   finalPrice: number;
   error?: string;
   promotionType?: string;
+  allowedAfterCancel?: boolean;
 }
 
 export async function validatePromotion(
   eventId: string,
   promotionCode: string,
-  basePrice: number
+  basePrice: number,
+  buyerEmail?: string,
 ): Promise<ValidationResult> {
-  const supabase = await createServerClient();
   const adminSupabase = createAdminClient();
   
   try {
@@ -82,11 +85,29 @@ export async function validatePromotion(
       finalPrice = basePrice / 2;
     }
 
+    const buyer = await getCurrentUser();
+    const alreadyUsed = await assertPromoNotAlreadyUsed(adminSupabase, {
+      promoId: promoData.id,
+      eventId,
+      code: promotionCode,
+      email: buyerEmail || buyer?.user.email || null,
+      userId: buyer?.user.id || null,
+    });
+    if (!alreadyUsed.ok) {
+      return {
+        isValid: false,
+        discountAmount: 0,
+        finalPrice: basePrice,
+        error: alreadyUsed.error,
+      };
+    }
+
     return {
       isValid: true,
       discountAmount,
         finalPrice: Math.max(0, finalPrice),
         promotionType: promoData.promotion_type,
+        allowedAfterCancel: alreadyUsed.allowedAfterCancel,
       };
   } catch (error) {
     console.error('[v0] Error validating promotion:', error);

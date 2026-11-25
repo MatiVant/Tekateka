@@ -13,6 +13,7 @@ import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check, Minus, Plus } 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
 import { validatePromotion as validatePromotionServer } from "@/app/actions/validate-promotion"
+import { clearPromoUsedOnDevice, markPromoUsedOnDevice, PROMO_USED_DEVICE_MESSAGE, wasPromoUsedOnDevice } from "@/lib/promo-device-usage"
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
 import { findPendingPurchase, type PendingPurchase } from "@/app/actions/find-pending-purchase"
 import { formatCurrency } from "@/lib/format"
@@ -176,12 +177,23 @@ export function PurchaseFlow({
     }
 
     try {
-      const result = await validatePromotionServer(eventId, promotionCode, basePrice)
+      const result = await validatePromotionServer(eventId, promotionCode, basePrice, email)
       if (!result.isValid) {
         setError(result.error || "Código de promoción inválido o expirado")
         setDiscountApplied(false)
+        setPromotionType(null)
         setFinalPrice(basePrice)
         return
+      }
+      if (wasPromoUsedOnDevice(eventId, promotionCode) && !result.allowedAfterCancel) {
+        setError(PROMO_USED_DEVICE_MESSAGE)
+        setDiscountApplied(false)
+        setPromotionType(null)
+        setFinalPrice(basePrice)
+        return
+      }
+      if (wasPromoUsedOnDevice(eventId, promotionCode)) {
+        clearPromoUsedOnDevice(eventId, promotionCode)
       }
 
       const nextPromotionType = result.promotionType ?? null
@@ -282,6 +294,7 @@ export function PurchaseFlow({
 
       setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia
       setTicketIds(createdTicketIds) // Guardamos todos los IDs de la compra (para el comprobante)
+      if (promotionCode) markPromoUsedOnDevice(eventId, promotionCode)
 
       if (priceToUse === 0) {
         setStep("success")
