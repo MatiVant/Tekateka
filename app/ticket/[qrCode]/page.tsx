@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/admin"
 import { TicketDetails } from "@/components/verify/ticket-details"
+import { fetchAttendeeNameByQr } from "@/lib/attendee-name"
 
 export default async function PublicTicketPage({ params }: { params: Promise<{ qrCode: string }> }) {
   const { qrCode } = await params
@@ -14,12 +15,13 @@ export default async function PublicTicketPage({ params }: { params: Promise<{ q
   if (!ticket) notFound()
   const event = Array.isArray(ticket.events) ? ticket.events[0] : ticket.events
   if (!event) notFound()
+  const attendeeName = await fetchAttendeeNameByQr(supabase, decodeURIComponent(qrCode))
 
   return (
     <main className="min-h-screen bg-muted/30 px-4 py-10">
       <div className="mx-auto max-w-xl">
         <h1 className="mb-6 text-center text-2xl font-bold">Entrada digital</h1>
-        <TicketDetails ticket={{ ...ticket, events: event }} />
+        <TicketDetails ticket={{ ...ticket, attendee_name: attendeeName, events: event }} />
       </div>
     </main>
   )

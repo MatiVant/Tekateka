@@ -7,12 +7,14 @@ import { Calendar, MapPin, CheckCircle, Clock, XCircle } from "lucide-react"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { QRCodeDisplay } from "@/components/qr-code-display"
+import { AttendeeNameEditor } from "@/components/attendee-name-editor"
 
 type BuyerTicket = {
   id: string
   status: string
   purchased_at: string
   buyer_name: string
+  attendee_name?: string | null
   qr_code: string
   events: {
     title: string
@@ -142,6 +144,13 @@ export default async function MyTicketsPage() {
                       <span className="text-pretty">{ticket.events.venue}</span>
                     </div>
                   </div>
+
+                  <AttendeeNameEditor
+                    ticketId={ticket.id}
+                    buyerName={ticket.buyer_name}
+                    attendeeName={ticket.attendee_name ?? null}
+                    editable={ticket.status === "pending" || ticket.status === "confirmed"}
+                  />
 
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium mb-2">Código QR para verificación:</p>
