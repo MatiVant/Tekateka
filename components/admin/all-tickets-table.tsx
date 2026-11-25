@@ -1225,7 +1225,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                       <div className="flex flex-col gap-1">
                         {ticket.ticket_promotions.map((promo) => (
                           <Badge key={promo.id} variant="secondary" className="text-xs">
-                            {promo.promotion_codes.promotion_type === "protocol" || ticket.final_price === 0 ? `${promo.promotion_codes.code} · Gratis` : `${promo.promotion_codes.code} · Descuento`}
+                            {promo.promotion_codes.promotion_type === "protocol" || ticket.final_price === 0 ? `${promo.promotion_codes.code} · Gratis` : promo.promotion_codes.promotion_type === "fixed_price" ? `${promo.promotion_codes.code} · Precio fijo` : `${promo.promotion_codes.code} · Descuento`}
                           </Badge>
                         ))}
                       </div>
@@ -1551,10 +1551,11 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                         <strong>Código:</strong> {promo.promotion_codes.code}
                       </p>
                       <p>
-                        <strong>Tipo:</strong> {promo.promotion_codes.promotion_type}
+                        <strong>Tipo:</strong> {promo.promotion_codes.promotion_type === "fixed_price" ? "Precio fijo" : promo.promotion_codes.promotion_type}
                       </p>
                       <p>
-                        <strong>Descuento:</strong> {formatCurrency(promo.discount_amount)}
+                        <strong>{promo.promotion_codes.promotion_type === "fixed_price" ? "Precio fijo del código:" : "Descuento:"}</strong>{" "}
+                        {promo.promotion_codes.promotion_type === "fixed_price" ? formatCurrency(promo.promotion_codes.discount_value) : formatCurrency(promo.discount_amount)}
                       </p>
                       <p>
                         <strong>Precio Final:</strong> {formatCurrency(promo.final_price)}

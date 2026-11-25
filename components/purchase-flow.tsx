@@ -13,6 +13,7 @@ import { Loader2, Upload, CheckCircle2, AlertCircle, Copy, Check, Minus, Plus } 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createTicket } from "@/app/actions/create-ticket"
 import { validatePromotion as validatePromotionServer } from "@/app/actions/validate-promotion"
+import { clearPromoUsedOnDevice, markPromoUsedOnDevice, PROMO_USED_DEVICE_MESSAGE, wasPromoUsedOnDevice } from "@/lib/promo-device-usage"
 import { updateTicketReceipt } from "@/app/actions/update-ticket-receipt"
 import { findPendingPurchase, type PendingPurchase } from "@/app/actions/find-pending-purchase"
 import { formatCurrency } from "@/lib/format"
@@ -60,7 +61,7 @@ export function PurchaseFlow({
   platformFeePercent = 8,
   mercadoPagoEnabled = false,
   isFree = false,
-  isPwyw = false,
+  isPwyw: isPwywEvent = false,
 }: PurchaseFlowProps) {
   const [step, setStep] = useState<Step>("form")
   const [ticketId, setTicketId] = useState<string | null>(null)
@@ -85,6 +86,8 @@ export function PurchaseFlow({
   const [finalPrice, setFinalPrice] = useState(eventPrice)
   const [discountApplied, setDiscountApplied] = useState(false)
   const [promotionType, setPromotionType] = useState<string | null>(null)
+  // Con un código de precio fijo el precio lo define el código, aunque el evento sea "a voluntad".
+  const isPwyw = isPwywEvent && promotionType !== "fixed_price"
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
   const [pendingPurchase, setPendingPurchase] = useState<PendingPurchase | null>(null)
@@ -174,12 +177,23 @@ export function PurchaseFlow({
     }
 
     try {
-      const result = await validatePromotionServer(eventId, promotionCode, basePrice)
+      const result = await validatePromotionServer(eventId, promotionCode, basePrice, email)
       if (!result.isValid) {
         setError(result.error || "Código de promoción inválido o expirado")
         setDiscountApplied(false)
+        setPromotionType(null)
         setFinalPrice(basePrice)
         return
+      }
+      if (wasPromoUsedOnDevice(eventId, promotionCode) && !result.allowedAfterCancel) {
+        setError(PROMO_USED_DEVICE_MESSAGE)
+        setDiscountApplied(false)
+        setPromotionType(null)
+        setFinalPrice(basePrice)
+        return
+      }
+      if (wasPromoUsedOnDevice(eventId, promotionCode)) {
+        clearPromoUsedOnDevice(eventId, promotionCode)
       }
 
       const nextPromotionType = result.promotionType ?? null
@@ -280,6 +294,7 @@ export function PurchaseFlow({
 
       setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia
       setTicketIds(createdTicketIds) // Guardamos todos los IDs de la compra (para el comprobante)
+      if (promotionCode) markPromoUsedOnDevice(eventId, promotionCode)
 
       if (priceToUse === 0) {
         setStep("success")
@@ -593,7 +608,9 @@ export function PurchaseFlow({
           <Alert className="bg-green-50 border-green-200">
             <AlertCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              ¡Código aplicado! Precio con descuento: {formatCurrency(finalPrice)}
+              {promotionType === "fixed_price"
+                ? `¡Código aplicado! Precio con código: ${formatCurrency(finalPrice)} por entrada`
+                : `¡Código aplicado! Precio con descuento: ${formatCurrency(finalPrice)}`}
             </AlertDescription>
           </Alert>
         )}

@@ -11,6 +11,7 @@ import { TICKET_TERMS_VERSION } from "@/lib/legal"
 import { calculatePlatformFee, getPlatformFeePercent } from "@/lib/platform-fees"
 import { checkRateLimit, identifierFromHeaders, RATE_LIMITS } from "@/lib/rate-limit"
 import { redactForLog } from "@/lib/mask-personal-data"
+import { assertPromoNotAlreadyUsed, markPromoUsedOnServerDevice } from "@/lib/promo-usage"
 
 async function allowPurchaseEmail() {
   try {
@@ -104,24 +105,17 @@ export async function createTicket(data: CreateTicketData) {
       if (!promo || !promo.is_active || (promo.max_uses && promo.current_uses >= promo.max_uses) || (promo.valid_from && today < promo.valid_from) || (promo.valid_until && today > promo.valid_until)) throw new Error("Código de promoción inválido o expirado")
       if (promo.promotion_type === "2x1" && data.ticketQuantity !== 2) throw new Error("El código 2x1 requiere exactamente 2 entradas")
       if (promo.promotion_type !== "2x1" && data.ticketQuantity !== 1) throw new Error("Este código permite comprar una sola entrada")
-      if (promo.promotion_type === "protocol") {
-        const normalizedEmail = data.buyer_email.trim().toLowerCase()
-        const { data: previousUse, error: previousUseError } = await supabase
-          .from("ticket_promotions")
-          .select("ticket_id, tickets!inner(event_id, buyer_email)")
-          .eq("promotion_code_id", promo.id)
-          .eq("tickets.event_id", data.event_id)
-          .neq("tickets.status", "cancelled")
-          .ilike("tickets.buyer_email", normalizedEmail)
-          .limit(1)
-          .maybeSingle()
-        if (previousUseError) throw new Error("No se pudo verificar el uso del código")
-        if (previousUse) throw new Error("Ya usaste este código de entrada gratuita")
-      }
       appliedPromotion = promo
       if (promo.promotion_type === "protocol") serverPrice = 0
       if (promo.promotion_type === "percentage") serverPrice = serverPrice * (1 - Number(promo.discount_value) / 100)
       if (promo.promotion_type === "fixed") serverPrice = Math.max(0, serverPrice - Number(promo.discount_value))
+      if (promo.promotion_type === "fixed_price") {
+        // Precio fijo: la entrada cuesta exactamente el valor del código, sin importar el precio del tipo de entrada
+        // (aunque sea más alto o el evento sea a voluntad). Lo decide el organizador al crear el código.
+        const fixedPrice = Number(promo.discount_value)
+        if (!Number.isFinite(fixedPrice) || fixedPrice <= 0) throw new Error("El código de precio fijo no tiene un valor válido")
+        serverPrice = fixedPrice
+      }
       if (promo.promotion_type === "2x1") serverPrice = serverPrice / 2
     }
     if (Math.abs(Number(data.final_price) - Math.max(0, serverPrice)) > 0.01) throw new Error("El precio de la compra cambió, actualizá la página")
@@ -162,6 +156,17 @@ export async function createTicket(data: CreateTicketData) {
       const existingTicket = existingGroup[data.purchaseItemIndex ?? 0]
       if (existingTicket) return existingTicket
       if (existingGroup.length >= requestedQuantity) throw new Error("No se pudo recuperar la compra pendiente")
+    }
+
+    if (appliedPromotion && !isSamePurchaseAttempt) {
+      const alreadyUsed = await assertPromoNotAlreadyUsed(supabase, {
+        promoId: appliedPromotion.id,
+        eventId: data.event_id,
+        code: data.promotion_code || "",
+        email: data.buyer_email,
+        userId: buyer?.user.id ?? null,
+      })
+      if (!alreadyUsed.ok) throw new Error(alreadyUsed.error)
     }
 
     const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
@@ -212,6 +217,11 @@ export async function createTicket(data: CreateTicketData) {
 
       if (promotionError) console.error("[v0] Error al guardar promoción del ticket:", promotionError)
       await supabase.rpc("increment_promotion_uses", { promo_id: appliedPromotion.id })
+      try {
+        await markPromoUsedOnServerDevice(data.event_id, data.promotion_code || "")
+      } catch (error) {
+        console.error("[promos] No se pudo guardar la cookie de uso del código:", error)
+      }
     }
 
     if (isFreeTicket) {

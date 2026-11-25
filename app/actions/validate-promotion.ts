@@ -2,6 +2,8 @@
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@/lib/supabase/admin';
+import { getCurrentUser } from '@/lib/auth';
+import { assertPromoNotAlreadyUsed } from '@/lib/promo-usage';
 
 interface ValidationResult {
   isValid: boolean;
@@ -9,14 +11,15 @@ interface ValidationResult {
   finalPrice: number;
   error?: string;
   promotionType?: string;
+  allowedAfterCancel?: boolean;
 }
 
 export async function validatePromotion(
   eventId: string,
   promotionCode: string,
-  basePrice: number
+  basePrice: number,
+  buyerEmail?: string,
 ): Promise<ValidationResult> {
-  const supabase = await createServerClient();
   const adminSupabase = createAdminClient();
   
   try {
@@ -64,9 +67,39 @@ export async function validatePromotion(
     } else if (promoData.promotion_type === 'fixed') {
       discountAmount = promoData.discount_value;
       finalPrice = Math.max(0, basePrice - discountAmount);
+    } else if (promoData.promotion_type === 'fixed_price') {
+      const fixedPrice = Number(promoData.discount_value);
+      if (!Number.isFinite(fixedPrice) || fixedPrice <= 0) {
+        return {
+          isValid: false,
+          discountAmount: 0,
+          finalPrice: basePrice,
+          error: 'Este código de precio fijo no tiene un valor válido',
+        };
+      }
+      // Puede ser mayor al precio normal: es decisión del organizador.
+      finalPrice = fixedPrice;
+      discountAmount = Math.max(0, basePrice - fixedPrice);
     } else if (promoData.promotion_type === '2x1') {
       discountAmount = basePrice / 2;
       finalPrice = basePrice / 2;
+    }
+
+    const buyer = await getCurrentUser();
+    const alreadyUsed = await assertPromoNotAlreadyUsed(adminSupabase, {
+      promoId: promoData.id,
+      eventId,
+      code: promotionCode,
+      email: buyerEmail || buyer?.user.email || null,
+      userId: buyer?.user.id || null,
+    });
+    if (!alreadyUsed.ok) {
+      return {
+        isValid: false,
+        discountAmount: 0,
+        finalPrice: basePrice,
+        error: alreadyUsed.error,
+      };
     }
 
     return {
@@ -74,6 +107,7 @@ export async function validatePromotion(
       discountAmount,
         finalPrice: Math.max(0, finalPrice),
         promotionType: promoData.promotion_type,
+        allowedAfterCancel: alreadyUsed.allowedAfterCancel,
       };
   } catch (error) {
     console.error('[v0] Error validating promotion:', error);
