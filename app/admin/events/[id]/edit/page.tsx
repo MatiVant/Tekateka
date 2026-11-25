@@ -28,10 +28,11 @@ export default async function EditEventPage({
   const currentTransfer = await getPendingTransfersForEvent(id)
   const audienceTags = await getAudienceTags()
 
-  const [{ data: event }, { data: venues }, pendingVenueProposals] = await Promise.all([
+  const [{ data: event }, { data: venues }, pendingVenueProposals, { count: ticketTierCount }] = await Promise.all([
     supabase.from("events").select("*").eq("id", id).eq("organizer_id", user.id).single(),
     supabase.from("venues").select("id, name, address").eq("active", true).order("name"),
     getMyPendingVenueProposals(user.id),
+    supabase.from("ticket_tiers").select("id", { count: "exact", head: true }).eq("event_id", id),
   ])
 
   if (!event) {
@@ -71,6 +72,7 @@ export default async function EditEventPage({
               pendingVenueProposals={pendingVenueProposals}
               audienceTagOptions={audienceTags.filter((tag) => tag.active).map((tag) => tag.name)}
               ticketSettingsHref={`/admin/events/${id}/settings`}
+              hasExistingTicketTiers={(ticketTierCount ?? 0) > 0}
             />
           </CardContent>
         </Card>

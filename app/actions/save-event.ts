@@ -90,14 +90,35 @@ export async function saveEvent(
 
     const slug = await createUniqueEventSlug(supabase, eventData.title, eventId)
 
+    const hasTiersInPayload = ticketTiers.length > 0
+    let hasTicketTiers = hasTiersInPayload
+    if (eventId && !hasTicketTiers) {
+      const { count: ticketTierCount, error: ticketTiersError } = await supabase
+        .from('ticket_tiers')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+      if (ticketTiersError) throw ticketTiersError
+      hasTicketTiers = (ticketTierCount ?? 0) > 0
+    }
+
+    const parsedPrice = Number(eventData.price)
+    const priceIsValid = Number.isFinite(parsedPrice) && parsedPrice >= 0
+    if (!priceIsValid && !hasTicketTiers) {
+      throw new Error('El precio de la entrada es obligatorio')
+    }
+
     if (eventId) {
       const { data: existingEvent, error: existingEventError } = await supabase
         .from('events')
-        .select('id, organizer_id, total_tickets, available_tickets')
+        .select('id, organizer_id, total_tickets, available_tickets, price')
         .eq('id', eventId)
         .eq('organizer_id', user.id)
         .single()
       if (existingEventError || !existingEvent) throw new Error('No tenés permiso para editar este evento')
+
+      if (!priceIsValid && hasTicketTiers) {
+        eventData.price = Number(existingEvent.price ?? 0)
+      }
 
       const [{ count: reservedTickets, error: ticketsError }, { data: doorSales, error: doorSalesError }] = await Promise.all([
         supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('event_id', eventId).in('status', ['pending', 'confirmed', 'used']),
@@ -129,6 +150,13 @@ export async function saveEvent(
       revalidatePath(`/events/${eventId}`)
       return { success: true, eventId }
     } else {
+      if (!priceIsValid && hasTicketTiers) {
+        const tierPrices = ticketTiers
+          .map((tier) => Number(tier.base_price))
+          .filter((tierPrice) => Number.isFinite(tierPrice) && tierPrice >= 0)
+        eventData.price = tierPrices.length > 0 ? Math.min(...tierPrices) : 0
+      }
+
       // Crear nuevo evento
       const { data: newEvent, error: insertError } = await supabase
         .from('events')
