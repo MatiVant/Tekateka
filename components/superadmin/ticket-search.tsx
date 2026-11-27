@@ -14,6 +14,12 @@ import { getPaymentStatusLabel, getTicketStatusLabel } from "@/lib/payment-statu
 
 export type TicketSearchEventOption = { id: string; title: string | null; event_date: string | null }
 
+type TicketReceipt = {
+  state: "yes" | "no" | "not_required"
+  url: string | null
+  shared: boolean
+}
+
 type TicketSearchResult = {
   id: string
   qrCode: string | null
@@ -29,6 +35,7 @@ type TicketSearchResult = {
   used: boolean
   usedAt: string | null
   purchaseGroupId: string | null
+  receipt: TicketReceipt
   tierName: string | null
   event: { id: string; title: string | null; date: string | null; slug: string | null } | null
 }
@@ -44,6 +51,12 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pendientes" },
   { value: "used", label: "Usadas" },
   { value: "cancelled", label: "Canceladas" },
+]
+
+const RECEIPT_OPTIONS = [
+  { value: ALL, label: "Con o sin comprobante" },
+  { value: "with", label: "Con comprobante" },
+  { value: "without", label: "Sin comprobante" },
 ]
 
 function formatShortDate(value: string | null, withTime = true) {
@@ -82,6 +95,29 @@ function StatusBadges({ ticket }: { ticket: TicketSearchResult }) {
   )
 }
 
+function ReceiptBadge({ receipt, withLink = true }: { receipt: TicketReceipt; withLink?: boolean }) {
+  if (receipt.state === "yes") {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        <Badge variant="default" className="text-[11px]">Comprobante: Sí{receipt.shared ? " (de la compra)" : ""}</Badge>
+        {withLink && receipt.url && (
+          <a
+            href={receipt.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex items-center gap-0.5 text-xs font-medium text-primary underline-offset-2 hover:underline"
+          >
+            ver<ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </span>
+    )
+  }
+  if (receipt.state === "no") return <Badge variant="destructive" className="text-[11px]">Comprobante: No</Badge>
+  return <Badge variant="outline" className="text-[11px] text-muted-foreground">Comprobante: No aplica</Badge>
+}
+
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[7.5rem_1fr] gap-2 py-2 text-sm">
@@ -97,6 +133,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [eventId, setEventId] = useState(ALL)
   const [status, setStatus] = useState(ALL)
+  const [receiptFilter, setReceiptFilter] = useState(ALL)
   const [page, setPage] = useState(1)
   const [results, setResults] = useState<TicketSearchResult[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -108,7 +145,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
 
   const trimmed = debouncedQuery.trim()
   const textTooShort = trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH
-  const hasFilters = eventId !== ALL || status !== ALL
+  const hasFilters = eventId !== ALL || status !== ALL || receiptFilter !== ALL
   const canSearch = !textTooShort && (trimmed.length >= MIN_QUERY_LENGTH || hasFilters)
 
   useEffect(() => {
@@ -136,6 +173,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
     if (trimmed) params.set("q", trimmed)
     if (eventId !== ALL) params.set("eventId", eventId)
     if (status !== ALL) params.set("status", status)
+    if (receiptFilter !== ALL) params.set("receipt", receiptFilter)
     try {
       const response = await fetch(`/api/superadmin/ticket-search?${params.toString()}`, { signal: controller.signal, cache: "no-store" })
       const data = await response.json().catch(() => null)
@@ -150,7 +188,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
-  }, [canSearch, page, trimmed, eventId, status])
+  }, [canSearch, page, trimmed, eventId, status, receiptFilter])
 
   useEffect(() => {
     // Se agenda para después del render: así los setState quedan fuera del cuerpo del efecto.
@@ -197,12 +235,12 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
         <Search className="mt-0.5 h-5 w-5 text-primary" />
         <div>
           <h2 className="font-semibold">Buscar entradas</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Buscá por email, nombre o código de la entrada, o filtrá por evento y estado.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Buscá por email, nombre o código de la entrada, o filtrá por evento, estado y comprobante de pago.</p>
         </div>
       </div>
 
       <form
-        className="mt-4 grid gap-2 md:grid-cols-[1fr_14rem_11rem_auto]"
+        className="mt-4 grid gap-2 md:grid-cols-[1fr_14rem_11rem_12rem_auto]"
         onSubmit={(event) => {
           event.preventDefault()
           setDebouncedQuery(query)
@@ -236,13 +274,19 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
             {STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={receiptFilter} onValueChange={(value) => { setReceiptFilter(value); setPage(1) }}>
+          <SelectTrigger aria-label="Filtrar por comprobante" className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {RECEIPT_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Button type="submit" disabled={loading}>
           {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Buscando...</> : "Buscar"}
         </Button>
       </form>
 
       {textTooShort && <p className="mt-2 text-xs text-muted-foreground">Escribí al menos {MIN_QUERY_LENGTH} caracteres.</p>}
-      {!canSearch && !textTooShort && <p className="mt-2 text-xs text-muted-foreground">Escribí algo o elegí un evento o estado para ver entradas.</p>}
+      {!canSearch && !textTooShort && <p className="mt-2 text-xs text-muted-foreground">Escribí algo o elegí un filtro para ver entradas.</p>}
 
       {error && <p className="mt-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="h-4 w-4" />{error}</p>}
 
@@ -261,6 +305,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
                   <th className="px-3 py-2 font-medium">Evento</th>
                   <th className="px-3 py-2 font-medium">Compra</th>
                   <th className="px-3 py-2 font-medium">Estado</th>
+                  <th className="px-3 py-2 font-medium">Comprobante</th>
                   <th className="px-3 py-2 font-medium text-right">Acciones</th>
                 </tr>
               </thead>
@@ -283,6 +328,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatShortDate(ticket.purchasedAt)}</td>
                     <td className="px-3 py-2"><StatusBadges ticket={ticket} /></td>
+                    <td className="px-3 py-2"><ReceiptBadge receipt={ticket.receipt} /></td>
                     <td className="px-3 py-2 text-right">
                       <Button type="button" variant="ghost" size="sm" onClick={(event) => { event.stopPropagation(); openRow(ticket) }}>Ver detalle</Button>
                     </td>
@@ -302,6 +348,7 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
                     <StatusBadges ticket={ticket} />
                   </div>
                   <p className="truncate text-xs text-muted-foreground">{ticket.event?.title || "Evento sin título"} · {formatShortDate(ticket.purchasedAt, false)}</p>
+                  <div className="mt-1"><ReceiptBadge receipt={ticket.receipt} withLink={false} /></div>
                 </button>
               </li>
             ))}
@@ -339,6 +386,12 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
                   {selected.tierName && <DetailRow label="Tipo de entrada">{selected.tierName}</DetailRow>}
                   <DetailRow label="Precio">{selected.finalPrice !== null ? formatCurrency(selected.finalPrice) : "—"}</DetailRow>
                   <DetailRow label="Pago">{getPaymentStatusLabel(selected.paymentStatus)}{selected.paymentMethod ? ` · ${selected.paymentMethod}` : ""}</DetailRow>
+                  <DetailRow label="Comprobante">
+                    <ReceiptBadge receipt={selected.receipt} withLink={false} />
+                    {selected.receipt.state === "yes" && selected.receipt.shared && (
+                      <p className="mt-1 text-xs text-muted-foreground">Es el comprobante de la compra: está cargado en otra entrada del mismo pedido.</p>
+                    )}
+                  </DetailRow>
                   <DetailRow label="Estado">{getTicketStatusLabel(selected.status)}</DetailRow>
                   <DetailRow label="Comprada">{formatShortDate(selected.purchasedAt)}</DetailRow>
                   {selected.paidAt && <DetailRow label="Pagada">{formatShortDate(selected.paidAt)}</DetailRow>}
@@ -347,6 +400,13 @@ export function TicketSearch({ events }: { events: TicketSearchEventOption[] }) 
                 </dl>
               </div>
               <div className="flex flex-col gap-2 p-4">
+                {selected.receipt.state === "yes" && selected.receipt.url && (
+                  <Button asChild variant="outline">
+                    <a href={selected.receipt.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />Ver comprobante de pago
+                    </a>
+                  </Button>
+                )}
                 {selected.qrCode && (
                   <Button asChild variant="outline">
                     <a href={`/ticket/${encodeURIComponent(selected.qrCode)}`} target="_blank" rel="noopener noreferrer">
