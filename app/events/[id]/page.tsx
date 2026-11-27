@@ -227,6 +227,7 @@ export default async function EventDetailPage({
                     isFree={isFree}
                     isPwyw={isPwyw}
                     isLoggedIn={Boolean(buyer)}
+                    requiresApproval={event.requires_approval === true}
                   />
                 ) : (
                   <div className={`rounded-lg border p-4 text-sm ${noTicketsAvailable ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-primary/30 bg-primary/5 text-foreground"}`}>

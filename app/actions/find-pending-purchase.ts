@@ -27,8 +27,11 @@ export async function findPendingPurchase(eventId: string, email: string): Promi
     .order("purchased_at", { ascending: false })
 
   if (error || !tickets?.length) return null
-  const groupId = tickets[0].purchase_group_id
-  const group = tickets.filter((ticket) => ticket.purchase_group_id === groupId)
+  // Una solicitud que espera la aprobación del organizador (entrada gratis pendiente) no se "continúa": no hay nada para pagar.
+  const resumable = tickets.filter((ticket) => ticket.payment_method !== "free")
+  if (resumable.length === 0) return null
+  const groupId = resumable[0].purchase_group_id
+  const group = resumable.filter((ticket) => ticket.purchase_group_id === groupId)
   const paymentMethod = group[0].payment_method
   if (!["mercado_pago", "external_link", "transfer", "free"].includes(paymentMethod)) return null
 

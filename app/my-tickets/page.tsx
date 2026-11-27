@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { QRCodeDisplay } from "@/components/qr-code-display"
 import { AttendeeNameEditor } from "@/components/attendee-name-editor"
 import { eventDateHasPassed } from "@/lib/attendee-name"
+import { isAwaitingApproval, isRejectedApproval } from "@/lib/ticket-approval"
 
 type BuyerTicket = {
   id: string
@@ -17,6 +18,8 @@ type BuyerTicket = {
   buyer_id?: string | null
   buyer_email?: string | null
   attendee_name?: string | null
+  payment_method?: string | null
+  rejection_reason?: string | null
   qr_code: string
   events: {
     title: string
@@ -126,7 +129,19 @@ export default async function MyTicketsPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-xl text-pretty">{ticket.events.title}</CardTitle>
-                    {getStatusBadge(ticket.status)}
+                    {isAwaitingApproval(ticket) ? (
+                      <Badge variant="secondary">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Esperando aprobación
+                      </Badge>
+                    ) : isRejectedApproval(ticket) ? (
+                      <Badge variant="destructive">
+                        <XCircle className="mr-1 h-3 w-3" />
+                        Solicitud rechazada
+                      </Badge>
+                    ) : (
+                      getStatusBadge(ticket.status)
+                    )}
                   </div>
                   <CardDescription>Comprador: {ticket.buyer_name}</CardDescription>
                 </CardHeader>
@@ -166,11 +181,19 @@ export default async function MyTicketsPage() {
                     }
                   />
 
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium mb-2">Código QR para verificación:</p>
-                    <QRCodeDisplay qrCode={ticket.qr_code} />
-                    <p className="text-xs text-muted-foreground mt-2 text-center">{ticket.qr_code}</p>
-                  </div>
+                  {isAwaitingApproval(ticket) || isRejectedApproval(ticket) ? (
+                    <div className="border-t pt-4 text-sm text-muted-foreground">
+                      {isAwaitingApproval(ticket)
+                        ? "Tu solicitud fue enviada. El organizador tiene que confirmarla; cuando lo haga vas a ver acá tu código QR y te llega por mail. Todavía no sirve para ingresar."
+                        : `El organizador no aprobó esta solicitud.${ticket.rejection_reason ? ` Motivo: ${ticket.rejection_reason}` : ""}`}
+                    </div>
+                  ) : (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium mb-2">Código QR para verificación:</p>
+                      <QRCodeDisplay qrCode={ticket.qr_code} />
+                      <p className="text-xs text-muted-foreground mt-2 text-center">{ticket.qr_code}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -30,6 +30,7 @@ import { handleNetworkError } from "@/lib/network-error-handler"
 import { useToast } from "@/hooks/use-toast"
 import { getPaymentStatusLabel, getTicketStatusLabel } from "@/lib/payment-status"
 import { AdminReceiptUpload } from "@/components/admin/admin-receipt-upload"
+import { isAwaitingApproval, isRejectedApproval } from "@/lib/ticket-approval"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -903,7 +904,23 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
     return <Badge variant="outline" className={className}>{getPaymentStatusLabel(status)}</Badge>
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, ticket?: { status?: string; payment_method?: string | null; rejection_reason?: string | null }) => {
+    if (ticket && isAwaitingApproval(ticket)) {
+      return (
+        <Badge variant="secondary" className="bg-amber-100 text-amber-900">
+          <Clock className="mr-1 h-3 w-3" />
+          Solicitud pendiente
+        </Badge>
+      )
+    }
+    if (ticket && isRejectedApproval(ticket)) {
+      return (
+        <Badge variant="destructive">
+          <XCircle className="mr-1 h-3 w-3" />
+          Solicitud rechazada
+        </Badge>
+      )
+    }
     switch (status) {
       case "confirmed":
         return (
@@ -1074,7 +1091,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center justify-between gap-2">
                             <div className="min-w-0"><h3 className="break-words text-sm font-semibold leading-tight">{ticket.attendee_name || ticket.buyer_name || "Titular sin nombre"}</h3>{ticket.attendee_name && <p className="text-xs text-muted-foreground">Comprado por {ticket.buyer_name}</p>}</div>
-                            {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
+                            {ticketIsConfirmed ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status, ticket)}
                           </div>
                           {isTwoForOneGroup && (
                             <p className="mt-1 text-xs font-medium text-muted-foreground">2x1 · 2 personas · {formatCurrency(ticket.final_price ?? ticket.events.price)}</p>
@@ -1110,7 +1127,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                               {group.tickets.length > 1 ? `Entrada ${ticketIndex + 1} de ${group.tickets.length} · compra agrupada` : "Entrada individual"}
                             </Badge>
                           </div>
-                          {isConfirmedTicket(ticket) ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status)}
+                          {isConfirmedTicket(ticket) ? <CheckCircle className="h-5 w-5 shrink-0 text-green-600" aria-label="Confirmada" /> : getStatusBadge(ticket.status, ticket)}
                         </div>
                         <p className="mt-1 break-all text-xs text-muted-foreground">{ticket.buyer_email}</p>
                         {!fixedEventId && <p className="mt-3 text-sm font-medium">{ticket.events.title}</p>}
@@ -1239,7 +1256,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                   </td>
   <td className="p-4 font-semibold">{Number(ticket.final_price) === 0 ? <Badge variant="secondary">Gratis</Badge> : formatCurrency(ticket.final_price ?? ticket.events.price)}</td>
   <td className="p-4 text-xs">{ticket.payment_method === "mercado_pago" ? "Mercado Pago (+10%)" : ticket.payment_method === "external_link" ? "Link MP" : ticket.payment_method === "transfer" ? "Transferencia" : ticket.payment_method === "free" ? "Gratis" : "—"}</td>
-  <td className="p-4">{getStatusBadge(ticket.status)}</td>
+  <td className="p-4">{getStatusBadge(ticket.status, ticket)}</td>
                   <td className="p-4">{getPaymentBadge(ticket.payment_status)}</td>
                   <td className="p-4">
                     {group.tickets.length === 1 && (ticket.payment_receipt_url ? (
@@ -1543,7 +1560,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Estado</p>
-                  {getStatusBadge(selectedTicket.status)}
+                  {getStatusBadge(selectedTicket.status, selectedTicket)}
                 </div>
               </div>
 
@@ -1647,7 +1664,7 @@ export function AllTicketsTable({ tickets, doorSales = [], events, fixedEventId,
                   disabled={loadingId === selectedTicket.id}
                 >
                   {loadingId === selectedTicket.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                  {loadingId === selectedTicket.id ? "Confirmando..." : "Confirmar Entrada"}
+                  {loadingId === selectedTicket.id ? "Confirmando..." : isAwaitingApproval(selectedTicket) ? "Aprobar solicitud" : "Confirmar Entrada"}
                 </Button>
                 <Button
                   variant="destructive"

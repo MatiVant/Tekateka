@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -45,6 +46,7 @@ interface EventFormProps {
   audience_tags?: string[] | null
   audience_keywords?: string | null
   is_pay_what_you_want: boolean
+    requires_approval?: boolean
     max_tickets_per_person?: number
     mercado_pago_link?: string | null
     payment_methods?: string[] | null
@@ -125,6 +127,7 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
     event?.price === 0 ? "free" : event?.is_pay_what_you_want ? "pwyw" : "paid",
   )
   const [maxTicketsPerPerson, setMaxTicketsPerPerson] = useState(event?.max_tickets_per_person?.toString() || "")
+  const [requiresApproval, setRequiresApproval] = useState(event?.requires_approval === true)
   const [mercadoPagoLink, setMercadoPagoLink] = useState(event?.mercado_pago_link || "")
   const [paymentMethods, setPaymentMethods] = useState<string[]>(isSuperadmin && event?.payment_methods?.length ? event.payment_methods : ["transfer"])
   const [transferAlias, setTransferAlias] = useState(event?.transfer_alias || "")
@@ -337,6 +340,8 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
         price: basePrice,
         door_ticket_price: doorTicketPrice.trim() ? Number.parseFloat(doorTicketPrice) : null,
         is_pay_what_you_want: eventType === "pwyw",
+        // Solo tiene sentido si la entrada puede salir $0 (gratis o a la gorra).
+        requires_approval: eventType !== "paid" && requiresApproval,
         total_tickets: Number.parseInt(totalTickets),
         available_tickets: event ? event.total_tickets : Number.parseInt(totalTickets),
         image_url: imageUrl || null,
@@ -631,6 +636,21 @@ export function EventForm({ userId, isSuperadmin = false, event, venues = [], pe
   </div>
 
       </div>
+
+      {eventType !== "paid" && (
+        <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+          <div className="space-y-1">
+            <Label htmlFor="requires-approval">Requiere aprobación del organizador</Label>
+            <p className="text-xs text-muted-foreground">
+              {requiresApproval
+                ? "Cada pedido queda como solicitud pendiente hasta que lo apruebes o rechaces desde Entradas. Mientras tanto ocupa un lugar del cupo."
+                : "Apagado: la entrada gratis se confirma sola y le llega el QR al instante."}
+              {eventType === "pwyw" ? " En «a la gorra» solo aplica cuando el comprador elige no pagar nada; si paga algo, seguís confirmando el pago como siempre." : ""}
+            </p>
+          </div>
+          <Switch id="requires-approval" checked={requiresApproval} onCheckedChange={setRequiresApproval} />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="totalTickets">Total de Entradas *</Label>

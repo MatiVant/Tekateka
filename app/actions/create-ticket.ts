@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/admin"
 import { sendConfirmedTicketEmail } from "@/lib/send-confirmed-ticket-email"
+import { sendApprovalRequestEmail } from "@/lib/send-approval-request-email"
+import { isMissingApprovalColumn } from "@/lib/ticket-approval"
 import { Resend } from "resend"
 import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
@@ -121,10 +123,20 @@ export async function createTicket(data: CreateTicketData) {
     }
     if (Math.abs(Number(data.final_price) - Math.max(0, serverPrice)) > 0.01) throw new Error("El precio de la compra cambió, actualizá la página")
 
+    // Si la entrada sale $0 y el organizador pidió aprobación, no se confirma sola.
+    // Se consulta aparte para tolerar que todavía no esté corrido el script 050.
+    const priceIsFree = Math.max(0, serverPrice) === 0
+    let eventRequiresApproval = false
+    if (priceIsFree) {
+      const { data: approvalRow, error: approvalError } = await supabase.from("events").select("requires_approval").eq("id", data.event_id).maybeSingle()
+      if (approvalError && !isMissingApprovalColumn(approvalError)) throw new Error("No se pudo verificar si el evento requiere aprobación")
+      eventRequiresApproval = !approvalError && approvalRow?.requires_approval === true
+    }
+
     const reuseCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
     const { data: pendingTickets, error: pendingError } = await supabase
       .from("tickets")
-      .select("id, purchase_group_id, purchased_at, payment_status, status")
+      .select("id, purchase_group_id, purchased_at, payment_status, status, payment_method")
       .eq("event_id", data.event_id)
       .ilike("buyer_email", buyerEmail)
       .eq("status", "pending")
@@ -155,7 +167,7 @@ export async function createTicket(data: CreateTicketData) {
       }
 
       const existingTicket = existingGroup[data.purchaseItemIndex ?? 0]
-      if (existingTicket) return existingTicket
+      if (existingTicket) return existingTicket.payment_method === "free" ? { ...existingTicket, awaiting_approval: true } : existingTicket
       if (existingGroup.length >= requestedQuantity) throw new Error("No se pudo recuperar la compra pendiente")
     }
 
@@ -168,6 +180,21 @@ export async function createTicket(data: CreateTicketData) {
         userId: buyer?.user.id ?? null,
       })
       if (!alreadyUsed.ok) throw new Error(alreadyUsed.error)
+    }
+
+    if (priceIsFree && eventRequiresApproval) {
+      // Una solicitud abierta por email y evento: evita llenar el cupo de pedidos repetidos.
+      const { data: openRequests, error: openRequestsError } = await supabase
+        .from("tickets")
+        .select("id, purchase_group_id")
+        .eq("event_id", data.event_id)
+        .eq("buyer_email", buyerEmail)
+        .eq("status", "pending")
+        .eq("payment_method", "free")
+      if (openRequestsError) throw new Error("No se pudieron verificar tus solicitudes anteriores")
+      if ((openRequests ?? []).some((item) => !data.purchaseGroupId || item.purchase_group_id !== data.purchaseGroupId)) {
+        throw new Error("Ya tenés una solicitud pendiente para este evento. Esperá a que el organizador la confirme.")
+      }
     }
 
     const { data: ticket, error: ticketError } = await supabase.rpc("create_ticket_atomic", {
@@ -189,6 +216,7 @@ export async function createTicket(data: CreateTicketData) {
     const createdTicket = Array.isArray(ticket) ? ticket[0] : ticket
     if (!createdTicket) throw new Error("No se pudo crear el ticket")
     const isFreeTicket = Math.max(0, serverPrice) === 0
+    const needsApproval = isFreeTicket && eventRequiresApproval
     const platformFeePercent = isFreeTicket ? 0 : await getPlatformFeePercent(supabase, event.venue_id, event.created_at)
     const platformFeeAmount = calculatePlatformFee(Math.max(0, serverPrice), platformFeePercent)
     const normalizedPaymentMethod = isFreeTicket ? "free" : data.payment_method === "transfer" ? "transfer" : data.payment_method === "external_link" ? "external_link" : "mercado_pago"
@@ -199,7 +227,7 @@ export async function createTicket(data: CreateTicketData) {
     const baseWithPlatformFee = isFreeTicket ? 0 : Math.round((Math.max(0, serverPrice) + platformFeeAmount) * 100) / 100
     const mercadoPagoFee = normalizedPaymentMethod === "mercado_pago" ? Math.round(baseWithPlatformFee * 0.10 * 100) / 100 : 0
     const chargedAmount = baseWithPlatformFee
-    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket ? "approved" : undefined, status: isFreeTicket ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: chargedAmount, payment_fee_amount: mercadoPagoFee, platform_fee_percent: platformFeePercent, platform_fee_amount: platformFeeAmount, net_amount: isFreeTicket ? 0 : Math.max(0, serverPrice), purchase_group_id: effectivePurchaseGroupId ?? null }).eq("id", createdTicket.id)
+    const { error: ticketDetailsError } = await supabase.from("tickets").update({ payment_method: normalizedPaymentMethod, payment_status: isFreeTicket && !needsApproval ? "approved" : undefined, status: isFreeTicket && !needsApproval ? "confirmed" : undefined, buyer_phone: data.buyer_phone?.trim() || null, marketing_consent: true, terms_accepted_at: new Date().toISOString(), terms_version: data.terms_version || TICKET_TERMS_VERSION, charged_amount: chargedAmount, payment_fee_amount: mercadoPagoFee, platform_fee_percent: platformFeePercent, platform_fee_amount: platformFeeAmount, net_amount: isFreeTicket ? 0 : Math.max(0, serverPrice), purchase_group_id: effectivePurchaseGroupId ?? null }).eq("id", createdTicket.id)
     if (ticketDetailsError) throw new Error("No se pudo confirmar la entrada")
 
     const { error: tokenError } = await supabase.from("tickets").update({ payment_resume_token_hash: resumeTokenHash, payment_resume_expires_at: resumeExpiresAt }).eq("id", createdTicket.id)
@@ -223,6 +251,19 @@ export async function createTicket(data: CreateTicketData) {
       } catch (error) {
         console.error("[promos] No se pudo guardar la cookie de uso del código:", error)
       }
+    }
+
+    if (needsApproval) {
+      // Queda 'pending' (cuenta para el cupo). El QR llega recién cuando el organizador la apruebe.
+      try {
+        if (data.sendEmail !== false && await allowPurchaseEmail()) {
+          const requestEmail = await sendApprovalRequestEmail({ eventId: data.event_id, buyerName: data.buyer_name, buyerEmail, quantity: data.ticketQuantity ?? 1 })
+          if (!requestEmail.sent) console.error("[email] No se pudo enviar el mail de solicitud recibida:", { reason: requestEmail.reason })
+        }
+      } catch (approvalEmailError) {
+        console.error("[email] Error en el mail de solicitud recibida:", redactForLog(approvalEmailError))
+      }
+      return { ...createdTicket, awaiting_approval: true }
     }
 
     if (isFreeTicket) {
