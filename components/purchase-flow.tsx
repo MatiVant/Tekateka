@@ -45,6 +45,7 @@ interface PurchaseFlowProps {
   isFree?: boolean
   isPwyw?: boolean
   isLoggedIn?: boolean
+  requiresApproval?: boolean
 }
 
 
@@ -80,9 +81,11 @@ export function PurchaseFlow({
   isFree = false,
   isPwyw: isPwywEvent = false,
   isLoggedIn = false,
+  requiresApproval = false,
 }: PurchaseFlowProps) {
   const [step, setStep] = useState<Step>("form")
   const [ticketId, setTicketId] = useState<string | null>(null)
+  const [awaitingApproval, setAwaitingApproval] = useState(false)
   const [ticketIds, setTicketIds] = useState<string[]>([])
   const [tiers, setTiers] = useState<TicketTier[]>([])
   const [tierSalesNotStarted, setTierSalesNotStarted] = useState(false)
@@ -277,6 +280,7 @@ export function PurchaseFlow({
       const sharedPaymentResumeToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`
       const purchaseGroupId = crypto.randomUUID()
       const createdTicketIds: string[] = []
+      let approvalRequested = false
 
       for (let i = 0; i < quantity; i++) {
         const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`
@@ -308,6 +312,7 @@ export function PurchaseFlow({
 
         const ticket = await createTicket(ticketData)
         if (!createdTicketIds.includes(ticket.id)) createdTicketIds.push(ticket.id)
+        if ("awaiting_approval" in ticket && ticket.awaiting_approval) approvalRequested = true
       }
 
       setTicketId(createdTicketIds[0]) // Guardamos el primer ID para referencia
@@ -315,6 +320,7 @@ export function PurchaseFlow({
       if (promotionCode) markPromoUsedOnDevice(eventId, promotionCode)
 
       if (priceToUse === 0) {
+        setAwaitingApproval(approvalRequested)
         setStep("success")
       } else if (paymentMethod === "transfer") {
         setCheckoutUrl(null)
@@ -703,6 +709,7 @@ export function PurchaseFlow({
     const platformFee = reviewBaseTotal > 0 ? Math.round(reviewBaseTotal * platformFeePercent) / 100 : 0
     const reviewMpFee = paymentMethod === "mercado_pago" ? Math.round((reviewBaseTotal + platformFee) * 0.10 * 100) / 100 : 0
     const reviewTotal = reviewBaseTotal + platformFee + reviewMpFee
+    const reviewIsZero = isFree || finalPrice === 0 || (isPwyw && !(Number.parseFloat(customPrice) > 0))
 
     return (
       <div className="space-y-5">
@@ -738,10 +745,16 @@ export function PurchaseFlow({
 
         {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error === "STORAGE_UPLOAD_UNAVAILABLE" ? <>Disculpa las molestias ocasionadas. Podés enviar el comprobante a <a className="font-semibold underline" href="https://wa.me/5493426105033" target="_blank" rel="noreferrer">+54 9 3426 10-5033 por WhatsApp</a> para que confirmemos tus entradas.</> : error}</AlertDescription></Alert>}
 
+        {requiresApproval && reviewIsZero && (
+          <Alert>
+            <AlertDescription>Este evento requiere que el organizador confirme tu entrada. Te avisamos por correo cuando la apruebe.</AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>Volver atrás</Button>
           <Button type="button" className="flex-1" onClick={() => void handlePurchaseSubmit()} disabled={isLoading}>
-            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree || finalPrice === 0 ? "Obtener entrada gratis" : "Continuar al pago"}
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : isFree || finalPrice === 0 ? (requiresApproval ? "Enviar solicitud" : "Obtener entrada gratis") : requiresApproval && reviewIsZero ? "Enviar solicitud" : "Continuar al pago"}
           </Button>
         </div>
       </div>
@@ -925,11 +938,13 @@ export function PurchaseFlow({
           <CheckCircle2 className="w-8 h-8 text-primary" />
         </div>
         <h3 className="text-xl font-semibold">
-          {isFree ? "¡Entradas Confirmadas!" : paymentWasReturned ? "Pago recibido" : "Compra Pendiente de Confirmación"}
+          {awaitingApproval ? "¡Solicitud enviada!" : isFree ? "¡Entradas Confirmadas!" : paymentWasReturned ? "Pago recibido" : "Compra Pendiente de Confirmación"}
         </h3>
         {paymentNotice && <Alert><AlertDescription>{paymentNotice}</AlertDescription></Alert>}
         <p className="text-muted-foreground text-sm leading-relaxed">
-          {isFree
+          {awaitingApproval
+            ? `Tu solicitud de ${quantity} ${quantity === 1 ? "entrada" : "entradas"} para ${eventTitle} fue enviada. El organizador tiene que confirmarla: cuando lo haga te llega la entrada con el código QR por correo y la vas a ver en Mis entradas. Hasta entonces figura como pendiente y no sirve para ingresar.`
+            : isFree
             ? `Has reservado ${quantity} ${quantity === 1 ? "entrada" : "entradas"} para ${eventTitle}. Encontrarás el estado y el código QR en Mis entradas.`
             : paymentWasReturned
               ? "Tu pago está en proceso de confirmación. Consultá el estado actualizado y tus códigos QR en Mis entradas."
@@ -938,7 +953,7 @@ export function PurchaseFlow({
         {email && <p className="text-sm text-muted-foreground">Correo informado: <strong>{email}</strong></p>}
         <Alert className="text-left">
           <AlertDescription>
-            Te enviamos la información de tus entradas por correo. Si no la encontrás, revisá también la carpeta de spam o correo no deseado.
+            {awaitingApproval ? "Te enviamos un correo confirmando que recibimos tu solicitud. Si no lo encontrás, revisá también la carpeta de spam o correo no deseado." : "Te enviamos la información de tus entradas por correo. Si no la encontrás, revisá también la carpeta de spam o correo no deseado."}
           </AlertDescription>
         </Alert>
         <AttendeeNameHint isLoggedIn={isLoggedIn} className="text-sm text-muted-foreground text-left leading-relaxed" />

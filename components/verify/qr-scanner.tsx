@@ -148,7 +148,7 @@ export function QRScanner({ userId, eventId, checkerToken }: QRScannerProps) {
       if (ticket.status === 'pending') {
         setResult({
           type: 'warning',
-          message: 'Ticket pendiente de confirmación de pago. Contacte al organizador.',
+          message: 'Ticket pendiente de confirmación. No sirve para ingresar hasta que el organizador lo apruebe.',
           ticket,
         });
         return;

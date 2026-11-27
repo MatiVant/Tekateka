@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { createUniqueEventSlug } from '@/lib/slugify'
+import { APPROVAL_DISABLED_MESSAGE, isMissingApprovalColumn } from '@/lib/ticket-approval'
 
 interface EventData {
   title: string
@@ -16,6 +17,7 @@ interface EventData {
   price: number
   door_ticket_price: number | null
   is_pay_what_you_want: boolean
+  requires_approval?: boolean
   total_tickets: number
   available_tickets: number
   image_url: string | null
@@ -133,16 +135,22 @@ export async function saveEvent(
         throw new Error(`No podés establecer menos de ${occupiedTickets} entradas: ya hay esa cantidad reservada o vendida.`)
       }
 
-      const { error: updateError } = await supabase
-        .from('events')
-        .update({
-          ...eventData,
-          total_tickets: requestedTotal,
-          available_tickets: requestedTotal - occupiedTickets,
-          slug,
-        })
-        .eq('id', eventId)
-        .eq('organizer_id', user.id)
+      const updatePayload = {
+        ...eventData,
+        total_tickets: requestedTotal,
+        available_tickets: requestedTotal - occupiedTickets,
+        slug,
+      }
+      const runUpdate = (payload: Record<string, unknown>) =>
+        supabase.from('events').update(payload).eq('id', eventId).eq('organizer_id', user.id)
+
+      let { error: updateError } = await runUpdate(updatePayload)
+      if (isMissingApprovalColumn(updateError)) {
+        // Falta correr el script 050: se guarda igual, salvo que se pida aprobación.
+        if (eventData.requires_approval) throw new Error(APPROVAL_DISABLED_MESSAGE)
+        const withoutApproval = Object.fromEntries(Object.entries(updatePayload).filter(([key]) => key !== 'requires_approval'))
+        ;({ error: updateError } = await runUpdate(withoutApproval))
+      }
 
       if (updateError) throw updateError
 
@@ -158,11 +166,14 @@ export async function saveEvent(
       }
 
       // Crear nuevo evento
-      const { data: newEvent, error: insertError } = await supabase
-        .from('events')
-        .insert({ ...eventData, slug })
-        .select()
-        .single()
+      const insertPayload = { ...eventData, slug }
+      let { data: newEvent, error: insertError } = await supabase.from('events').insert(insertPayload).select().single()
+      if (isMissingApprovalColumn(insertError)) {
+        // Falta correr el script 050: se crea igual, salvo que se pida aprobación.
+        if (eventData.requires_approval) throw new Error(APPROVAL_DISABLED_MESSAGE)
+        const withoutApproval = Object.fromEntries(Object.entries(insertPayload).filter(([key]) => key !== 'requires_approval'))
+        ;({ data: newEvent, error: insertError } = await supabase.from('events').insert(withoutApproval).select().single())
+      }
 
       if (insertError) throw insertError
 

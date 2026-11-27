@@ -132,6 +132,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, warning: "Email no configurado" })
     }
 
+    // Solicitud de entrada gratis (evento con aprobación): no hay pago ni comprobante que verificar.
+    if (ticket.payment_method === "free") {
+      const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+      try {
+        const { error: freeEmailError } = await resend.emails.send({
+          from: EMAIL_CONFIG.from,
+          replyTo: EMAIL_CONFIG.replyTo,
+          to: ticket.buyer_email,
+          subject: `Tu solicitud para ${ticket.events.title} no fue aprobada`,
+          html: `<p>Hola ${escapeHtml(String(ticket.buyer_name ?? ""))},</p><p>El organizador no aprobó tu solicitud de entrada para <strong>${escapeHtml(String(ticket.events.title ?? ""))}</strong>.</p><p><strong>Motivo:</strong> ${escapeHtml(reason.trim())}</p><p style="color:#666;font-size:12px">Este correo es automático y no recibe respuestas. Si tenés dudas, escribinos a <a href="mailto:consultas@tekateka.com.ar">consultas@tekateka.com.ar</a>.</p>`,
+        })
+        if (freeEmailError) console.error("[v0] Error al enviar email de solicitud no aprobada:", redactForLog(freeEmailError))
+      } catch (freeEmailError) {
+        console.error("[v0] Error al enviar email de solicitud no aprobada:", redactForLog(freeEmailError))
+      }
+      return NextResponse.json({ success: true, message: "Solicitud rechazada y email enviado" })
+    }
+
     try {
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: EMAIL_CONFIG.from,
